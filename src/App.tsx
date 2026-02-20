@@ -3,11 +3,31 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
+import Login from './components/Login'
+
 function App() {
   const [count, setCount] = useState(0)
+  const [user, setUser] = useState<string | null>(null)
+
+  function handleLogin(username: string) {
+    setUser(username)
+  }
+
+  function handleLogout() {
+    setUser(null)
+  }
+
+  if (!user) {
+    // render login form when there is no authenticated user
+    return <Login onLogin={handleLogin} />
+  }
 
   return (
     <>
+      <header>
+        <p>Bienvenido, {user}!</p>
+        <button onClick={handleLogout}>Cerrar sesión</button>
+      </header>
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
