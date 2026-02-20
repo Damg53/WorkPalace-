@@ -3,7 +3,9 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
-import Login from './components/Login'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Login from './components/Login.tsx'
+import Signup from './components/Signup.tsx'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -18,8 +20,17 @@ function App() {
   }
 
   if (!user) {
-    // render login form when there is no authenticated user
-    return <Login onLogin={handleLogin} />
+    // unauthenticated: expose routes for login/signup
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    )
   }
 
   return (

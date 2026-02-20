@@ -1,8 +1,8 @@
 .login-container {
   display: flex;
-  width: 700px;
-  max-width: 90vw;
-  height: 500px;
+  width: 900px;
+  max-width: 96vw;
+  height: 640px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(12px);
@@ -19,8 +19,11 @@
 .login-form {
   display: flex;
   flex-direction: column;
+  align-items: center;
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 460px;
 }
 
 .form-title {
@@ -35,6 +38,8 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 1.25rem;
+  width: 100%;
+  max-width: 420px;
 }
 
 .remember-group {
@@ -47,6 +52,38 @@
   color: #fff;
   margin: 0;
 }
+/* custom rounded subtle checkbox */
+.remember-group input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.06);
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  cursor: pointer;
+}
+.remember-group input[type="checkbox"]:checked {
+  background: linear-gradient(135deg,#6c5ce7,#4a90e2);
+  border-color: rgba(255,255,255,0.9);
+}
+.remember-group input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* ensure label aligns the checkbox centered */
+.remember-group label { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .input-group label {
   font-size: 0.95rem;
   color: #fff;
@@ -61,6 +98,8 @@
   font-size: 1rem;
   color: #fff;
   background-color: rgba(255,255,255,0.1);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-group input:focus {
@@ -88,6 +127,8 @@
   cursor: pointer;
   transition: background 200ms, transform 100ms, box-shadow 200ms;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 420px;
 }
 
 .submit-button:hover {

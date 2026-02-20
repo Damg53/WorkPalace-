@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import './Login.css';
 
 interface LoginProps {
@@ -68,10 +69,11 @@ export default function Login({ onLogin }: LoginProps) {
           <a href="#">¿Olvidaste tu contraseña?</a>
         </p>
         <p className="footer-text">
-          ¿No tienes cuenta? <a href="#">Regístrate</a>
+          ¿No tienes cuenta? <Link to="/signup">Regístrate</Link>
         </p>
       </form>
       </div>
     </div>
   );
 }
+    
