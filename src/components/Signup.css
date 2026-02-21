@@ -18,7 +18,7 @@
 
 .left-panel {
   flex: 1.2;
-  background: url('https://via.placeholder.com/600x720/ffffff/333333?text=Imagen') center/cover no-repeat;
+  background: url('../img/bckgrnd.jpeg') center/cover no-repeat;
   background-size: cover;
 }
 
