@@ -1,0 +1,195 @@
+.login-container {
+  display: flex;
+  width: 1100px;
+  max-width: 98vw;
+  height: 720px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.left-panel {
+  flex: 1.2;
+  background: url('../img/bckgrnd.jpeg') center/cover no-repeat;
+  background-size: cover;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: rgba(0,0,0,0.4);
+  overflow: auto;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+}
+
+.form-title {
+  text-align: center;
+  margin-bottom: 1.2rem;
+  font-size: 1.5rem;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.25rem;
+  align-items: center;
+  width: 100%;
+  max-width: 480px;
+}
+
+.input-group label {
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 0.4rem;
+  text-align: center;
+  width: 100%;
+}
+
+.error-message {
+  color: #ffb4b4;
+  background: rgba(211,47,47,0.08);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  margin: 0.5rem 0 1rem;
+}
+
+.input-group input {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 12px;
+  transition: border-color 200ms, box-shadow 200ms;
+  font-size: 1rem;
+  color: #fff;
+  background-color: rgba(255,255,255,0.1);
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.input-group.remember-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.input-group input:focus {
+  border-color: #ffcb05;
+  box-shadow: 0 0 0 3px rgba(255,203,5,0.3);
+  outline: none;
+  background-color: rgba(255,255,255,0.2);
+}
+
+.remember-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* custom rounded subtle checkbox */
+.remember-group input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.06);
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  cursor: pointer;
+}
+.remember-group input[type="checkbox"]:checked {
+  background: linear-gradient(135deg,#6c5ce7,#4a90e2);
+  border-color: rgba(255,255,255,0.9);
+}
+.remember-group input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* ensure label aligns the checkbox centered vertically */
+.remember-group label { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+
+.submit-button {
+  padding: 0.85rem 1.6rem;
+  margin: 0.75rem auto;
+  background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 200ms, transform 100ms, box-shadow 200ms;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: block;
+  width: auto;
+  min-width: 220px;
+  max-width: 480px;
+}
+
+@media (max-width: 1200px) {
+  .login-container {
+    width: 96vw;
+    height: auto;
+    flex-direction: column;
+  }
+  .left-panel { display: none }
+  .right-panel { padding: 2rem }
+  .login-form { max-width: 90vw }
+}
+
+.submit-button:hover {
+  background: #2a2a72;
+  transform: translateY(-1px);
+}
+
+.footer-text {
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 1rem;
+  color: #fff;
+}
+
+.footer-text a { color: #4a90e2; text-decoration: none }
+
+@media (max-width: 768px) {
+  .login-container { flex-direction: column; height: auto }
+  .left-panel { display: none }
+}
