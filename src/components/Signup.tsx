@@ -9,12 +9,16 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [accepted, setAccepted] = useState(false)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
+    
     if (
       !fullName.trim() ||
       !email.trim() ||
@@ -33,8 +37,39 @@ export default function Signup() {
       setError('Debes aceptar los términos y condiciones')
       return
     }
-    // simulate signup success -> redirect to login
-    navigate('/login')
+
+    setLoading(true)
+    try {
+      const response = await fetch('http://localhost:3001/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName,
+          email,
+          username,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Error al registrar el usuario')
+        return
+      }
+
+      setSuccess('¡Usuario registrado exitosamente! Redirigiendo al login...')
+      setTimeout(() => {
+        navigate('/login')
+      }, 2000)
+    } catch (error) {
+      setError('Error de conexión. Asegúrate de que el servidor esté ejecutándose.')
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -100,6 +135,7 @@ export default function Signup() {
           </div>
 
           {error && <p className="error-message">{error}</p>}
+          {success && <p className="success-message" style={{ color: 'green', marginBottom: '15px' }}>{success}</p>}
 
           <div className="input-group remember-group">
             <label>
@@ -112,7 +148,9 @@ export default function Signup() {
             </label>
           </div>
 
-          <button type="submit" className="submit-button">Crear usuario</button>
+          <button type="submit" className="submit-button" disabled={loading}>
+            {loading ? 'Registrando...' : 'Crear usuario'}
+          </button>
 
           <p className="footer-text">
             ¿Ya tienes cuenta? <Link to="/">Inicia sesión</Link>
