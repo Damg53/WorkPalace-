@@ -153,7 +153,7 @@ export default function Signup() {
           </button>
 
           <p className="footer-text">
-            ¿Ya tienes cuenta? <Link to="/">Inicia sesión</Link>
+            ¿Ya tienes cuenta? <Link to="/Login">Inicia sesión</Link>
           </p>
         </form>
       </div>
