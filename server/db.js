@@ -1,3 +1,4 @@
+
 import pg from 'pg';
 import dotenv from 'dotenv';
 
@@ -36,5 +37,3 @@ pool.on('connect', () => {
 })();
 
 export default pool;
-
-

@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import './Login.css';
+import './ForgotPassword.css';
 
-interface LoginProps {
-  onLogin: (username: string) => void;
-}
-
-export default function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function ForgotPassword() {
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [serverConnected, setServerConnected] = useState<boolean | null>(null);
 
@@ -33,10 +29,18 @@ export default function Login({ onLogin }: LoginProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
-    // Validar campos
-    if (!username.trim() || !password.trim()) {
-      setError('Por favor completa ambos campos');
+    // Validar campo
+    if (!email.trim()) {
+      setError('Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Por favor ingresa un correo electrónico válido');
       return;
     }
 
@@ -47,16 +51,15 @@ export default function Login({ onLogin }: LoginProps) {
 
     setLoading(true);
     try {
-      console.log('📤 Enviando login a:', 'http://localhost:3001/api/login');
-      
-      const response = await fetch('http://localhost:3001/api/login', {
+      console.log('📤 Enviando solicitud de recuperación a:', 'http://localhost:3001/api/forgot-password');
+
+      const response = await fetch('http://localhost:3001/api/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: username.trim(),
-          password,
+          email: email.trim(),
         }),
       });
 
@@ -66,15 +69,14 @@ export default function Login({ onLogin }: LoginProps) {
       console.log('📄 Response data:', data);
 
       if (!response.ok) {
-        setError(data.error || 'Error al iniciar sesión');
+        setError(data.error || 'Error al procesar la solicitud');
         return;
       }
 
-      // Login exitoso
-      console.log('✅ Login exitoso');
-      onLogin(data.user.username);
-      setUsername('');
-      setPassword('');
+      // Éxito
+      console.log('✅ Solicitud enviada');
+      setSuccess(data.message);
+      setEmail('');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
       console.error('❌ Error:', errorMsg);
@@ -85,12 +87,13 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="login-container">
+    <div className="forgot-password-container">
       <div className="left-panel" />
       <div className="right-panel">
-        <form onSubmit={handleSubmit} className="login-form">
-          <h2 className="form-title">Iniciar sesión</h2>
-          
+        <form onSubmit={handleSubmit} className="forgot-password-form">
+          <h2 className="form-title">Recuperar Contraseña</h2>
+          <p className="form-subtitle">Ingresa tu correo electrónico y te enviaremos un enlace para resetear tu contraseña.</p>
+
           {/* Server status indicator */}
           {serverConnected === false && (
             <div style={{
@@ -109,47 +112,30 @@ export default function Login({ onLogin }: LoginProps) {
           )}
 
           <div className="input-group">
-            <label htmlFor="username">Usuario o Email</label>
+            <label htmlFor="email">Correo Electrónico</label>
             <input
-              id="username"
-              type="text"
-              placeholder="Escribe tu usuario o email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="tu@ejemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
           </div>
-          <div className="input-group">
-            <label htmlFor="password">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"            
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <div className="input-group remember-group">
-            <label>
-              <input
-                type="checkbox"
-                name="remember"
-                disabled={loading}
-              />{' '}
-              Recuérdame
-            </label>
-          </div>
+
           {error && <p className="error-message">{error}</p>}
-          <button 
-            type="submit" 
-            className="submit-button" 
+          {success && <p className="success-message">{success}</p>}
+
+          <button
+            type="submit"
+            className="submit-button"
             disabled={loading || serverConnected === false}
           >
-            {loading ? 'Iniciando sesión...' : 'Entrar'}
+            {loading ? 'Enviando...' : 'Enviar Enlace de Recuperación'}
           </button>
+
           <p className="footer-text">
-            <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
+            ¿Recuerdas tu contraseña? <Link to="/login">Inicia sesión</Link>
           </p>
           <p className="footer-text">
             ¿No tienes cuenta? <Link to="/signup">Regístrate</Link>
@@ -159,4 +145,3 @@ export default function Login({ onLogin }: LoginProps) {
     </div>
   );
 }
-    

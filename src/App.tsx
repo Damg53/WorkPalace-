@@ -6,6 +6,7 @@ import './App.css'
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
+import ForgotPassword from './components/ForgotPassword.tsx'
 
 function Landing() {
   return (
@@ -42,39 +43,33 @@ function Landing() {
           <h2 className="section-title">Características Principales</h2>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">🎯</div>
-              <h3>Gestión de Proyectos</h3>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+              <h3>Búsqueda Filtrada de Espacios</h3>
+              <p>Encuentra el espacio ideal filtrando por tipo de lugar, ubicación en Medellín y equipamiento disponible. Estudios, cocinas, talleres y más, al alcance de tu mano.</p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-icon">👥</div>
-              <h3>Colaboración en Tiempo Real</h3>
-              <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+              <h3>Reservas Flexibles</h3>
+              <p>Reserva por horas, media jornada o jornada completa según lo que necesites. Sin contratos largos ni grandes inversiones, solo el tiempo que realmente usas.</p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-icon">📊</div>
-              <h3>Análisis y Reportes</h3>
-              <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+              <h3>Disponibilidad en Tiempo Real</h3>
+              <p>Consulta la disponibilidad de cualquier espacio en tiempo real y confirma tu reserva al instante o solicita aprobación del propietario según el tipo de espacio.</p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-icon">🔒</div>
-              <h3>Seguridad Avanzada</h3>
-              <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+              <h3>Pagos y Seguridad Integrados</h3>
+              <p>Sistema de pago integrado y verificación de identidad para arrendadores y arrendatarios. Confianza y trazabilidad en cada transacción.</p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-icon">⚡</div>
-              <h3>Rendimiento Óptimo</h3>
-              <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+              <h3>Comunicación Directa</h3>
+              <p>Chat interno para coordinar todos los detalles con el dueño del espacio antes y durante tu reserva. Sin intermediarios innecesarios.</p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-icon">🚀</div>
-              <h3>Escalabilidad</h3>
-              <p>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+              <h3>Reseñas y Calificaciones</h3>
+              <p>Sistema de reseñas bidireccional entre arrendadores y arrendatarios para construir una comunidad confiable y transparente en Medellín.</p>
             </div>
           </div>
         </div>
@@ -85,16 +80,18 @@ function Landing() {
         <div className="content-container">
           <h2>Acerca de WorkPalace</h2>
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            WorkPalace nació para resolver un problema real en Medellín: muchos profesionales independientes, emprendedores y creativos 
+            necesitan espacios especializados para trabajar, como estudios de grabación, cocinas industriales o talleres de carpintería, 
+            pero acceder a ellos de forma permanente es costoso e inviable para la mayoría.
           </p>
           <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat 
-            cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            Al mismo tiempo, estos espacios permanecen vacíos durante horas o días enteros, representando una pérdida de oportunidades 
+            para sus propietarios. WorkPalace conecta ambas partes: los dueños de espacios infrautilizados con quienes los necesitan 
+            temporalmente, generando ingresos para unos y acceso a infraestructura productiva para otros.
           </p>
           <p>
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa 
-            quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+            Nuestra misión es ser la plataforma de referencia en Medellín para el alquiler temporal de espacios productivos, 
+            impulsando el talento local y el emprendimiento bajo un modelo flexible, seguro y pensado para las dinámicas del trabajo independiente de hoy.
           </p>
         </div>
       </section>
@@ -102,7 +99,7 @@ function Landing() {
       {/* Footer */}
       <footer id="contact">
         <p>&copy; 2026 WorkPalace. Todos los derechos reservados.</p>
-        <p>Construido con ❤️ para mejorar tu productividad</p>
+        <p>Conectando talento con espacios en Medellín</p>
       </footer>
     </>
   )
@@ -323,6 +320,7 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -26,6 +26,16 @@ body {
   height: 100%;
 }
 
+/* Centered layout for auth pages */
+.auth-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
 /* Header Navigation */
 .landing-header {
   background: rgba(255, 255, 255, 0.95);
