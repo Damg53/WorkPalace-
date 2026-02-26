@@ -110,9 +110,29 @@ function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
       <section className="contact-section" id="contact">
         <div className="content-container">
           <h2>Contacto</h2>
-          <p>Daniel Antonio Sarmiento Amador</p>
-          <p>Télefono: <a href="tel:+573225761257">+57 322 5761257</a></p>
-          <p>Correo electrónico: <a href="mailto:daniel.antonio1409@gmail.com">daniel.antonio1409@gmail.com</a></p>
+          
+          <div className="contact-card">
+            <h3>Daniel Antonio Sarmiento Amador</h3>
+            <p>Télefono: <a href="tel:+573225761257">+57 322 5761257</a></p>
+            <p>Correo electrónico: <a href="mailto:daniel.antonio1409@gmail.com">daniel.antonio1409@gmail.com</a></p>
+          </div>
+
+          <div className="contact-card">
+            <h3>Diego Alejandro Morales Gómez</h3>
+            <p>Télefono: <a href="tel:+573146449803">+57 314 6449803</a></p>
+            <p>Correo electrónico: <a href="mailto:diealemorgom@gmail.com">diealemorgom@gmail.com</a></p>
+          </div>
+
+          <div className="contact-card">
+            <h3>Erik Anthony Soto Castaño</h3>
+            <p>Télefono: <a href="tel:+573022944700">+57 3022944700</a></p>
+            <p>Correo electrónico: <a href="mailto:erikluna71easc@gmail.com">erikluna71easc@gmail.com</a></p>
+          </div>
+          <div className="contact-card">
+            <h3>Juan José Pulido Bustamante</h3>
+            <p>Télefono: <a href="tel:+573006618262">+57 3006618262</a></p>
+            <p>Correo electrónico: <a href="mailto:Juanjpulido.57@gmail.com">Juanjpulido.57@gmail.com</a></p>
+          </div>
         </div>
       </section>
 

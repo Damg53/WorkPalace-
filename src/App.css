@@ -243,6 +243,26 @@ nav .nav-links a:hover {
   text-decoration: underline;
 }
 
+.contact-card {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.contact-card h3 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.contact-card p {
+  color: #555;
+  margin: 0.5rem 0;
+}
+
 .content-container {
   max-width: 1000px;
   margin: 0 auto;
@@ -1039,6 +1059,16 @@ html[data-theme="dark"] .contact-section a {
   color: #8b9bdb;
 }
 
+html[data-theme="dark"] .contact-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 155, 219, 0.3);
+}
+
+html[data-theme="dark"] .contact-card h3,
+html[data-theme="dark"] .contact-card p {
+  color: #f0f0f0;
+}
+
 html[data-theme="dark"] footer {
   background: rgba(45, 45, 45, 0.95);
   color: #b0b0b0;
@@ -1046,6 +1076,15 @@ html[data-theme="dark"] footer {
 
 html[data-theme="dark"] footer p {
   color: #b0b0b0;
+}
+
+/* User name styling based on theme */
+html[data-theme="dark"] .user-name {
+  color: #f0f0f0;
+}
+
+html[data-theme="light"] .user-name {
+  color: #333;
 }
 
 html[data-theme="dark"] .btn-primary {

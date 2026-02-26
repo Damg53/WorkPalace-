@@ -264,6 +264,19 @@ html[data-theme="dark"] .remember-group input[type="checkbox"] {
   border-color: rgba(139, 155, 219, 0.4);
 }
 
+html[data-theme="light"] .remember-group label {
+  color: #333;
+}
+
+html[data-theme="light"] .remember-group input[type="checkbox"] {
+  background: rgba(255, 255, 255, 1);
+  border-color: #999;
+}
+
+html[data-theme="light"] .remember-group input[type="checkbox"]:checked::after {
+  border-color: #333;
+}
+
 html[data-theme="dark"] .submit-button {
   background: linear-gradient(135deg, #4a90e2, #6c5ce7);
   box-shadow: 0 4px 12px rgba(139, 155, 219, 0.3);
