@@ -106,9 +106,18 @@ function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           </p>
         </div>
       </section>
+      {/* Contact Section (debajo de "Acerca de") */}
+      <section className="contact-section" id="contact">
+        <div className="content-container">
+          <h2>Contacto</h2>
+          <p>Daniel Antonio Sarmiento Amador</p>
+          <p>Télefono: <a href="tel:+573225761257">+57 322 5761257</a></p>
+          <p>Correo electrónico: <a href="mailto:daniel.antonio1409@gmail.com">daniel.antonio1409@gmail.com</a></p>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer id="contact">
+      <footer id="site-footer">
         <p>&copy; 2026 WorkPalace. Todos los derechos reservados.</p>
         <p>Conectando talento con espacios en Medellín</p>
       </footer>
