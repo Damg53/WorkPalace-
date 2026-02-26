@@ -329,8 +329,9 @@ header {
     width: 100%;
   }
 }
-  border-radius: 4px;
-}
+ 
+
+
 
 header button {
   padding: 0.5rem 1rem;
@@ -813,4 +814,372 @@ header button:hover {
     align-items: flex-start;
     gap: 1rem;
   }
+}
+
+/* Theme Toggle Switch */
+.theme-toggle {
+  display: inline-block;
+  position: relative;
+  margin-right: 1rem;
+}
+
+.theme-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 80px;
+  height: 42px;
+  background: linear-gradient(135deg, #ff9a56 0%, #ff7b54 100%);
+  border-radius: 40px;
+  padding: 3px;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  box-shadow: 
+    0 4px 15px rgba(255, 122, 84, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggle-label:hover {
+  box-shadow: 
+    0 6px 20px rgba(255, 122, 84, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.toggle-label .toggle-inner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 
+    0 3px 10px rgba(0, 0, 0, 0.25),
+    0 0 0 4px rgba(255, 122, 84, 0.1);
+}
+
+.toggle-label .toggle-icon {
+  position: absolute;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  z-index: 0;
+  transition: all 0.4s ease;
+}
+
+.toggle-label .sun {
+  left: 3px;
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+  transition: all 0.4s ease;
+}
+
+.toggle-label .moon {
+  right: 3px;
+  opacity: 0;
+  transform: rotate(-180deg) scale(0.8);
+  transition: all 0.4s ease;
+}
+
+.theme-toggle input[type="checkbox"]:checked + .toggle-label {
+  background: linear-gradient(135deg, #0066ff 0%, #00d4ff 100%);
+  box-shadow: 
+    0 4px 15px rgba(0, 102, 255, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle input[type="checkbox"]:checked + .toggle-label:hover {
+  box-shadow: 
+    0 6px 20px rgba(0, 102, 255, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle input[type="checkbox"]:checked + .toggle-label .toggle-inner {
+  left: 41px;
+  box-shadow: 
+    0 3px 10px rgba(0, 0, 0, 0.25),
+    0 0 0 4px rgba(0, 102, 255, 0.1);
+}
+
+.theme-toggle input[type="checkbox"]:checked + .toggle-label .sun {
+  opacity: 0;
+  transform: rotate(180deg) scale(0.8);
+}
+
+.theme-toggle input[type="checkbox"]:checked + .toggle-label .moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* Dark Mode Styles */
+html[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-surface: #2d2d2d;
+  --color-text: #f0f0f0;
+  --color-text-secondary: #b0b0b0;
+  --color-border: #404040;
+}
+
+html[data-theme="light"] {
+  --color-bg: #ffffff;
+  --color-surface: #f5f5f5;
+  --color-text: #333333;
+  --color-text-secondary: #666666;
+  --color-border: #e0e0e0;
+}
+
+/* Apply Dark Mode */
+html[data-theme="dark"] body {
+  background-color: #1a1a1a;
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .landing-header {
+  background: rgba(45, 45, 45, 0.95);
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] nav .nav-links a {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] nav .nav-links a:hover {
+  color: #8b9bdb;
+}
+
+html[data-theme="dark"] .hero {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .hero h1,
+html[data-theme="dark"] .hero p {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .features {
+  background-color: #1a1a1a;
+}
+
+html[data-theme="dark"] .section-title {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .feature-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .feature-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .feature-card h3,
+html[data-theme="dark"] .feature-card p {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .content-section {
+  background-color: #2d2d2d;
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .content-section h2,
+html[data-theme="dark"] .content-section p {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] footer {
+  background: rgba(45, 45, 45, 0.95);
+  color: #b0b0b0;
+}
+
+html[data-theme="dark"] footer p {
+  color: #b0b0b0;
+}
+
+html[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+html[data-theme="dark"] .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+html[data-theme="dark"] .btn-secondary {
+  background: transparent;
+  color: #f0f0f0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+html[data-theme="dark"] .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+html[data-theme="dark"] nav .logo {
+  background: linear-gradient(135deg, #8b9bdb 0%, #9b8bdb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+html[data-theme="dark"] .logo {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] a {
+  color: #8b9bdb;
+}
+
+html[data-theme="dark"] a:hover {
+  color: #a8b5e8;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6 {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] p {
+  color: #e0e0e0;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f0f0f0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] textarea:focus,
+html[data-theme="dark"] select:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: #8b9bdb;
+  outline: none;
+}
+
+html[data-theme="dark"] input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="dark"] .card {
+  background-color: #2d2d2d;
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .dashboard-header {
+  background: rgba(45, 45, 45, 0.98);
+  color: #f0f0f0;
+  border-bottom-color: rgba(139, 155, 219, 0.3);
+}
+
+html[data-theme="dark"] .sidebar {
+  background: rgba(45, 45, 45, 0.98);
+  color: #f0f0f0;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .nav-item {
+  color: #b0b0b0;
+}
+
+html[data-theme="dark"] .nav-item:hover,
+html[data-theme="dark"] .nav-item.active {
+  background: linear-gradient(90deg, rgba(139, 155, 219, 0.2) 0%, rgba(139, 155, 219, 0.1) 100%);
+  color: #8b9bdb;
+  border-left-color: #8b9bdb;
+}
+
+html[data-theme="dark"] .stat-card {
+  background: rgba(45, 45, 45, 0.95);
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .stat-card:hover {
+  background: rgba(50, 50, 50, 0.95);
+  box-shadow: 0 12px 32px rgba(139, 155, 219, 0.2);
+}
+
+html[data-theme="dark"] .stat-content h3 {
+  color: #b0b0b0;
+}
+
+html[data-theme="dark"] .project-card {
+  background: rgba(45, 45, 45, 0.95);
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .project-card:hover {
+  background: rgba(50, 50, 50, 0.95);
+  box-shadow: 0 12px 32px rgba(139, 155, 219, 0.2);
+}
+
+html[data-theme="dark"] .project-header h3,
+html[data-theme="dark"] .project-description,
+html[data-theme="dark"] .activity-item {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .project-status {
+  background: rgba(139, 155, 219, 0.2);
+  color: #8b9bdb;
+}
+
+html[data-theme="dark"] .activity-list {
+  background: rgba(45, 45, 45, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .activity-item {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] .activity-title {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .activity-time {
+  color: #888888;
+}
+
+html[data-theme="dark"] .welcome-text h2,
+html[data-theme="dark"] .welcome-text p {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .section-header h2 {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .btn-logout {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+}
+
+html[data-theme="dark"] .btn-logout:hover {
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
 }

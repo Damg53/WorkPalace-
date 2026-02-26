@@ -91,6 +91,7 @@ export default function ForgotPassword() {
       <div className="left-panel" />
       <div className="right-panel">
         <form onSubmit={handleSubmit} className="forgot-password-form">
+          <Link to="/" className="back-button">← Volver al Inicio</Link>
           <h2 className="form-title">Recuperar Contraseña</h2>
           <p className="form-subtitle">Ingresa tu correo electrónico y te enviaremos un enlace para resetear tu contraseña.</p>
 

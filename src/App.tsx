@@ -1,6 +1,4 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
@@ -8,19 +6,32 @@ import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
 import ForgotPassword from './components/ForgotPassword.tsx'
 
-function Landing() {
+function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: boolean) => void }) {
   return (
     <>
       {/* Header Navigation */}
       <header className="landing-header">
         <nav>
-          <div className="logo">✨ WorkPalace</div>
+          <div className="logo"> WorkPalace</div>
           <ul className="nav-links">
             <li><a href="#features">Características</a></li>
             <li><a href="#about">Acerca de</a></li>
             <li><a href="#contact">Contacto</a></li>
           </ul>
           <div className="auth-buttons">
+            <div className="theme-toggle">
+              <input 
+                type="checkbox" 
+                id="theme-switch" 
+                checked={isDark}
+                onChange={() => setIsDark(!isDark)}
+              />
+              <label htmlFor="theme-switch" className="toggle-label">
+                <span className="toggle-inner"></span>
+                <span className="toggle-icon sun">☀️</span>
+                <span className="toggle-icon moon">🌙</span>
+              </label>
+            </div>
             <Link to="/signup" className="btn btn-secondary">Registrarse</Link>
             <Link to="/login" className="btn btn-primary">Iniciar Sesión</Link>
           </div>
@@ -111,7 +122,7 @@ function Dashboard({ user, onLogout }: { user: string; onLogout: () => void }) {
       {/* Header Dashboard */}
       <header className="dashboard-header">
         <div className="header-left">
-          <h1 className="dashboard-logo">✨ WorkPalace</h1>
+          <h1 className="dashboard-logo"> WorkPalace</h1>
         </div>
         <div className="header-right">
           <div className="user-info">
@@ -303,6 +314,16 @@ function Dashboard({ user, onLogout }: { user: string; onLogout: () => void }) {
 
 function App() {
   const [user, setUser] = useState<string | null>(null)
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme-mode')
+    return saved ? saved === 'dark' : false
+  })
+
+  // Aplicar tema al documento
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+    localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
+  }, [isDark])
 
   function handleLogin(username: string) {
     setUser(username)
@@ -317,10 +338,22 @@ function App() {
     return (
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/" element={<Landing isDark={isDark} setIsDark={setIsDark} />} />
+          <Route path="/login" element={
+            <div className="auth-layout">
+              <Login onLogin={handleLogin} />
+            </div>
+          } />
+          <Route path="/signup" element={
+            <div className="auth-layout">
+              <Signup />
+            </div>
+          } />
+          <Route path="/forgot-password" element={
+            <div className="auth-layout">
+              <ForgotPassword />
+            </div>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -23,7 +23,7 @@ export default function Login({ onLogin }: LoginProps) {
         setServerConnected(response.ok);
       } catch (error) {
         setServerConnected(false);
-        console.error('❌ No se puede conectar al servidor:', error);
+        console.error(' No se puede conectar al servidor:', error);
       }
     };
 
@@ -47,7 +47,7 @@ export default function Login({ onLogin }: LoginProps) {
 
     setLoading(true);
     try {
-      console.log('📤 Enviando login a:', 'http://localhost:3001/api/login');
+      console.log(' Enviando login a:', 'http://localhost:3001/api/login');
       
       const response = await fetch('http://localhost:3001/api/login', {
         method: 'POST',
@@ -60,10 +60,10 @@ export default function Login({ onLogin }: LoginProps) {
         }),
       });
 
-      console.log('📊 Response status:', response.status);
+      console.log(' Response status:', response.status);
 
       const data = await response.json();
-      console.log('📄 Response data:', data);
+      console.log(' Response data:', data);
 
       if (!response.ok) {
         setError(data.error || 'Error al iniciar sesión');
@@ -71,13 +71,13 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       // Login exitoso
-      console.log('✅ Login exitoso');
+      console.log('Login exitoso');
       onLogin(data.user.username);
       setUsername('');
       setPassword('');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
-      console.error('❌ Error:', errorMsg);
+      console.error('Error:', errorMsg);
       setError('Error de conexión. Asegúrate de que el servidor esté ejecutándose: npm run server');
     } finally {
       setLoading(false);
@@ -89,6 +89,7 @@ export default function Login({ onLogin }: LoginProps) {
       <div className="left-panel" />
       <div className="right-panel">
         <form onSubmit={handleSubmit} className="login-form">
+          <Link to="/" className="back-button">← Volver al Inicio</Link>
           <h2 className="form-title">Iniciar sesión</h2>
           
           {/* Server status indicator */}

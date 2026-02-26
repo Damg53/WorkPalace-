@@ -77,6 +77,7 @@ export default function Signup() {
       <div className="left-panel" />
       <div className="right-panel">
         <form onSubmit={handleSubmit} className="login-form">
+          <Link to="/" className="back-button">← Volver al Inicio</Link>
           <h2 className="form-title">Crear cuenta</h2>
 
           <div className="input-group">
