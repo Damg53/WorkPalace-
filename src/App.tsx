@@ -1,42 +1,19 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
 import ForgotPassword from './components/ForgotPassword.tsx'
+import Navbar from './components/Navbar'
+import Dashboard from './components/Dashboard'
+import AdminDashboard from './components/AdminDashboard'
 
 function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: boolean) => void }) {
   return (
     <>
-      {/* Header Navigation */}
-      <header className="landing-header">
-        <nav>
-          <div className="logo"> WorkPalace</div>
-          <ul className="nav-links">
-            <li><a href="#features">Características</a></li>
-            <li><a href="#about">Acerca de</a></li>
-            <li><a href="#contact">Contacto</a></li>
-          </ul>
-          <div className="auth-buttons">
-            <div className="theme-toggle">
-              <input 
-                type="checkbox" 
-                id="theme-switch" 
-                checked={isDark}
-                onChange={() => setIsDark(!isDark)}
-              />
-              <label htmlFor="theme-switch" className="toggle-label">
-                <span className="toggle-inner"></span>
-                <span className="toggle-icon sun">☀️</span>
-                <span className="toggle-icon moon">🌙</span>
-              </label>
-            </div>
-            <Link to="/signup" className="btn btn-secondary">Registrarse</Link>
-            <Link to="/login" className="btn btn-primary">Iniciar Sesión</Link>
-          </div>
-        </nav>
-      </header>
+      {/* shared header/navigation */}
+      <Navbar isDark={isDark} setIsDark={setIsDark} />
 
       {/* Hero Section */}
       <section className="hero">
@@ -145,204 +122,12 @@ function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
   )
 }
 
-function Dashboard({ user, onLogout }: { user: string; onLogout: () => void }) {
-  return (
-    <div className="dashboard-container">
-      {/* Header Dashboard */}
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1 className="dashboard-logo"> WorkPalace</h1>
-        </div>
-        <div className="header-right">
-          <div className="user-info">
-            <span className="user-avatar">{user.charAt(0).toUpperCase()}</span>
-            <span className="user-name">{user}</span>
-          </div>
-          <button className="btn-logout" onClick={onLogout}>Cerrar sesión</button>
-        </div>
-      </header>
-
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <nav className="sidebar-nav">
-          <a href="#home" className="nav-item active">
-            <span className="nav-icon">🏠</span>
-            <span>Inicio</span>
-          </a>
-          <a href="#projects" className="nav-item">
-            <span className="nav-icon">📁</span>
-            <span>Proyectos</span>
-          </a>
-          <a href="#team" className="nav-item">
-            <span className="nav-icon">👥</span>
-            <span>Equipo</span>
-          </a>
-          <a href="#tasks" className="nav-item">
-            <span className="nav-icon">✅</span>
-            <span>Tareas</span>
-          </a>
-          <a href="#analytics" className="nav-item">
-            <span className="nav-icon">📊</span>
-            <span>Análisis</span>
-          </a>
-          <a href="#settings" className="nav-item">
-            <span className="nav-icon">⚙️</span>
-            <span>Configuración</span>
-          </a>
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <main className="dashboard-content">
-        {/* Welcome Section */}
-        <section className="welcome-section">
-          <div className="welcome-text">
-            <h2>¡Bienvenido de vuelta, {user}!</h2>
-            <p>Aquí está un resumen de tu actividad hoy</p>
-          </div>
-        </section>
-
-        {/* Stats Grid */}
-        <section className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">📁</div>
-            <div className="stat-content">
-              <h3>Proyectos Activos</h3>
-              <p className="stat-number">5</p>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">✅</div>
-            <div className="stat-content">
-              <h3>Tareas Completadas</h3>
-              <p className="stat-number">24</p>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">👥</div>
-            <div className="stat-content">
-              <h3>Miembros del Equipo</h3>
-              <p className="stat-number">8</p>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">🔔</div>
-            <div className="stat-content">
-              <h3>Nuevas Notificaciones</h3>
-              <p className="stat-number">3</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Projects Section */}
-        <section className="projects-section">
-          <div className="section-header">
-            <h2>Tus Proyectos</h2>
-            <button className="btn btn-primary">+ Nuevo Proyecto</button>
-          </div>
-
-          <div className="projects-grid">
-            <div className="project-card">
-              <div className="project-header">
-                <h3>Sitio Web Corporativo</h3>
-                <span className="project-status active">En Progreso</span>
-              </div>
-              <p className="project-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <div className="project-footer">
-                <div className="project-members">
-                  <span className="member-avatar">MJ</span>
-                  <span className="member-avatar">AR</span>
-                </div>
-                <div className="project-progress">
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '75%' }}></div>
-                  </div>
-                  <span className="progress-text">75%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="project-card">
-              <div className="project-header">
-                <h3>Aplicación Móvil</h3>
-                <span className="project-status active">En Progreso</span>
-              </div>
-              <p className="project-description">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p>
-              <div className="project-footer">
-                <div className="project-members">
-                  <span className="member-avatar">JL</span>
-                  <span className="member-avatar">CS</span>
-                </div>
-                <div className="project-progress">
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '50%' }}></div>
-                  </div>
-                  <span className="progress-text">50%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="project-card">
-              <div className="project-header">
-                <h3>Dashboard Analítico</h3>
-                <span className="project-status completed">Completado</span>
-              </div>
-              <p className="project-description">Duis aute irure dolor in reprehenderit in voluptate velit.</p>
-              <div className="project-footer">
-                <div className="project-members">
-                  <span className="member-avatar">NA</span>
-                  <span className="member-avatar">DB</span>
-                </div>
-                <div className="project-progress">
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '100%' }}></div>
-                  </div>
-                  <span className="progress-text">100%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Recent Activity */}
-        <section className="activity-section">
-          <h2>Actividad Reciente</h2>
-          <div className="activity-list">
-            <div className="activity-item">
-              <span className="activity-icon">📝</span>
-              <div className="activity-content">
-                <p className="activity-title">María actualizó el proyecto <strong>Sitio Web Corporativo</strong></p>
-                <p className="activity-time">Hace 2 horas</p>
-              </div>
-            </div>
-
-            <div className="activity-item">
-              <span className="activity-icon">✅</span>
-              <div className="activity-content">
-                <p className="activity-title">Tarea completada: <strong>Diseño de interfaz</strong></p>
-                <p className="activity-time">Hace 5 horas</p>
-              </div>
-            </div>
-
-            <div className="activity-item">
-              <span className="activity-icon">👥</span>
-              <div className="activity-content">
-                <p className="activity-title">Juan fue agregado al proyecto <strong>Aplicación Móvil</strong></p>
-                <p className="activity-time">Hace 1 día</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-  )
-}
+// Dashboard component moved to its own file
+// (see src/components/Dashboard.tsx)
 
 function App() {
-  const [user, setUser] = useState<string | null>(null)
+  const [user, setUser] = useState<{ username: string; role?: string } | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme-mode')
     return saved ? saved === 'dark' : false
@@ -354,43 +139,88 @@ function App() {
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
   }, [isDark])
 
-  function handleLogin(username: string) {
-    setUser(username)
+  // now receive object with username and role
+  function handleLogin(userInfo: { username: string; role?: string }) {
+    setUser(userInfo)
+    setIsAdmin(userInfo.role === 'admin')
   }
 
   function handleLogout() {
     setUser(null)
+    setIsAdmin(false)
   }
 
-  if (!user) {
-    // unauthenticated: expose routes for landing, login/signup
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing isDark={isDark} setIsDark={setIsDark} />} />
-          <Route path="/login" element={
-            <div className="auth-layout">
-              <Login onLogin={handleLogin} />
-            </div>
-          } />
-          <Route path="/signup" element={
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* public routes */}
+        <Route
+          path="/"
+          element={
+            user ? (
+              isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
+            ) : (
+              <Landing isDark={isDark} setIsDark={setIsDark} />
+            )
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <div className="auth-layout">
+                <Login onLogin={handleLogin} />
+              </div>
+            )
+          }
+        />
+        <Route
+          path="/signup"
+          element={
             <div className="auth-layout">
               <Signup />
             </div>
-          } />
-          <Route path="/forgot-password" element={
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
             <div className="auth-layout">
               <ForgotPassword />
             </div>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    )
-  }
+          }
+        />
 
-  // Authenticated user
-  return <Dashboard user={user} onLogout={handleLogout} />
+        {/* protected route for regular users */}
+        <Route
+          path="/dashboard"
+          element={
+            user && !isAdmin ? (
+              <Dashboard user={user!} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* admin panel */}
+        <Route
+          path="/admin"
+          element={
+            user && isAdmin ? (
+              <AdminDashboard user={user!} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App

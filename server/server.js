@@ -68,9 +68,9 @@ app.post('/api/signup', async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcryptjs.hash(password, saltRounds);
 
-    // Insertar nuevo usuario
+    // Insertar nuevo usuario (role por defecto user)
     const result = await pool.query(
-      'INSERT INTO users (full_name, email, username, password) VALUES ($1, $2, $3, $4) RETURNING id, email, username',
+      'INSERT INTO users (full_name, email, username, password) VALUES ($1, $2, $3, $4) RETURNING id, email, username, role',
       [fullName, email, username, hashedPassword]
     );
 
@@ -112,14 +112,15 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
 
-    // Login exitoso - retornar información del usuario
+    // Login exitoso - retornar información del usuario, incluyendo rol
     res.json({
       message: '✅ Sesión iniciada exitosamente',
       user: {
         id: userData.id,
         username: userData.username,
         fullName: userData.full_name,
-        email: userData.email
+        email: userData.email,
+        role: userData.role
       }
     });
   } catch (error) {
@@ -131,6 +132,49 @@ app.post('/api/login', async (req, res) => {
 // Ruta para verificar si el servidor está funcionando
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
+});
+
+// middleware simple para chequear admin (se asume rol enviado en request; en producción usar JWT)
+function requireAdmin(req, res, next) {
+  // para la demo leemos header x-user-role o body
+  const role = req.header('x-user-role') || req.body.role;
+  if (role === 'admin') {
+    return next();
+  }
+  return res.status(403).json({ error: 'Forbidden: admin only' });
+}
+
+// Obtener todos los usuarios (admin)
+app.get('/api/users', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, full_name, email, username, role FROM users ORDER BY id');
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo usuarios:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Cambiar rol de un usuario (admin)
+app.put('/api/users/:id/role', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    if (!['admin', 'user'].includes(role)) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+    const update = await pool.query(
+      'UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2 RETURNING id, username, role',
+      [role, id]
+    );
+    if (update.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ user: update.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar rol:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
 });
 
 app.listen(PORT, () => {

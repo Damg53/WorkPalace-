@@ -1,24 +1,16 @@
 import { Link } from 'react-router-dom'
 import './Landing.css'
+import Navbar from './Navbar'
 
-export default function Landing() {
+interface LandingProps {
+  isDark: boolean
+  setIsDark: (value: boolean) => void
+}
+
+export default function Landing({ isDark, setIsDark }: LandingProps) {
   return (
     <>
-      {/* Header Navigation */}
-      <header className="landing-header">
-        <nav>
-          <div className="logo">✨ WorkPalace</div>
-          <ul className="nav-links">
-            <li><a href="#features">Características</a></li>
-            <li><a href="#about">Acerca de</a></li>
-            <li><a href="#contact">Contacto</a></li>
-          </ul>
-          <div className="auth-buttons">
-            <Link to="/signup" className="btn btn-secondary">Registrarse</Link>
-            <Link to="/login" className="btn btn-primary">Iniciar Sesión</Link>
-          </div>
-        </nav>
-      </header>
+      <Navbar isDark={isDark} setIsDark={setIsDark} />
 
       {/* Hero Section */}
       <section className="hero">
