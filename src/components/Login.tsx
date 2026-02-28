@@ -77,13 +77,19 @@ export default function Login({ onLogin }: LoginProps) {
       console.log('Login exitoso');
       const returnedUser = data.user.username;
       const returnedRole = data.user.role;
+      console.log('👤 Usuario:', returnedUser);
+      console.log('🔐 Rol recibido:', returnedRole);
+      console.log('📊 Tipo de rol:', typeof returnedRole);
+      console.log('✅ ¿Es admin?:', returnedRole === 'admin');
       onLogin({ username: returnedUser, role: returnedRole });
       setUsername('');
       setPassword('');
       // redirect depending on role
       if (returnedRole === 'admin') {
+        console.log('🚀 Redirigiendo a /admin');
         navigate('/admin');
       } else {
+        console.log('🚀 Redirigiendo a /dashboard');
         navigate('/dashboard');
       }
     } catch (error) {

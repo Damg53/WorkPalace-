@@ -14,6 +14,7 @@ async function createTable() {
         email VARCHAR(255) UNIQUE NOT NULL,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'user' NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -21,6 +22,19 @@ async function createTable() {
 
     await pool.query(createTableQuery);
     console.log('✅ Tabla "users" creada exitosamente\n');
+
+    // Agregar columna role si no existe (para migración)
+    console.log('🔨 Verificando/agregando columna role...');
+    try {
+      await pool.query('ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT \'user\' NOT NULL;');
+      console.log('✅ Columna role agregada\n');
+    } catch (e) {
+      if (e.message.includes('already exists')) {
+        console.log('✅ Columna role ya existe\n');
+      } else {
+        throw e;
+      }
+    }
 
     // Crear índices
     console.log('🔨 Creando índices...');

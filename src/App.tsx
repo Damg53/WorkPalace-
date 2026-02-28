@@ -126,7 +126,7 @@ function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
 // (see src/components/Dashboard.tsx)
 
 function App() {
-  const [user, setUser] = useState<{ username: string; role?: string } | null>(null)
+  const [user, setUser] = useState<{ username: string; role?: string; fullName?: string; email?: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme-mode')
@@ -139,8 +139,8 @@ function App() {
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
   }, [isDark])
 
-  // now receive object with username and role
-  function handleLogin(userInfo: { username: string; role?: string }) {
+  // now receive object with username, role, fullName, and email
+  function handleLogin(userInfo: { username: string; role?: string; fullName?: string; email?: string }) {
     setUser(userInfo)
     setIsAdmin(userInfo.role === 'admin')
   }

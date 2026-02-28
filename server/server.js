@@ -96,7 +96,7 @@ app.post('/api/login', async (req, res) => {
 
     // Buscar el usuario por username o email
     const user = await pool.query(
-      'SELECT id, username, password, full_name, email FROM users WHERE username = $1 OR email = $1',
+      'SELECT id, username, password, full_name, email, role FROM users WHERE username = $1 OR email = $1',
       [username]
     );
 
@@ -136,11 +136,13 @@ app.get('/api/health', (req, res) => {
 
 // middleware simple para chequear admin (se asume rol enviado en request; en producción usar JWT)
 function requireAdmin(req, res, next) {
-  // para la demo leemos header x-user-role o body
-  const role = req.header('x-user-role') || req.body.role;
+  // para la demo leemos header x-user-role o body (solo si existe)
+  const role = req.header('x-user-role') || (req.body && req.body.role);
+  console.log(`🔐 Validando admin - Header role: ${req.header('x-user-role')}, Body role: ${req.body?.role || 'N/A'}, Final role: ${role}`);
   if (role === 'admin') {
     return next();
   }
+  console.log(`❌ Acceso denegado - Role: ${role}`);
   return res.status(403).json({ error: 'Forbidden: admin only' });
 }
 
@@ -164,7 +166,7 @@ app.put('/api/users/:id/role', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Rol inválido' });
     }
     const update = await pool.query(
-      'UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2 RETURNING id, username, role',
+      'UPDATE users SET role=$1 WHERE id=$2 RETURNING id, username, full_name, email, role',
       [role, id]
     );
     if (update.rows.length === 0) {
