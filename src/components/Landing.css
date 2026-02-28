@@ -57,6 +57,153 @@ nav .nav-links a:hover {
   gap: 1rem;
 }
 
+/* User dropdown menu */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .user-menu-button {
+  background: rgba(20, 20, 35, 0.95);
+  color: #e0e0e0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-menu-button:hover {
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+  transform: translateY(-1px);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-arrow {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 220px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 0.75rem;
+  z-index: 200;
+}
+
+[data-theme="dark"] .user-menu-dropdown {
+  background: #1a1a2e;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.user-menu-header {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+[data-theme="dark"] .user-menu-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.user-menu-username {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+[data-theme="dark"] .user-menu-username {
+  color: #ccc;
+}
+
+.user-menu-role {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  align-self: flex-start;
+}
+
+.user-menu-role.admin {
+  background: rgba(102, 126, 234, 0.18);
+  color: #667eea;
+}
+
+.user-menu-role.user {
+  background: rgba(100, 200, 200, 0.18);
+  color: #2c8a8a;
+}
+
+.user-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  color: #333;
+  text-decoration: none;
+}
+
+.user-menu-item:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+[data-theme="dark"] .user-menu-item {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .user-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.user-menu-logout {
+  color: #e63946;
+}
+
+[data-theme="dark"] .user-menu-logout {
+  color: #ff6b6b;
+}
+
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;

@@ -22,3 +22,21 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 -- Ver la tabla creada
 SELECT * FROM users;
+
+-- Tabla de reservas (estilo Airbnb / hoteles)
+CREATE TABLE IF NOT EXISTS reservations (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hotel VARCHAR(255) NOT NULL,
+  tipo_alojamiento VARCHAR(100) NOT NULL,
+  ubicacion VARCHAR(255) NOT NULL,
+  check_in DATE NOT NULL,
+  check_out DATE NOT NULL,
+  huespedes INT NOT NULL DEFAULT 1,
+  estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);

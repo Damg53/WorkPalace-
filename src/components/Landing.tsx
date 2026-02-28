@@ -16,10 +16,6 @@ export default function Landing({ isDark, setIsDark }: LandingProps) {
       <section className="hero">
         <h1>Bienvenido a WorkPalace</h1>
         <p>Tu plataforma colaborativa moderna para maximizar la productividad en equipo</p>
-        <div className="hero-buttons">
-          <Link to="/signup" className="btn btn-primary">Comenzar Ahora</Link>
-          <a href="#about" className="btn btn-secondary">Conocer Más</a>
-        </div>
       </section>
 
       {/* Features Section */}

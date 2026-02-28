@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react';
+import UserMenu from './UserMenu';
 
 interface NavbarProps {
   isDark: boolean
@@ -52,16 +53,7 @@ export default function Navbar({ isDark, setIsDark, user, onLogout }: NavbarProp
           </div>
 
           {user ? (
-            <>
-              <div className="user-info">
-                <span className="user-avatar">{user.username.charAt(0).toUpperCase()}</span>
-                <span className="user-name">{user.username}</span>
-              </div>
-              {user.role === 'admin' && (
-                <a href="/admin" className="btn btn-secondary">Admin</a>
-              )}
-              <button className="btn btn-logout" onClick={onLogout}>Cerrar sesión</button>
-            </>
+            <UserMenu user={user} onLogout={onLogout} />
           ) : (
             <>
               <Link to="/signup" className="btn btn-secondary">Registrarse</Link>

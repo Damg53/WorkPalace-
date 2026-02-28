@@ -179,6 +179,113 @@ app.put('/api/users/:id/role', requireAdmin, async (req, res) => {
   }
 });
 
+// Obtener perfil de un usuario (para la página de datos personales)
+app.get('/api/users/:id/profile', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'ID de usuario inválido' });
+    }
+    const result = await pool.query(
+      'SELECT id, username, full_name, email, role FROM users WHERE id = $1',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Actualizar perfil del usuario (nombre, email, usuario)
+app.put('/api/users/:id/profile', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { full_name, email, username } = req.body;
+
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'ID de usuario inválido' });
+    }
+
+    const current = await pool.query(
+      'SELECT id, full_name, email, username FROM users WHERE id = $1',
+      [userId]
+    );
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const existing = current.rows[0];
+    const newFullName = full_name !== undefined ? full_name.trim() : existing.full_name;
+    const newEmail = email !== undefined ? email.trim() : existing.email;
+    const newUsername = username !== undefined ? username.trim() : existing.username;
+
+    if (newEmail) {
+      const emailTaken = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [newEmail, userId]
+      );
+      if (emailTaken.rows.length > 0) {
+        return res.status(400).json({ error: 'Este correo ya está en uso por otra cuenta.' });
+      }
+    }
+    if (newUsername) {
+      const usernameTaken = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id != $2',
+        [newUsername, userId]
+      );
+      if (usernameTaken.rows.length > 0) {
+        return res.status(400).json({ error: 'Este nombre de usuario ya está en uso.' });
+      }
+    }
+
+    const update = await pool.query(
+      `UPDATE users SET 
+        full_name = COALESCE($1, full_name),
+        email = COALESCE($2, email),
+        username = COALESCE($3, username)
+       WHERE id = $4
+       RETURNING id, username, full_name, email, role`,
+      [newFullName || null, newEmail || null, newUsername || null, userId]
+    );
+
+    res.json({ user: update.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Obtener reservas del usuario (header x-user-id)
+app.get('/api/reservations', async (req, res) => {
+  try {
+    const userId = req.header('x-user-id');
+    if (!userId) {
+      return res.status(400).json({ error: 'Se requiere el header x-user-id' });
+    }
+    const uid = parseInt(userId, 10);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'x-user-id inválido' });
+    }
+    const result = await pool.query(
+      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, created_at
+       FROM reservations
+       WHERE user_id = $1
+       ORDER BY check_in DESC`,
+      [uid]
+    );
+    res.json({ reservations: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo reservas:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
 });

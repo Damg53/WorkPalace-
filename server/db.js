@@ -94,6 +94,46 @@ async function createTablesIfNotExist() {
       ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
     `);
     console.log('✅ Columna role verificada/creada en users');
+
+    // Crear tabla de reservas (estilo Airbnb / hoteles)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS reservations (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        hotel VARCHAR(255) NOT NULL,
+        tipo_alojamiento VARCHAR(100) NOT NULL,
+        ubicacion VARCHAR(255) NOT NULL,
+        check_in DATE NOT NULL,
+        check_out DATE NOT NULL,
+        huespedes INT NOT NULL DEFAULT 1,
+        estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
+    console.log('✅ Tabla "reservations" verificada/creada');
+
+    // Seed inicial de reservas si la tabla está vacía
+    const countRes = await pool.query('SELECT COUNT(*) AS total FROM reservations');
+    const total = parseInt(countRes.rows[0]?.total || '0', 10);
+    if (total === 0) {
+      const firstUser = await pool.query('SELECT id FROM users ORDER BY id LIMIT 1');
+      if (firstUser.rows.length > 0) {
+        const uid = firstUser.rows[0].id;
+        await pool.query(`
+          INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado)
+          VALUES
+            ($1, 'Casa Verde Medellín', 'Casa entera', 'El Poblado, Medellín', '2026-03-15', '2026-03-18', 4, 'confirmada'),
+            ($1, 'Loft Ciudad del Río', 'Apartamento', 'Ciudad del Río, Medellín', '2026-03-22', '2026-03-25', 2, 'pendiente'),
+            ($1, 'Hotel Boutique Patio', 'Habitación privada', 'Laureles, Medellín', '2026-04-01', '2026-04-05', 2, 'confirmada'),
+            ($1, 'Cabaña Santa Elena', 'Casa entera', 'Santa Elena, Medellín', '2026-04-10', '2026-04-12', 6, 'completada'),
+            ($1, 'Estudio Laureles', 'Apartamento', 'Laureles, Medellín', '2026-02-20', '2026-02-22', 1, 'cancelada')
+        `, [uid]);
+        console.log('✅ Datos iniciales de reservas insertados');
+      }
+    }
   } catch (err) {
     console.error('❌ Error al crear tablas:', err.message);
     throw err;

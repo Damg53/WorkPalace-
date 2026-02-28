@@ -1,0 +1,139 @@
+.settings-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #e0e0e0;
+  padding: 2rem;
+}
+
+[data-theme="light"] .settings-page {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #333;
+}
+
+.settings-container {
+  max-width: 520px;
+  margin: 0 auto;
+  background: rgba(20, 20, 40, 0.9);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .settings-container {
+  background: white;
+  border-color: rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+}
+
+.settings-title {
+  font-size: 1.75rem;
+  margin: 0 0 0.25rem 0;
+  color: #fff;
+}
+
+[data-theme="light"] .settings-title {
+  color: #333;
+}
+
+.settings-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: #aaa;
+  font-size: 0.95rem;
+}
+
+.settings-loading {
+  color: #aaa;
+  padding: 1.5rem 0;
+  margin: 0;
+}
+
+[data-theme="light"] .settings-subtitle {
+  color: #666;
+}
+
+[data-theme="light"] .settings-loading {
+  color: #666;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.settings-field label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+  color: #ccc;
+}
+
+[data-theme="light"] .settings-field label {
+  color: #555;
+}
+
+.settings-field input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: rgba(30, 30, 60, 0.6);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.settings-field input::placeholder {
+  color: #888;
+}
+
+[data-theme="light"] .settings-field input {
+  background: #fff;
+  color: #333;
+  border-color: rgba(102, 126, 234, 0.35);
+}
+
+.settings-field input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.settings-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.settings-message--success {
+  background: rgba(72, 187, 120, 0.15);
+  border: 1px solid rgba(72, 187, 120, 0.4);
+  color: #5dd39e;
+}
+
+[data-theme="light"] .settings-message--success {
+  background: rgba(72, 187, 120, 0.12);
+  color: #228b22;
+}
+
+.settings-message--error {
+  background: rgba(231, 57, 70, 0.15);
+  border: 1px solid rgba(231, 57, 70, 0.4);
+  color: #ff6b6b;
+}
+
+[data-theme="light"] .settings-message--error {
+  color: #c0392b;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.settings-actions .btn {
+  padding: 0.75rem 1.5rem;
+}

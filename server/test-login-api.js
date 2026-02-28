@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 async function testLoginAPI() {
-  console.log('🔐 Probando API de Login\n');
+  console.log(' Probando API de Login\n');
 
   // Usuario de prueba (existe en la BD)
   const testUser = {
@@ -9,7 +9,7 @@ async function testLoginAPI() {
     password: 'MiPasswordSegura' // Cambiar por la contraseña correcta
   };
 
-  console.log('📤 Enviando solicitud de login...');
+  console.log(' Enviando solicitud de login...');
   console.log(`   Usuario: ${testUser.username}`);
   console.log(`   Contraseña: ${testUser.password}\n`);
 
@@ -28,14 +28,14 @@ async function testLoginAPI() {
     console.log(`📄 Response:`, JSON.stringify(data, null, 2));
 
     if (response.ok) {
-      console.log('\n✅ Login exitoso!');
+      console.log('\n Login exitoso!');
       console.log(`Usuario: ${data.user.username}`);
       console.log(`Email: ${data.user.email}`);
     } else {
-      console.log('\n❌ Error en el login:', data.error);
+      console.log('\n Error en el login:', data.error);
     }
   } catch (error) {
-    console.error('❌ Error de conexión:', error.message);
+    console.error(' Error de conexión:', error.message);
     console.log('\n💡 Asegúrate de que:');
     console.log('1. El servidor está corriendo: npm run server');
     console.log('2. PostgreSQL está corriendo: docker-compose up -d');

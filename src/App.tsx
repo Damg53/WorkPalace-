@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
 import ForgotPassword from './components/ForgotPassword.tsx'
 import Navbar from './components/Navbar'
 import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
+import Settings from './components/Settings'
 
 function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: boolean) => void }) {
   return (
@@ -125,9 +126,46 @@ function Landing({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
 // Dashboard component moved to its own file
 // (see src/components/Dashboard.tsx)
 
+const STORAGE_KEY = 'workpalace-user'
+
+function loadStoredUser(): { id: number; username: string; role?: string; fullName?: string; email?: string } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const u = JSON.parse(raw)
+    if (!u || typeof u.username !== 'string' || typeof u.id !== 'number') return null
+    return {
+      id: u.id,
+      username: u.username,
+      role: u.role,
+      fullName: u.fullName,
+      email: u.email,
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveUser(user: { id?: number; username: string; role?: string; fullName?: string; email?: string } | null) {
+  if (!user) {
+    localStorage.removeItem(STORAGE_KEY)
+    return
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    fullName: user.fullName,
+    email: user.email,
+  }))
+}
+
 function App() {
-  const [user, setUser] = useState<{ username: string; role?: string; fullName?: string; email?: string } | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [user, setUser] = useState<{ id?: number; username: string; role?: string; fullName?: string; email?: string } | null>(() => loadStoredUser())
+  const [isAdmin, setIsAdmin] = useState(() => {
+    const u = loadStoredUser()
+    return u?.role === 'admin'
+  })
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme-mode')
     return saved ? saved === 'dark' : false
@@ -139,15 +177,25 @@ function App() {
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
   }, [isDark])
 
-  // now receive object with username, role, fullName, and email
-  function handleLogin(userInfo: { username: string; role?: string; fullName?: string; email?: string }) {
+  // now receive object with id, username, role, fullName, and email
+  function handleLogin(userInfo: { id?: number; username: string; role?: string; fullName?: string; email?: string }) {
     setUser(userInfo)
     setIsAdmin(userInfo.role === 'admin')
+    saveUser(userInfo)
   }
 
   function handleLogout() {
+    localStorage.removeItem(STORAGE_KEY)
     setUser(null)
     setIsAdmin(false)
+  }
+
+  function handleProfileUpdate(updated: { id: number; username: string; role?: string; fullName?: string; email?: string }) {
+    setUser(prev => {
+      const next = prev ? { ...prev, ...updated } : null
+      if (next) saveUser(next)
+      return next
+    })
   }
 
   return (
@@ -168,7 +216,7 @@ function App() {
           path="/login"
           element={
             user ? (
-              <Navigate to="/dashboard" replace />
+              isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
             ) : (
               <div className="auth-layout">
                 <Login onLogin={handleLogin} />
@@ -211,6 +259,32 @@ function App() {
           element={
             user && isAdmin ? (
               <AdminDashboard user={user!} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* settings / profile */}
+        <Route
+          path="/settings"
+          element={
+            user && user.id != null ? (
+              <Settings
+                user={{
+                  id: user.id,
+                  username: user.username,
+                  fullName: user.fullName,
+                  email: user.email,
+                  role: user.role,
+                }}
+                onLogout={handleLogout}
+                onProfileUpdate={handleProfileUpdate}
+                isDark={isDark}
+                setIsDark={setIsDark}
+              />
+            ) : user ? (
+              <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
             ) : (
               <Navigate to="/" replace />
             )

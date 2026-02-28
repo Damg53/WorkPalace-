@@ -5,7 +5,7 @@ import './Login.css';
 import { useNavigate } from 'react-router-dom';
 
 interface LoginProps {
-  onLogin: (user: { username: string; role?: string }) => void;
+  onLogin: (user: { id?: number; username: string; role?: string; fullName?: string; email?: string }) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -75,23 +75,17 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Login exitoso
       console.log('Login exitoso');
-      const returnedUser = data.user.username;
-      const returnedRole = data.user.role;
-      console.log('👤 Usuario:', returnedUser);
-      console.log('🔐 Rol recibido:', returnedRole);
-      console.log('📊 Tipo de rol:', typeof returnedRole);
-      console.log('✅ ¿Es admin?:', returnedRole === 'admin');
-      onLogin({ username: returnedUser, role: returnedRole });
+      const u = data.user;
+      onLogin({
+        id: u.id,
+        username: u.username,
+        role: u.role,
+        fullName: u.full_name,
+        email: u.email,
+      });
       setUsername('');
       setPassword('');
-      // redirect depending on role
-      if (returnedRole === 'admin') {
-        console.log('🚀 Redirigiendo a /admin');
-        navigate('/admin');
-      } else {
-        console.log('🚀 Redirigiendo a /dashboard');
-        navigate('/dashboard');
-      }
+      navigate('/');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
       console.error('Error:', errorMsg);

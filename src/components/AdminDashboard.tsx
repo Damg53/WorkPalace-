@@ -124,8 +124,8 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           value={u.role} 
                           onChange={e => updateRole(u.id, e.target.value)}
                         >
-                          <option value="user">👤 User</option>
-                          <option value="admin">👑 Admin</option>
+                          <option value="user"> Usuario</option>
+                          <option value="admin"> Administrador</option>
                         </select>
                       </td>
                     </tr>
