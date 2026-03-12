@@ -24,6 +24,7 @@ interface Place {
   modalidad: string | null
   caracteristicas: string | null
   nivel_ruido: string | null
+  image_url: string | null
 }
 
 function Landing({
@@ -44,7 +45,18 @@ function Landing({
     let cancelled = false
     async function fetchPlaces() {
       try {
-        const res = await fetch(`${API}/api/places`)
+        // Solo cargar espacios si el usuario está autenticado
+        if (!user?.id) {
+          setPlaces([])
+          setLoadingSpaces(false)
+          return
+        }
+
+        const res = await fetch(`${API}/api/places`, {
+          headers: {
+            'x-user-id': String(user.id),
+          },
+        })
         const data = await res.json()
         if (cancelled) return
         if (!res.ok) {
@@ -60,7 +72,7 @@ function Landing({
     }
     fetchPlaces()
     return () => { cancelled = true }
-  }, [])
+  }, [user?.id])
 
   function handleReserve(placeId: number) {
     if (user && user.id != null) {
@@ -76,20 +88,109 @@ function Landing({
       {/* shared header/navigation */}
       <Navbar isDark={isDark} setIsDark={setIsDark} user={user || undefined} />
 
-      {/* Hero Section */}
-      <section className="hero">
-        <h1>Bienvenido a WorkPalace</h1>
-        <p>Encuentra espacios productivos en Medellín y resérvalos solo por el tiempo que necesitas.</p>
-        {!user && (
-          <div className="hero-buttons">
-            <Link to="/signup" className="btn btn-primary">Crear cuenta gratis</Link>
-            <Link to="/login" className="btn btn-secondary">Iniciar sesión</Link>
-          </div>
-        )}
-      </section>
+      {/* Si el usuario es admin, redirigir al panel de administrador */}
+      {user && user.role === 'admin' ? (
+        <Navigate to="/admin" replace />
+      ) : user && user.role !== 'admin' ? (
+        <section className="features" id="explore-spaces">
+          <div className="features-container">
+            <h2 className="section-title">Explora espacios disponibles</h2>
+            <p style={{ marginBottom: '1.5rem', maxWidth: 720 }}>
+              Estos son los espacios publicados en la plataforma.
+            </p>
 
-      {/* Features Section */}
-      <section className="features" id="features">
+            {spacesError && <p className="reservations-error">{spacesError}</p>}
+            {loadingSpaces ? (
+              <p className="settings-loading">Cargando espacios disponibles...</p>
+            ) : (
+              <div className="features-grid">
+                {places.length === 0 ? (
+                  <p style={{ padding: '1.5rem 0', color: '#666' }}>
+                    No hay espacios registrados aún en la base de datos.
+                  </p>
+                ) : (
+                  places.map(place => (
+                    <div key={place.id} className="feature-card">
+                      {place.image_url && (
+                        <div style={{
+                          width: '100%',
+                          height: '150px',
+                          marginBottom: '1rem',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          backgroundColor: '#222'
+                        }}>
+                          <img
+                            src={place.image_url}
+                            alt={place.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        </div>
+                      )}
+                      <h3>{place.tipo}</h3>
+                      <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>{place.name}</p>
+                      <p style={{ marginBottom: '0.35rem' }}>
+                        {[place.barrio, place.ciudad].filter(Boolean).join(', ')}
+                      </p>
+                      <p style={{ marginBottom: '0.35rem' }}>
+                        <strong>Capacidad:</strong> {place.capacidad ?? 'Sin especificar'}
+                      </p>
+                      <p style={{ marginBottom: '0.35rem' }}>
+                        <strong>Modalidad:</strong> {place.modalidad ?? 'Consultar disponibilidad'}
+                      </p>
+                      <p style={{ marginBottom: '0.75rem' }}>
+                        <strong>Precio de referencia:</strong>{' '}
+                        {place.precio_hora != null
+                          ? `$${place.precio_hora.toLocaleString('es-CO')} / hora`
+                          : 'A convenir'}
+                      </p>
+                      {place.caracteristicas && (
+                        <p style={{ marginBottom: '0.75rem' }}>
+                          <strong>Características:</strong> {place.caracteristicas}
+                        </p>
+                      )}
+                      {place.nivel_ruido && (
+                        <p style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.85 }}>
+                          Nivel de ruido: {place.nivel_ruido}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '0.85rem' }}>
+                          Confirma los datos y simula tu pago para reservar.
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => handleReserve(place.id)}
+                        >
+                          Reserva ya
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* Hero Section */}
+          <section className="hero">
+            <h1>Bienvenido a WorkPalace</h1>
+            <p>Encuentra espacios productivos en Medellín y resérvalos solo por el tiempo que necesitas.</p>
+            <div className="hero-buttons">
+              <Link to="/signup" className="btn btn-primary">Crear cuenta gratis</Link>
+              <Link to="/login" className="btn btn-secondary">Iniciar sesión</Link>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section className="features" id="features">
         <div className="features-container">
           <h2 className="section-title">Cómo funciona WorkPalace</h2>
           <div className="features-grid">
@@ -123,79 +224,6 @@ function Landing({
               <p>Sistema de reseñas bidireccional entre arrendadores y arrendatarios para construir una comunidad confiable y transparente en Medellín.</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Demo spaces grid (containers by characteristics) */}
-      <section className="features" id="explore-spaces">
-        <div className="features-container">
-          <h2 className="section-title">Explora espacios disponibles</h2>
-          <p style={{ marginBottom: '1.5rem', maxWidth: 720 }}>
-            Estos son los espacios publicados en la plataforma.
-            {!user && (
-              <>
-                {' '}Para crear una reserva nueva debes
-                <Link to="/login" style={{ marginLeft: 4 }}>iniciar sesión</Link>.
-              </>
-            )}
-          </p>
-
-          {spacesError && <p className="reservations-error">{spacesError}</p>}
-          {loadingSpaces ? (
-            <p className="settings-loading">Cargando espacios disponibles...</p>
-          ) : (
-            <div className="features-grid">
-              {places.length === 0 ? (
-                <p style={{ padding: '1.5rem 0', color: '#666' }}>
-                  No hay espacios registrados aún en la base de datos.
-                </p>
-              ) : (
-                places.map(place => (
-                  <div key={place.id} className="feature-card">
-                    <h3>{place.tipo}</h3>
-                    <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>{place.name}</p>
-                    <p style={{ marginBottom: '0.35rem' }}>
-                      {[place.barrio, place.ciudad].filter(Boolean).join(', ')}
-                    </p>
-                    <p style={{ marginBottom: '0.35rem' }}>
-                      <strong>Capacidad:</strong> {place.capacidad ?? 'Sin especificar'}
-                    </p>
-                    <p style={{ marginBottom: '0.35rem' }}>
-                      <strong>Modalidad:</strong> {place.modalidad ?? 'Consultar disponibilidad'}
-                    </p>
-                    <p style={{ marginBottom: '0.75rem' }}>
-                      <strong>Precio de referencia:</strong>{' '}
-                      {place.precio_hora != null
-                        ? `$${place.precio_hora.toLocaleString('es-CO')} / hora`
-                        : 'A convenir'}
-                    </p>
-                    {place.caracteristicas && (
-                      <p style={{ marginBottom: '0.75rem' }}>
-                        <strong>Características:</strong> {place.caracteristicas}
-                      </p>
-                    )}
-                    {place.nivel_ruido && (
-                      <p style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.85 }}>
-                        Nivel de ruido: {place.nivel_ruido}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.85rem' }}>
-                        {user ? 'Confirma los datos y simula tu pago para reservar.' : 'Inicia sesión para reservar este tipo de espacio.'}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => handleReserve(place.id)}
-                      >
-                        {user ? 'Reserva ya' : 'Iniciar sesión para reservar'}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
       </section>
 
@@ -249,11 +277,13 @@ function Landing({
         </div>
       </section>
 
-      {/* Footer */}
-      <footer id="site-footer">
-        <p>&copy; 2026 WorkPalace. Todos los derechos reservados.</p>
-        <p>Conectando talento con espacios en Medellín</p>
-      </footer>
+          {/* Footer */}
+          <footer id="site-footer">
+            <p>&copy; 2026 WorkPalace. Todos los derechos reservados.</p>
+            <p>Conectando talento con espacios en Medellín</p>
+          </footer>
+        </>
+      )}
     </>
   )
 }

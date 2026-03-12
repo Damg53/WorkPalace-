@@ -474,9 +474,16 @@ app.get('/api/available-reservations', async (_req, res) => {
   }
 });
 
-// Lista de espacios (places) para el landing
-app.get('/api/places', async (_req, res) => {
+// Lista de espacios (places) para el landing - Requiere autenticación
+app.get('/api/places', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
+    
+    // Solo usuarios autenticados pueden ver los espacios publicados
+    if (!userId) {
+      return res.json({ places: [] });
+    }
+
     const result = await pool.query(
       `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido
        FROM places
@@ -501,6 +508,29 @@ app.get('/api/admin/places', requireAdmin, async (_req, res) => {
     res.json({ places: result.rows });
   } catch (error) {
     console.error('Error obteniendo places (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Admin - crear novo lugar
+app.post('/api/admin/places', requireAdmin, async (req, res) => {
+  try {
+    const { name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido } = req.body;
+
+    if (!name || !tipo) {
+      return res.status(400).json({ error: 'Nombre y tipo son requeridos' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO places (name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+       RETURNING id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active`,
+      [name, tipo, barrio || null, ciudad || null, capacidad || null, precio_hora || null, modalidad || null, caracteristicas || null, nivel_ruido || null]
+    );
+
+    res.status(201).json({ place: result.rows[0] });
+  } catch (error) {
+    console.error('Error creando lugar:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

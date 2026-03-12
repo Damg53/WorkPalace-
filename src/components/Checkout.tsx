@@ -52,7 +52,11 @@ export default function Checkout({ user, isDark, setIsDark }: CheckoutProps) {
     let cancelled = false
     async function fetchPlace() {
       try {
-        const res = await fetch(`${API}/api/places`)
+        const res = await fetch(`${API}/api/places`, {
+          headers: {
+            'x-user-id': String(user.id),
+          },
+        })
         const data = await res.json()
         if (cancelled) return
         if (!res.ok) {

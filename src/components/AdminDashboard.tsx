@@ -15,6 +15,18 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
   const [reservations, setReservations] = useState<Array<any>>([]);
   const [places, setPlaces] = useState<Array<any>>([]);
   const [error, setError] = useState('');
+  const [showCreatePlaceForm, setShowCreatePlaceForm] = useState(false);
+  const [newPlaceForm, setNewPlaceForm] = useState({
+    name: '',
+    tipo: '',
+    barrio: '',
+    ciudad: '',
+    capacidad: '',
+    precio_hora: '',
+    modalidad: '',
+    caracteristicas: '',
+    nivel_ruido: '',
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -224,6 +236,58 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     }
   };
 
+  const createPlace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlaceForm.name || !newPlaceForm.tipo) {
+      setError('Nombre y tipo son requeridos');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:3001/api/admin/places', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': 'admin',
+        },
+        body: JSON.stringify({
+          name: newPlaceForm.name,
+          tipo: newPlaceForm.tipo,
+          barrio: newPlaceForm.barrio || null,
+          ciudad: newPlaceForm.ciudad || null,
+          capacidad: newPlaceForm.capacidad || null,
+          precio_hora: newPlaceForm.precio_hora ? Number(newPlaceForm.precio_hora) : null,
+          modalidad: newPlaceForm.modalidad || null,
+          caracteristicas: newPlaceForm.caracteristicas || null,
+          nivel_ruido: newPlaceForm.nivel_ruido || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Falló la creación del lugar');
+      }
+
+      setPlaces([...places, data.place]);
+      setNewPlaceForm({
+        name: '',
+        tipo: '',
+        barrio: '',
+        ciudad: '',
+        capacidad: '',
+        precio_hora: '',
+        modalidad: '',
+        caracteristicas: '',
+        nivel_ruido: '',
+      });
+      setShowCreatePlaceForm(false);
+      setError('');
+    } catch (e) {
+      console.error(e);
+      setError('Error al crear lugar: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
   return (
     <div className="admin-container">
       <Navbar isDark={isDark} setIsDark={setIsDark} user={user} onLogout={onLogout} />
@@ -402,7 +466,218 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
 
         {/* Places Table */}
         <div className="users-section" style={{ marginTop: '3rem' }}>
-          <h2>Lugares publicados</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2>Lugares publicados</h2>
+            <button 
+              className="btn btn-primary"
+              onClick={() => setShowCreatePlaceForm(!showCreatePlaceForm)}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+            >
+              {showCreatePlaceForm ? 'Cancelar' : '+ Crear nuevo lugar'}
+            </button>
+          </div>
+
+          {/* Form para crear nuevo lugar */}
+          {showCreatePlaceForm && (
+            <form onSubmit={createPlace} style={{
+              backgroundColor: '#1a1a1a',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              marginBottom: '2rem',
+              border: '1px solid #333'
+            }}>
+              <h3 style={{ marginBottom: '1rem' }}>Crear Nuevo Lugar</h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Nombre *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Studio 404"
+                    value={newPlaceForm.name}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, name: e.target.value })}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Tipo *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Estudio de grabación"
+                    value={newPlaceForm.tipo}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, tipo: e.target.value })}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Barrio
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: El Poblado"
+                    value={newPlaceForm.barrio}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, barrio: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Ciudad
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Medellín"
+                    value={newPlaceForm.ciudad}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, ciudad: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Capacidad
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Hasta 4 personas"
+                    value={newPlaceForm.capacidad}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, capacidad: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Precio/hora
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ej: 45000"
+                    value={newPlaceForm.precio_hora}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, precio_hora: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Modalidad
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Por hora / media jornada"
+                    value={newPlaceForm.modalidad}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, modalidad: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Características
+                  </label>
+                  <textarea
+                    placeholder="Ej: Cabina tratada acústicamente, Interfaz de audio, Micrófonos profesionales"
+                    value={newPlaceForm.caracteristicas}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, caracteristicas: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff',
+                      fontFamily: 'inherit',
+                      minHeight: '80px'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Nivel de ruido
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Aislado"
+                    value={newPlaceForm.nivel_ruido}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, nivel_ruido: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      backgroundColor: '#222',
+                      color: '#fff'
+                    }}
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ padding: '0.7rem 1.5rem' }}
+              >
+                Crear Lugar
+              </button>
+            </form>
+          )}
+
           {places.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>
               No hay lugares registrados.
