@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import './Landing.css'
 import Navbar from './Navbar'
 

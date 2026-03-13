@@ -149,7 +149,7 @@ function requireAdmin(req, res, next) {
 // Obtener todos los usuarios (admin)
 app.get('/api/users', requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, full_name, email, username, role FROM users ORDER BY id');
+    const result = await pool.query('SELECT id, full_name, email, username, role, active FROM users ORDER BY id');
     res.json({ users: result.rows });
   } catch (error) {
     console.error('Error obteniendo usuarios:', error);
@@ -175,6 +175,43 @@ app.put('/api/users/:id/role', requireAdmin, async (req, res) => {
     res.json({ user: update.rows[0] });
   } catch (error) {
     console.error('Error al actualizar rol:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Activar / desactivar usuario (admin)
+app.put('/api/users/:id/active', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body || {};
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ error: 'El campo active debe ser booleano' });
+    }
+    const result = await pool.query(
+      'UPDATE users SET active = $1 WHERE id = $2 RETURNING id, full_name, email, username, role, active',
+      [active, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar estado de usuario:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Eliminar usuario (admin)
+app.delete('/api/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });
@@ -282,6 +319,251 @@ app.get('/api/reservations', async (req, res) => {
     res.json({ reservations: result.rows });
   } catch (error) {
     console.error('Error obteniendo reservas:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Crear una nueva reserva para un place
+app.post('/api/reservations', async (req, res) => {
+  try {
+    const userId = req.header('x-user-id');
+    if (!userId) {
+      return res.status(400).json({ error: 'Se requiere el header x-user-id' });
+    }
+    const uid = parseInt(userId, 10);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'x-user-id inválido' });
+    }
+
+    const { placeId, checkIn, checkOut, huespedes } = req.body || {};
+    if (!placeId || !checkIn || !checkOut) {
+      return res.status(400).json({ error: 'placeId, checkIn y checkOut son requeridos' });
+    }
+
+    const pid = parseInt(placeId, 10);
+    if (isNaN(pid)) {
+      return res.status(400).json({ error: 'placeId inválido' });
+    }
+
+    const placeResult = await pool.query(
+      `SELECT id, name, tipo, barrio, ciudad FROM places WHERE id = $1`,
+      [pid]
+    );
+    if (placeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Espacio no encontrado' });
+    }
+    const place = placeResult.rows[0];
+
+    const ubicacionParts = [];
+    if (place.barrio) ubicacionParts.push(place.barrio);
+    if (place.ciudad) ubicacionParts.push(place.ciudad);
+    const ubicacion = ubicacionParts.join(', ');
+
+    const insert = await pool.query(
+      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 1), 'pendiente')
+       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, created_at`,
+      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, huespedes || 1]
+    );
+
+    res.status(201).json({ reservation: insert.rows[0] });
+  } catch (error) {
+    console.error('Error creando reserva:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Listar todas las reservas (admin)
+app.get('/api/admin/reservations', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.id,
+              r.user_id,
+              u.username,
+              u.email,
+              r.hotel,
+              r.tipo_alojamiento,
+              r.ubicacion,
+              r.check_in,
+              r.check_out,
+              r.huespedes,
+              r.estado,
+              r.active,
+              r.created_at
+       FROM reservations r
+       LEFT JOIN users u ON u.id = r.user_id
+       ORDER BY r.check_in DESC, r.id DESC`
+    );
+    res.json({ reservations: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo reservas (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Actualizar una reserva (admin)
+app.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { checkIn, checkOut, huespedes, estado, active } = req.body || {};
+    const rid = parseInt(id, 10);
+    if (isNaN(rid)) {
+      return res.status(400).json({ error: 'ID de reserva inválido' });
+    }
+
+    const result = await pool.query(
+      `UPDATE reservations SET
+         check_in = COALESCE($1, check_in),
+         check_out = COALESCE($2, check_out),
+         huespedes = COALESCE($3, huespedes),
+         estado = COALESCE($4, estado),
+         active = COALESCE($5, active)
+       WHERE id = $6
+       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, active, created_at`,
+      [
+        checkIn || null,
+        checkOut || null,
+        typeof huespedes === 'number' ? huespedes : null,
+        estado || null,
+        active === undefined ? null : !!active,
+        rid,
+      ]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+    res.json({ reservation: result.rows[0] });
+  } catch (error) {
+    console.error('Error actualizando reserva (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Eliminar una reserva (admin)
+app.delete('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rid = parseInt(id, 10);
+    if (isNaN(rid)) {
+      return res.status(400).json({ error: 'ID de reserva inválido' });
+    }
+    const result = await pool.query('DELETE FROM reservations WHERE id = $1 RETURNING id', [rid]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error eliminando reserva (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Reservas disponibles públicas para el landing (todas las activas)
+app.get('/api/available-reservations', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado
+       FROM reservations
+       WHERE estado IN ('pendiente', 'confirmada')
+       ORDER BY check_in ASC, hotel ASC`
+    );
+    res.json({ reservations: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo reservas disponibles:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Lista de espacios (places) para el landing
+app.get('/api/places', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido
+       FROM places
+       WHERE active = TRUE
+       ORDER BY id ASC`
+    );
+    res.json({ places: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo places:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Admin - listar y administrar lugares (places)
+app.get('/api/admin/places', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active
+       FROM places
+       ORDER BY id ASC`
+    );
+    res.json({ places: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo places (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+app.put('/api/admin/places/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, active } = req.body || {};
+    const pid = parseInt(id, 10);
+    if (isNaN(pid)) {
+      return res.status(400).json({ error: 'ID de lugar inválido' });
+    }
+
+    const result = await pool.query(
+      `UPDATE places SET
+         name = COALESCE($1, name),
+         tipo = COALESCE($2, tipo),
+         barrio = COALESCE($3, barrio),
+         ciudad = COALESCE($4, ciudad),
+         capacidad = COALESCE($5, capacidad),
+         precio_hora = COALESCE($6, precio_hora),
+         modalidad = COALESCE($7, modalidad),
+         caracteristicas = COALESCE($8, caracteristicas),
+         active = COALESCE($9, active)
+       WHERE id = $10
+       RETURNING id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active`,
+      [
+        name || null,
+        tipo || null,
+        barrio || null,
+        ciudad || null,
+        capacidad || null,
+        typeof precio_hora === 'number' ? precio_hora : null,
+        modalidad || null,
+        caracteristicas || null,
+        active === undefined ? null : !!active,
+        pid,
+      ]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Lugar no encontrado' });
+    }
+    res.json({ place: result.rows[0] });
+  } catch (error) {
+    console.error('Error actualizando place (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+app.delete('/api/admin/places/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pid = parseInt(id, 10);
+    if (isNaN(pid)) {
+      return res.status(400).json({ error: 'ID de lugar inválido' });
+    }
+    const result = await pool.query('DELETE FROM places WHERE id = $1 RETURNING id', [pid]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Lugar no encontrado' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error eliminando place (admin):', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

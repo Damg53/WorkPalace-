@@ -33,9 +33,19 @@ export default function Navbar({ isDark, setIsDark, user, onLogout }: NavbarProp
       <nav>
         <div className="logo">✨ WorkPalace</div>
         <ul className="nav-links">
-          <li><a href="#features">Características</a></li>
-          <li><a href="#about">Acerca de</a></li>
-          <li><a href="#contact">Contacto</a></li>
+          {user ? (
+            <>
+              <li><a href="#available-reservations">Disponibles</a></li>
+              <li><a href="#stats">Mis reservas</a></li>
+              <li><Link to="/settings">Perfil</Link></li>
+            </>
+          ) : (
+            <>
+              <li><a href="#features">Características</a></li>
+              <li><a href="#about">Acerca de</a></li>
+              <li><a href="#contact">Contacto</a></li>
+            </>
+          )}
         </ul>
         <div className="auth-buttons">
           <div className="theme-toggle">

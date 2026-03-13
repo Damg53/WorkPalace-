@@ -1,4 +1,5 @@
 /* Reservations table - stats section */
+#available-reservations .dashboard-reservations,
 #stats .dashboard-reservations {
   width: 100%;
   margin-top: 1rem;
@@ -11,6 +12,7 @@
   font-size: 0.95rem;
 }
 
+#available-reservations .reservations-table-wrap,
 #stats .reservations-table-wrap {
   overflow-x: auto;
   border-radius: 12px;
@@ -18,17 +20,20 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
+[data-theme="dark"] #available-reservations .reservations-table-wrap,
 [data-theme="dark"] #stats .reservations-table-wrap {
   background: rgba(30, 30, 60, 0.6);
   border-color: rgba(102, 126, 234, 0.25);
 }
 
+#available-reservations .reservations-table,
 #stats .reservations-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 700px;
 }
 
+#available-reservations .reservations-table th,
 #stats .reservations-table th {
   padding: 1rem 1.25rem;
   text-align: left;
@@ -41,11 +46,13 @@
   border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 }
 
+[data-theme="dark"] #available-reservations .reservations-table th,
 [data-theme="dark"] #stats .reservations-table th {
   color: #8b9aff;
   background: rgba(102, 126, 234, 0.12);
 }
 
+#available-reservations .reservations-table td,
 #stats .reservations-table td {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid rgba(102, 126, 234, 0.1);
@@ -53,38 +60,46 @@
   font-size: 0.95rem;
 }
 
+[data-theme="dark"] #available-reservations .reservations-table td,
 [data-theme="dark"] #stats .reservations-table td {
   color: #e0e0e0;
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
+#available-reservations .reservations-table tbody tr:hover,
 #stats .reservations-table tbody tr:hover {
   background: rgba(102, 126, 234, 0.05);
 }
 
+[data-theme="dark"] #available-reservations .reservations-table tbody tr:hover,
 [data-theme="dark"] #stats .reservations-table tbody tr:hover {
   background: rgba(102, 126, 234, 0.08);
 }
 
+#available-reservations .reservation-hotel,
 #stats .reservation-hotel {
   font-weight: 600;
   color: #333;
 }
 
+[data-theme="dark"] #available-reservations .reservation-hotel,
 [data-theme="dark"] #stats .reservation-hotel {
   color: #fff;
 }
 
+#available-reservations .reservation-type,
 #stats .reservation-type {
   font-size: 0.8rem;
   color: #666;
   margin-top: 0.2rem;
 }
 
+[data-theme="dark"] #available-reservations .reservation-type,
 [data-theme="dark"] #stats .reservation-type {
   color: #aaa;
 }
 
+#available-reservations .reservation-badge,
 #stats .reservation-badge {
   display: inline-block;
   padding: 0.35rem 0.75rem;
@@ -93,47 +108,97 @@
   font-weight: 600;
 }
 
+#available-reservations .reservation-badge.confirmada,
 #stats .reservation-badge.confirmada {
   background: rgba(72, 187, 120, 0.15);
   color: #2e7d4a;
 }
 
+[data-theme="dark"] #available-reservations .reservation-badge.confirmada,
 [data-theme="dark"] #stats .reservation-badge.confirmada {
   background: rgba(72, 187, 120, 0.25);
   color: #5dd39e;
 }
 
+#available-reservations .reservation-badge.pendiente,
 #stats .reservation-badge.pendiente {
   background: rgba(246, 190, 0, 0.15);
   color: #b38600;
 }
 
+[data-theme="dark"] #available-reservations .reservation-badge.pendiente,
 [data-theme="dark"] #stats .reservation-badge.pendiente {
   background: rgba(246, 190, 0, 0.25);
   color: #f5c842;
 }
 
+#available-reservations .reservation-badge.cancelada,
 #stats .reservation-badge.cancelada {
   background: rgba(231, 57, 70, 0.15);
   color: #c0392b;
 }
 
+[data-theme="dark"] #available-reservations .reservation-badge.cancelada,
 [data-theme="dark"] #stats .reservation-badge.cancelada {
   background: rgba(231, 57, 70, 0.2);
   color: #ff6b6b;
 }
 
+#available-reservations .reservation-badge.completada,
 #stats .reservation-badge.completada {
   background: rgba(102, 126, 234, 0.15);
   color: #5568d3;
 }
 
+[data-theme="dark"] #available-reservations .reservation-badge.completada,
 [data-theme="dark"] #stats .reservation-badge.completada {
   background: rgba(102, 126, 234, 0.25);
   color: #8b9aff;
 }
 
+.section-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.reservations-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reservations-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+[data-theme="dark"] .reservations-filter {
+  color: #cfcfe6;
+}
+
+.reservations-filter select {
+  border-radius: 10px;
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 0.55rem 0.75rem;
+  outline: none;
+}
+
+[data-theme="dark"] .reservations-filter select {
+  background: rgba(30, 30, 60, 0.7);
+  color: #fff;
+  border-color: rgba(102, 126, 234, 0.35);
+}
+
 @media (max-width: 768px) {
+  #available-reservations .reservations-table th,
+  #available-reservations .reservations-table td,
   #stats .reservations-table th,
   #stats .reservations-table td {
     padding: 0.75rem 0.5rem;

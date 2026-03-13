@@ -95,6 +95,13 @@ async function createTablesIfNotExist() {
     `);
     console.log('✅ Columna role verificada/creada en users');
 
+    // columna active para desactivar usuarios sin borrarlos
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+    `);
+    console.log('✅ Columna active verificada/creada en users');
+
     // Crear tabla de reservas (estilo Airbnb / hoteles)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reservations (
@@ -114,6 +121,56 @@ async function createTablesIfNotExist() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
     console.log('✅ Tabla "reservations" verificada/creada');
+
+    // columna active para desactivar reservas sin borrarlas
+    await pool.query(`
+      ALTER TABLE reservations
+      ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+    `);
+    console.log('✅ Columna active verificada/creada en reservations');
+
+    // Crear tabla de espacios (places)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS places (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        tipo VARCHAR(100) NOT NULL,
+        barrio VARCHAR(255),
+        ciudad VARCHAR(255),
+        capacidad VARCHAR(255),
+        precio_hora INT,
+        modalidad VARCHAR(255),
+        caracteristicas TEXT,
+        nivel_ruido VARCHAR(100),
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Tabla "places" verificada/creada');
+
+    // Seed inicial de places si la tabla está vacía
+    const countPlaces = await pool.query('SELECT COUNT(*) AS total FROM places');
+    const totalPlaces = parseInt(countPlaces.rows[0]?.total || '0', 10);
+    if (totalPlaces === 0) {
+      await pool.query(`
+        INSERT INTO places (name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido)
+        VALUES
+          ('Studio 404', 'Estudio de grabación', 'El Poblado', 'Medellín', 'Hasta 4 personas', 45000,
+           'Por hora / media jornada',
+           'Cabina tratada acústicamente, Interfaz de audio, Micrófonos profesionales, Aire acondicionado',
+           'Aislado'),
+          ('Cocina Clouds', 'Cocina oculta', 'Laureles', 'Medellín', 'Hasta 6 personas', 60000,
+           'Media jornada / jornada completa',
+           'Campana industrial, Horno convector, Utensilios básicos, Área de empaque',
+           'Uso gastronómico'),
+          ('WoodLab', 'Taller de carpintería', 'Belén', 'Medellín', 'Hasta 3 personas', 50000,
+           'Jornada completa',
+           'Sierra de mesa, Lijadora de banda, Prensas y bancos de trabajo, Extractor de polvo',
+           'Alto (ideal para proyectos)');
+      `);
+      console.log('✅ Datos iniciales de places insertados');
+    }
 
     // Seed inicial de reservas si la tabla está vacía
     const countRes = await pool.query('SELECT COUNT(*) AS total FROM reservations');
