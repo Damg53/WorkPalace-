@@ -112,9 +112,8 @@ export default function Checkout({ user, isDark, setIsDark }: CheckoutProps) {
         setError(data.error || 'No se pudo completar la reserva.')
         return
       }
-      // Redirigir al panel correspondiente según rol
-      const target = user.role === 'admin' ? '/admin' : '/dashboard'
-      navigate(target, { replace: true })
+      // Redirigir a la home para ver los lugares actualizados
+      navigate('/', { replace: true })
     } catch (_e) {
       setError('Error de conexión al procesar el pago simulado.')
     } finally {

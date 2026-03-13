@@ -35,8 +35,12 @@ export default function Navbar({ isDark, setIsDark, user, onLogout }: NavbarProp
         <ul className="nav-links">
           {user ? (
             <>
-              <li><a href="#available-reservations">Disponibles</a></li>
-              <li><a href="#stats">Mis reservas</a></li>
+              {user.role !== 'admin' && (
+                <>
+                  <li><Link to="/">Disponibles</Link></li>
+                  <li><Link to="/dashboard">Mis reservas</Link></li>
+                </>
+              )}
               <li><Link to="/settings">Perfil</Link></li>
             </>
           ) : (

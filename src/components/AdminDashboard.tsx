@@ -16,6 +16,8 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
   const [places, setPlaces] = useState<Array<any>>([]);
   const [error, setError] = useState('');
   const [showCreatePlaceForm, setShowCreatePlaceForm] = useState(false);
+  const [editingImagePlaceId, setEditingImagePlaceId] = useState<number | null>(null);
+  const [editingImageUrl, setEditingImageUrl] = useState('');
   const [newPlaceForm, setNewPlaceForm] = useState({
     name: '',
     tipo: '',
@@ -26,6 +28,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     modalidad: '',
     caracteristicas: '',
     nivel_ruido: '',
+    image_url: '',
   });
 
   useEffect(() => {
@@ -221,6 +224,39 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     }
   };
 
+  const openEditImageModal = (placeId: number) => {
+    const place = places.find(p => p.id === placeId);
+    if (place) {
+      setEditingImagePlaceId(placeId);
+      setEditingImageUrl(place.image_url || '');
+    }
+  };
+
+  const saveImageChange = async () => {
+    if (editingImagePlaceId === null) return;
+    try {
+      await updatePlace(editingImagePlaceId, { image_url: editingImageUrl });
+      setEditingImagePlaceId(null);
+      setEditingImageUrl('');
+    } catch (e) {
+      console.error(e);
+      setError('Error al actualizar imagen');
+    }
+  };
+
+  const deleteImage = async () => {
+    if (editingImagePlaceId === null) return;
+    if (!window.confirm('¿Eliminar la imagen de este lugar?')) return;
+    try {
+      await updatePlace(editingImagePlaceId, { image_url: null });
+      setEditingImagePlaceId(null);
+      setEditingImageUrl('');
+    } catch (e) {
+      console.error(e);
+      setError('Error al eliminar imagen');
+    }
+  };
+
   const deletePlace = async (id: number) => {
     if (!window.confirm(`¿Eliminar lugar #${id}?`)) return;
     try {
@@ -260,6 +296,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
           modalidad: newPlaceForm.modalidad || null,
           caracteristicas: newPlaceForm.caracteristicas || null,
           nivel_ruido: newPlaceForm.nivel_ruido || null,
+          image_url: newPlaceForm.image_url || null,
         }),
       });
 
@@ -279,6 +316,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
         modalidad: '',
         caracteristicas: '',
         nivel_ruido: '',
+        image_url: '',
       });
       setShowCreatePlaceForm(false);
       setError('');
@@ -667,6 +705,54 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     }}
                   />
                 </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                    Imagen (URL o cargar archivo)
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Pega aquí el enlace de la imagen"
+                      value={newPlaceForm.image_url}
+                      onChange={e => setNewPlaceForm({ ...newPlaceForm, image_url: e.target.value })}
+                      style={{
+                        flex: 1,
+                        padding: '0.7rem',
+                        borderRadius: '4px',
+                        border: '1px solid #444',
+                        backgroundColor: '#222',
+                        color: '#fff'
+                      }}
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            setNewPlaceForm({ ...newPlaceForm, image_url: result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{
+                        padding: '0.7rem',
+                        borderRadius: '4px',
+                        border: '1px solid #444',
+                        backgroundColor: '#222',
+                        color: '#fff'
+                      }}
+                    />
+                  </div>
+                  {newPlaceForm.image_url && (
+                    <div style={{ borderRadius: '4px', overflow: 'hidden', maxHeight: '150px', marginBottom: '0.5rem' }}>
+                      <img src={newPlaceForm.image_url} alt="Preview" style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                    </div>
+                  )}
+                </div>
               </div>
               <button
                 type="submit"
@@ -762,12 +848,21 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                         />
                       </td>
                       <td>
-                        <button
-                          className="user-delete-button"
-                          onClick={() => deletePlace(p.id)}
-                        >
-                          Eliminar
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => openEditImageModal(p.id)}
+                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                          >
+                            🖼️ Imagen
+                          </button>
+                          <button
+                            className="user-delete-button"
+                            onClick={() => deletePlace(p.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -776,6 +871,125 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
             </div>
           )}
         </div>
+
+        {/* Modal para editar imagen */}
+        {editingImagePlaceId !== null && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: isDark ? '#1a1a1a' : '#fff',
+              padding: '2rem',
+              borderRadius: '8px',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h3 style={{ marginBottom: '1rem', color: isDark ? '#fff' : '#000' }}>Editar imagen del lugar</h3>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: isDark ? '#ccc' : '#666' }}>
+                  URL de la imagen
+                </label>
+                <input
+                  type="text"
+                  placeholder="Pega el enlace de la imagen"
+                  value={editingImageUrl}
+                  onChange={(e) => setEditingImageUrl(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.7rem',
+                    borderRadius: '4px',
+                    border: '1px solid #444',
+                    backgroundColor: isDark ? '#222' : '#f0f0f0',
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: isDark ? '#ccc' : '#666' }}>
+                  O carga un archivo
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const result = event.target?.result as string;
+                        setEditingImageUrl(result);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.7rem',
+                    borderRadius: '4px',
+                    border: '1px solid #444',
+                    backgroundColor: isDark ? '#222' : '#f0f0f0',
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                />
+              </div>
+
+              {editingImageUrl && (
+                <div style={{
+                  marginBottom: '1rem',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  maxHeight: '250px'
+                }}>
+                  <img src={editingImageUrl} alt="Preview" style={{ width: '100%', height: '250px', objectFit: 'cover' }} />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setEditingImagePlaceId(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.6rem 1.2rem' }}
+                >
+                  Cancelar
+                </button>
+                {editingImageUrl && (
+                  <button
+                    onClick={deleteImage}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Borrar imagen
+                  </button>
+                )}
+                <button
+                  onClick={saveImageChange}
+                  className="btn btn-primary"
+                  style={{ padding: '0.6rem 1.2rem' }}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="admin-footer">
           <p>&copy; 2026 WorkPalace. Acceso restringido a administradores.</p>

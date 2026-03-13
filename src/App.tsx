@@ -25,6 +25,7 @@ interface Place {
   caracteristicas: string | null
   nivel_ruido: string | null
   image_url: string | null
+  active: boolean
 }
 
 function Landing({
@@ -112,26 +113,23 @@ function Landing({
                   places.map(place => (
                     <div key={place.id} className="feature-card">
                       {place.image_url && (
-                        <div style={{
-                          width: '100%',
-                          height: '150px',
-                          marginBottom: '1rem',
-                          borderRadius: '6px',
-                          overflow: 'hidden',
-                          backgroundColor: '#222'
-                        }}>
-                          <img
-                            src={place.image_url}
-                            alt={place.name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
+                        <div style={{ marginBottom: '0.75rem', borderRadius: '4px', overflow: 'hidden', maxHeight: '200px' }}>
+                          <img src={place.image_url} alt={place.name} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
                         </div>
                       )}
-                      <h3>{place.tipo}</h3>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <h3>{place.tipo}</h3>
+                        <span style={{
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          backgroundColor: place.active ? '#4CAF50' : '#f44336',
+                          color: 'white'
+                        }}>
+                          {place.active ? 'Disponible' : 'No disponible'}
+                        </span>
+                      </div>
                       <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>{place.name}</p>
                       <p style={{ marginBottom: '0.35rem' }}>
                         {[place.barrio, place.ciudad].filter(Boolean).join(', ')}
@@ -166,6 +164,7 @@ function Landing({
                           type="button"
                           className="btn btn-primary"
                           onClick={() => handleReserve(place.id)}
+                          disabled={!place.active}
                         >
                           Reserva ya
                         </button>

@@ -52,6 +52,12 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             </Link>
           )}
 
+          {user.role !== 'admin' && (
+            <Link to="/dashboard" className="user-menu-item">
+              Mis reservas
+            </Link>
+          )}
+
           <Link to="/settings" className="user-menu-item">
             Datos personales
           </Link>

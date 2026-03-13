@@ -53,9 +53,17 @@ CREATE TABLE IF NOT EXISTS places (
   modalidad VARCHAR(255),
   caracteristicas TEXT,
   nivel_ruido VARCHAR(100),
+  image_url TEXT,
+  active BOOLEAN DEFAULT TRUE NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Agregar columna active si no existe (para migración)
+ALTER TABLE places ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+
+-- Agregar columna image_url si no existe (para migración)
+ALTER TABLE places ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- Datos de ejemplo para places (puedes ejecutar este script completo en tu DB)
 INSERT INTO places (name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido)
