@@ -205,3 +205,44 @@
     font-size: 0.85rem;
   }
 }
+
+/* Cancel button */
+.cancel-btn {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #e74c3c;
+  background: rgba(231, 57, 70, 0.1);
+  color: #c0392b;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(231, 57, 70, 0.2);
+  border-color: #c0392b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(231, 57, 70, 0.2);
+}
+
+.cancel-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .cancel-btn {
+  background: rgba(231, 57, 70, 0.15);
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+[data-theme="dark"] .cancel-btn:hover:not(:disabled) {
+  background: rgba(231, 57, 70, 0.25);
+  box-shadow: 0 2px 8px rgba(231, 57, 70, 0.3);
+}

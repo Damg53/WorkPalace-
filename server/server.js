@@ -361,10 +361,10 @@ app.post('/api/reservations', async (req, res) => {
     const ubicacion = ubicacionParts.join(', ');
 
     const insert = await pool.query(
-      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 1), 'pendiente')
-       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, created_at`,
-      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, huespedes || 1]
+      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 1), 'pendiente', $8)
+       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, created_at`,
+      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, huespedes || 1, pid]
     );
 
     // Marcar el lugar como no disponible
@@ -461,6 +461,59 @@ app.delete('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     res.status(204).send();
   } catch (error) {
     console.error('Error eliminando reserva (admin):', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Cancelar una reserva (usuario propietario)
+app.delete('/api/reservations/:id', async (req, res) => {
+  try {
+    const userId = req.header('x-user-id');
+    if (!userId) {
+      return res.status(400).json({ error: 'Se requiere el header x-user-id' });
+    }
+    const uid = parseInt(userId, 10);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'x-user-id inválido' });
+    }
+
+    const { id } = req.params;
+    const rid = parseInt(id, 10);
+    if (isNaN(rid)) {
+      return res.status(400).json({ error: 'ID de reserva inválido' });
+    }
+
+    // Verificar que la reservación pertenece al usuario
+    const reserva = await pool.query(
+      'SELECT id, user_id, place_id FROM reservations WHERE id = $1',
+      [rid]
+    );
+    if (reserva.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    const reservationData = reserva.rows[0];
+    if (reservationData.user_id !== uid) {
+      return res.status(403).json({ error: 'No tienes permiso para cancelar esta reserva' });
+    }
+
+    // Actualizar estado a cancelada
+    const updated = await pool.query(
+      'UPDATE reservations SET estado = $1 WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, created_at',
+      ['cancelada', rid]
+    );
+
+    // Reactivar el lugar si existe
+    if (reservationData.place_id) {
+      await pool.query(
+        'UPDATE places SET active = TRUE WHERE id = $1',
+        [reservationData.place_id]
+      );
+    }
+
+    res.json({ reservation: updated.rows[0], message: '✅ Reserva cancelada exitosamente' });
+  } catch (error) {
+    console.error('Error cancelando reserva:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

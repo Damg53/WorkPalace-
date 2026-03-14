@@ -28,3 +28,26 @@ export const signupUser = async (userData: {
     throw error;
   }
 };
+
+// Cancel reservation
+export const cancelReservation = async (reservationId: number, userId: number) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/reservations/${reservationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': String(userId),
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al cancelar la reservación');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};

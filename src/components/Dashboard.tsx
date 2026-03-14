@@ -2,6 +2,7 @@ import Navbar from './Navbar'
 import './Landing.css'   // reuse landing styles for dashboard
 import './Dashboard.css'
 import { useState, useEffect } from 'react'
+import { cancelReservation } from '../services/api'
 
 interface DashboardProps {
   user: { id?: number; username: string; role?: string }
@@ -47,6 +48,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [availableFilter, setAvailableFilter] = useState<'todas' | EstadoReserva>('todas')
+  const [cancelling, setCancelling] = useState<number | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user.id == null) {
@@ -108,7 +111,35 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     return r.estado === availableFilter
   })
 
-  function renderReservationsTable(rows: Reserva[], emptyText: string) {
+  const handleCancelReservation = async (reservaId: number) => {
+    if (!window.confirm('¿Estás seguro de que deseas cancelar esta reservación?')) {
+      return
+    }
+
+    setCancelling(reservaId)
+    setCancelError(null)
+
+    try {
+      if (!user.id) {
+        throw new Error('Usuario no identificado')
+      }
+      await cancelReservation(reservaId, user.id)
+      // Actualizar la lista de reservaciones
+      setReservas((prev) => 
+        prev.map((r) => 
+          r.id === reservaId ? { ...r, estado: 'cancelada' as EstadoReserva } : r
+        )
+      )
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Error al cancelar la reservación'
+      setCancelError(errorMsg)
+      console.error('Error cancelando reservación:', e)
+    } finally {
+      setCancelling(null)
+    }
+  }
+
+  function renderReservationsTable(rows: Reserva[], emptyText: string, showActions: boolean = false) {
     return (
       <div className="dashboard-reservations">
         <div className="reservations-table-wrap">
@@ -121,12 +152,13 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                 <th>Check-out</th>
                 <th>Huéspedes</th>
                 <th>Estado</th>
+                {showActions && <th>Acciones</th>}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  <td colSpan={showActions ? 7 : 6} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
                     {emptyText}
                   </td>
                 </tr>
@@ -146,6 +178,22 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                         {r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}
                       </span>
                     </td>
+                    {showActions && (
+                      <td>
+                        {(r.estado === 'pendiente' || r.estado === 'confirmada') ? (
+                          <button
+                            className="cancel-btn"
+                            onClick={() => handleCancelReservation(r.id)}
+                            disabled={cancelling === r.id}
+                            title="Cancelar esta reservación"
+                          >
+                            {cancelling === r.id ? 'Cancelando...' : 'Cancelar'}
+                          </button>
+                        ) : (
+                          <span style={{ color: '#999', fontSize: '0.9rem' }}>-</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -192,7 +240,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
           ) : (
             renderReservationsTable(
               reservasDisponibles,
-              'No hay reservas disponibles (próximas) por el momento.'
+              'No hay reservas disponibles (próximas) por el momento.',
+              false
             )
           )}
         </div>
@@ -202,11 +251,12 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
       <section className="features" id="stats">
         <div className="features-container">
           <h2 className="section-title">Mis reservas</h2>
+          {cancelError && <p className="reservations-error">{cancelError}</p>}
           {error && <p className="reservations-error">{error}</p>}
           {loading ? (
             <p className="settings-loading">Cargando reservas...</p>
           ) : (
-            renderReservationsTable(reservas, 'No tienes reservas aún.')
+            renderReservationsTable(reservas, 'No tienes reservas aún.', true)
           )}
         </div>
       </section>

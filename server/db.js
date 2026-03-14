@@ -129,6 +129,13 @@ async function createTablesIfNotExist() {
     `);
     console.log('✅ Columna active verificada/creada en reservations');
 
+    // columna place_id para rastrear qué lugar está reservado
+    await pool.query(`
+      ALTER TABLE reservations
+      ADD COLUMN IF NOT EXISTS place_id INT REFERENCES places(id) ON DELETE SET NULL;
+    `);
+    console.log('✅ Columna place_id verificada/creada en reservations');
+
     // Crear tabla de espacios (places)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS places (
