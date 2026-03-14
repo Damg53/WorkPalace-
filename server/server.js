@@ -571,7 +571,7 @@ app.get('/api/admin/places', requireAdmin, async (_req, res) => {
   }
 });
 
-// Admin - crear novo lugar
+// Admin - crear nuevo lugar
 app.post('/api/admin/places', requireAdmin, async (req, res) => {
   try {
     const { name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url } = req.body;
