@@ -228,6 +228,94 @@
   color: #333;
 }
 
+/* Selects y inputs en tablas */
+.table-select {
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #fff;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+[data-theme="light"] .table-select {
+  background: white;
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #333;
+}
+
+.table-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="light"] .table-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+.table-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+}
+
+[data-theme="light"] .table-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+}
+
+.table-select option {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 0.5rem;
+}
+
+[data-theme="light"] .table-select option {
+  background: white;
+  color: #333;
+}
+
+.table-input {
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #fff;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+[data-theme="light"] .table-input {
+  background: white;
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #333;
+}
+
+.table-input:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="light"] .table-input:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+.table-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+}
+
+[data-theme="light"] .table-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+}
+
 .role-badge {
   display: inline-block;
   padding: 0.4rem 0.8rem;
@@ -317,6 +405,115 @@
 
 [data-theme="light"] .stat-card .number {
   color: #667eea;
+}
+
+/* Form para crear nuevo lugar */
+.form-create-place {
+  background-color: #1a1a1a;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #333;
+}
+
+[data-theme="light"] .form-create-place {
+  background-color: white;
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.form-create-place h3 {
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+[data-theme="light"] .form-create-place h3 {
+  color: #333;
+}
+
+.form-create-place-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-create-place-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-create-place-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+[data-theme="light"] .form-create-place-label {
+  color: #666;
+}
+
+.form-create-place-input,
+.form-create-place-textarea,
+.form-create-place-file {
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #222;
+  color: #fff;
+  font-family: inherit;
+}
+
+[data-theme="light"] .form-create-place-input,
+[data-theme="light"] .form-create-place-textarea,
+[data-theme="light"] .form-create-place-file {
+  border-color: #ddd;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+.form-create-place-input:focus,
+.form-create-place-textarea:focus,
+.form-create-place-file:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="light"] .form-create-place-input:focus,
+[data-theme="light"] .form-create-place-textarea:focus,
+[data-theme="light"] .form-create-place-file:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+.form-create-place-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-create-place-full-width {
+  grid-column: 1 / -1;
+}
+
+.form-create-place-image-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-create-place-image-preview {
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 150px;
+  margin-bottom: 0.5rem;
+}
+
+.form-create-place-image-preview img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
 }
 
 /* Responsive */

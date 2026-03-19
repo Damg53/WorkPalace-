@@ -465,6 +465,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           min={1}
                           value={r.huespedes}
                           onChange={e => updateReservation(r.id, { huespedes: Number(e.target.value) || 1 })}
+                          className="table-input"
                           style={{ width: '4rem' }}
                         />
                       </td>
@@ -472,6 +473,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                         <select
                           value={r.estado}
                           onChange={e => updateReservation(r.id, { estado: e.target.value })}
+                          className="table-select"
                         >
                           <option value="pendiente">Pendiente</option>
                           <option value="confirmada">Confirmada</option>
@@ -517,22 +519,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
 
           {/* Form para crear nuevo lugar */}
           {showCreatePlaceForm && (
-            <form onSubmit={createPlace} style={{
-              backgroundColor: '#1a1a1a',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              marginBottom: '2rem',
-              border: '1px solid #333'
-            }}>
-              <h3 style={{ marginBottom: '1rem' }}>Crear Nuevo Lugar</h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1rem',
-                marginBottom: '1rem'
-              }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+            <form onSubmit={createPlace} className="form-create-place">
+              <h3>Crear Nuevo Lugar</h3>
+              <div className="form-create-place-grid">
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Nombre *
                   </label>
                   <input
@@ -541,18 +532,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     value={newPlaceForm.name}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, name: e.target.value })}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Tipo *
                   </label>
                   <input
@@ -561,18 +545,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     value={newPlaceForm.tipo}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, tipo: e.target.value })}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Barrio
                   </label>
                   <input
@@ -580,18 +557,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: El Poblado"
                     value={newPlaceForm.barrio}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, barrio: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Ciudad
                   </label>
                   <input
@@ -599,18 +569,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: Medellín"
                     value={newPlaceForm.ciudad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, ciudad: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Capacidad
                   </label>
                   <input
@@ -618,18 +581,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: Hasta 4 personas"
                     value={newPlaceForm.capacidad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, capacidad: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Precio/hora
                   </label>
                   <input
@@ -637,18 +593,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: 45000"
                     value={newPlaceForm.precio_hora}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, precio_hora: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Modalidad
                   </label>
                   <input
@@ -656,38 +605,22 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: Por hora / media jornada"
                     value={newPlaceForm.modalidad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, modalidad: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field form-create-place-full-width">
+                  <label className="form-create-place-label">
                     Características
                   </label>
                   <textarea
                     placeholder="Ej: Cabina tratada acústicamente, Interfaz de audio, Micrófonos profesionales"
                     value={newPlaceForm.caracteristicas}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, caracteristicas: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff',
-                      fontFamily: 'inherit',
-                      minHeight: '80px'
-                    }}
+                    className="form-create-place-textarea"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
                     Nivel de ruido
                   </label>
                   <input
@@ -695,34 +628,21 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: Aislado"
                     value={newPlaceForm.nivel_ruido}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, nivel_ruido: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      borderRadius: '4px',
-                      border: '1px solid #444',
-                      backgroundColor: '#222',
-                      color: '#fff'
-                    }}
+                    className="form-create-place-input"
                   />
                 </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+                <div className="form-create-place-field form-create-place-full-width">
+                  <label className="form-create-place-label">
                     Imagen (URL o cargar archivo)
                   </label>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div className="form-create-place-image-container">
                     <input
                       type="text"
                       placeholder="Pega aquí el enlace de la imagen"
                       value={newPlaceForm.image_url}
                       onChange={e => setNewPlaceForm({ ...newPlaceForm, image_url: e.target.value })}
-                      style={{
-                        flex: 1,
-                        padding: '0.7rem',
-                        borderRadius: '4px',
-                        border: '1px solid #444',
-                        backgroundColor: '#222',
-                        color: '#fff'
-                      }}
+                      className="form-create-place-input"
+                      style={{ flex: 1 }}
                     />
                     <input
                       type="file"
@@ -738,18 +658,12 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           reader.readAsDataURL(file);
                         }
                       }}
-                      style={{
-                        padding: '0.7rem',
-                        borderRadius: '4px',
-                        border: '1px solid #444',
-                        backgroundColor: '#222',
-                        color: '#fff'
-                      }}
+                      className="form-create-place-file"
                     />
                   </div>
                   {newPlaceForm.image_url && (
-                    <div style={{ borderRadius: '4px', overflow: 'hidden', maxHeight: '150px', marginBottom: '0.5rem' }}>
-                      <img src={newPlaceForm.image_url} alt="Preview" style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                    <div className="form-create-place-image-preview">
+                      <img src={newPlaceForm.image_url} alt="Preview" />
                     </div>
                   )}
                 </div>
@@ -794,6 +708,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.name}
                           onBlur={e => updatePlace(p.id, { name: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>
@@ -801,6 +716,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.tipo}
                           onBlur={e => updatePlace(p.id, { tipo: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>
@@ -808,6 +724,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.barrio || ''}
                           onBlur={e => updatePlace(p.id, { barrio: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>
@@ -815,6 +732,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.ciudad || ''}
                           onBlur={e => updatePlace(p.id, { ciudad: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>
@@ -822,6 +740,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.capacidad || ''}
                           onBlur={e => updatePlace(p.id, { capacidad: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>
@@ -830,6 +749,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           min={0}
                           defaultValue={p.precio_hora ?? 0}
                           onBlur={e => updatePlace(p.id, { precio_hora: Number(e.target.value) || 0 })}
+                          className="table-input"
                           style={{ width: '6rem' }}
                         />
                       </td>
@@ -838,6 +758,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           type="text"
                           defaultValue={p.modalidad || ''}
                           onBlur={e => updatePlace(p.id, { modalidad: e.target.value })}
+                          className="table-input"
                         />
                       </td>
                       <td>

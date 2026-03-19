@@ -32,10 +32,12 @@ function Landing({
   isDark,
   setIsDark,
   user,
+  onLogout,
 }: {
   isDark: boolean
   setIsDark: (value: boolean) => void
   user?: { id?: number; username: string; role?: string; fullName?: string; email?: string } | null
+  onLogout?: () => void
 }) {
   const navigate = useNavigate()
   const [places, setPlaces] = useState<Place[]>([])
@@ -87,7 +89,7 @@ function Landing({
   return (
     <>
       {/* shared header/navigation */}
-      <Navbar isDark={isDark} setIsDark={setIsDark} user={user || undefined} />
+      <Navbar isDark={isDark} setIsDark={setIsDark} user={user || undefined} onLogout={onLogout} />
 
       {/* Si el usuario es admin, redirigir al panel de administrador */}
       {user && user.role === 'admin' ? (
@@ -369,7 +371,7 @@ function App() {
         <Route
           path="/"
           element={
-            <Landing isDark={isDark} setIsDark={setIsDark} user={user} />
+            <Landing isDark={isDark} setIsDark={setIsDark} user={user} onLogout={handleLogout} />
           }
         />
         <Route
