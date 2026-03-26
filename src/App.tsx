@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
+
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
@@ -10,6 +11,8 @@ import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
 import Settings from './components/Settings'
 import Checkout from './components/Checkout'
+import PlacesList from './components/PlacesList'
+import PlacesPage from './components/PlacesPage'
 
 const API = 'http://localhost:3001'
 
@@ -40,9 +43,7 @@ function Landing({
   onLogout?: () => void
 }) {
   const navigate = useNavigate()
-  const [places, setPlaces] = useState<Place[]>([])
-  const [loadingSpaces, setLoadingSpaces] = useState(true)
-  const [spacesError, setSpacesError] = useState<string | null>(null)
+  // Eliminado: lógica de lugares, ahora en PlacesPage
 
   useEffect(() => {
     let cancelled = false
@@ -95,89 +96,7 @@ function Landing({
       {user && user.role === 'admin' ? (
         <Navigate to="/admin" replace />
       ) : user && user.role !== 'admin' ? (
-        <section className="features" id="explore-spaces">
-          <div className="features-container">
-            <h2 className="section-title">Explora espacios disponibles</h2>
-            <p style={{ marginBottom: '1.5rem', maxWidth: 720 }}>
-              Estos son los espacios publicados en la plataforma.
-            </p>
-
-            {spacesError && <p className="reservations-error">{spacesError}</p>}
-            {loadingSpaces ? (
-              <p className="settings-loading">Cargando espacios disponibles...</p>
-            ) : (
-              <div className="features-grid">
-                {places.length === 0 ? (
-                  <p style={{ padding: '1.5rem 0', color: '#666' }}>
-                    No hay espacios registrados aún en la base de datos.
-                  </p>
-                ) : (
-                  places.map(place => (
-                    <div key={place.id} className="feature-card">
-                      {place.image_url && (
-                        <div style={{ marginBottom: '0.75rem', borderRadius: '4px', overflow: 'hidden', maxHeight: '200px' }}>
-                          <img src={place.image_url} alt={place.name} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <h3>{place.tipo}</h3>
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '4px',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          backgroundColor: place.active ? '#4CAF50' : '#f44336',
-                          color: 'white'
-                        }}>
-                          {place.active ? 'Disponible' : 'No disponible'}
-                        </span>
-                      </div>
-                      <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>{place.name}</p>
-                      <p style={{ marginBottom: '0.35rem' }}>
-                        {[place.barrio, place.ciudad].filter(Boolean).join(', ')}
-                      </p>
-                      <p style={{ marginBottom: '0.35rem' }}>
-                        <strong>Capacidad:</strong> {place.capacidad ?? 'Sin especificar'}
-                      </p>
-                      <p style={{ marginBottom: '0.35rem' }}>
-                        <strong>Modalidad:</strong> {place.modalidad ?? 'Consultar disponibilidad'}
-                      </p>
-                      <p style={{ marginBottom: '0.75rem' }}>
-                        <strong>Precio de referencia:</strong>{' '}
-                        {place.precio_hora != null
-                          ? `$${place.precio_hora.toLocaleString('es-CO')} / hora`
-                          : 'A convenir'}
-                      </p>
-                      {place.caracteristicas && (
-                        <p style={{ marginBottom: '0.75rem' }}>
-                          <strong>Características:</strong> {place.caracteristicas}
-                        </p>
-                      )}
-                      {place.nivel_ruido && (
-                        <p style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.85 }}>
-                          Nivel de ruido: {place.nivel_ruido}
-                        </p>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.85rem' }}>
-                          Confirma los datos y simula tu pago para reservar.
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => handleReserve(place.id)}
-                          disabled={!place.active}
-                        >
-                          Reserva ya
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        </section>
+        <Navigate to="/places" replace />
       ) : (
         <>
           {/* Hero Section */}
@@ -289,8 +208,8 @@ function Landing({
   )
 }
 
-// Dashboard component moved to its own file
-// (see src/components/Dashboard.tsx)
+// Dashboard component moved a su propio archivo
+// (ver src/components/Dashboard.tsx)
 
 const STORAGE_KEY = 'workpalace-user'
 
@@ -403,12 +322,23 @@ function App() {
           }
         />
 
+
         {/* protected route for regular users */}
         <Route
           path="/dashboard"
           element={
             user && !isAdmin ? (
               <Dashboard user={user!} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+        <Route
+          path="/places"
+          element={
+            user && !isAdmin ? (
+              <PlacesPage user={user!} isDark={isDark} setIsDark={setIsDark} onLogout={handleLogout} />
             ) : (
               <Navigate to="/" replace />
             )
