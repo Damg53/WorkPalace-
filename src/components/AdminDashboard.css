@@ -465,6 +465,16 @@
   font-family: inherit;
 }
 
+[data-theme="dark"] .form-create-place-input option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+[data-theme="light"] .form-create-place-input option {
+  background: white;
+  color: #333;
+}
+
 [data-theme="light"] .form-create-place-input,
 [data-theme="light"] .form-create-place-textarea,
 [data-theme="light"] .form-create-place-file {

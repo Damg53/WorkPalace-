@@ -11,6 +11,109 @@ interface AdminDashboardProps {
 import { useEffect, useState } from 'react';
 
 export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: AdminDashboardProps) {
+  const TIPOS_LUGAR = [
+    'Coworking',
+    'Oficina privada',
+    'Sala de reuniones',
+    'Auditorio / salón de eventos',
+    'Aula / salón de clases',
+    'Estudio de grabación',
+    'Estudio de fotografía',
+    'Sala de ensayo',
+    'Taller de carpintería',
+    'Taller / maker space',
+    'Cocina industrial',
+    'Cocina oculta (dark kitchen)',
+    'Espacio para talleres (manualidades/arte)',
+    'Consultorio',
+    'Sala de terapia / coaching',
+    'Gimnasio / sala de entrenamiento',
+    'Cancha / espacio deportivo',
+    'Terraza / rooftop',
+    'Patio / jardín',
+    'Bodega / almacén',
+    'Local comercial',
+    'Otro',
+  ]
+
+  const BARRIOS_MEDELLIN = [
+    'El Poblado',
+    'Laureles - Estadio',
+    'Belén',
+    'Envigado',
+    'Sabaneta',
+    'Itagüí',
+    'Robledo',
+    'Buenos Aires',
+    'La América',
+    'San Javier',
+    'Aranjuez',
+    'Manrique',
+    'Castilla',
+    'Doce de Octubre',
+    'Popular',
+    'Santa Cruz',
+    'Guayabal',
+    'Centro',
+    'Otro / No aplica',
+  ]
+
+  const CIUDADES_COLOMBIA = [
+    'Medellín',
+    'Bello',
+    'Envigado',
+    'Sabaneta',
+    'Itagüí',
+    'Bogotá',
+    'Cali',
+    'Barranquilla',
+    'Cartagena',
+    'Bucaramanga',
+    'Pereira',
+    'Manizales',
+    'Santa Marta',
+    'Cúcuta',
+    'Otra',
+  ]
+
+  const CAPACIDADES = [
+    '1 persona',
+    '2 personas',
+    '3-4 personas',
+    '5-6 personas',
+    '7-10 personas',
+    '11-15 personas',
+    '16-25 personas',
+    '26-50 personas',
+    '51-100 personas',
+    'Más de 100 personas',
+    'No especificado',
+  ]
+
+  const MODALIDADES = [
+    'Por hora',
+    'Media jornada (4 horas)',
+    'Jornada completa (8 horas)',
+    'Por día',
+    'Por noche',
+    'Por semana',
+    'Solo por cita',
+    'Flexible (acordar con el propietario)',
+  ]
+
+  const NIVELES_RUIDO = [
+    'Silencioso (ideal para concentración)',
+    'Moderado (conversación normal)',
+    'Alto (actividad intensa)',
+    'Muy alto (industrial / eventos)',
+    'Aislado acústicamente',
+    'No aplica',
+  ]
+
+  function preventWheelNumberChange(e: React.WheelEvent<HTMLInputElement>) {
+    // Evita que al hacer scroll sobre un input type="number" se modifique el valor
+    ;(e.currentTarget as HTMLInputElement).blur()
+  }
   const [users, setUsers] = useState<Array<any>>([]);
   const [reservations, setReservations] = useState<Array<any>>([]);
   const [places, setPlaces] = useState<Array<any>>([]);
@@ -539,50 +642,62 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                   <label className="form-create-place-label">
                     Tipo *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Estudio de grabación"
+                  <select
                     value={newPlaceForm.tipo}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, tipo: e.target.value })}
                     required
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona un tipo</option>
+                    {TIPOS_LUGAR.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
                     Barrio
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: El Poblado"
+                  <select
                     value={newPlaceForm.barrio}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, barrio: e.target.value })}
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona un barrio</option>
+                    {BARRIOS_MEDELLIN.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
                     Ciudad
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Medellín"
+                  <select
                     value={newPlaceForm.ciudad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, ciudad: e.target.value })}
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona una ciudad</option>
+                    {CIUDADES_COLOMBIA.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
                     Capacidad
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Hasta 4 personas"
+                  <select
                     value={newPlaceForm.capacidad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, capacidad: e.target.value })}
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona capacidad</option>
+                    {CAPACIDADES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
@@ -593,6 +708,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                     placeholder="Ej: 45000"
                     value={newPlaceForm.precio_hora}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, precio_hora: e.target.value })}
+                    onWheel={preventWheelNumberChange}
                     className="form-create-place-input"
                   />
                 </div>
@@ -600,13 +716,16 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                   <label className="form-create-place-label">
                     Modalidad
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Por hora / media jornada"
+                  <select
                     value={newPlaceForm.modalidad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, modalidad: e.target.value })}
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona modalidad</option>
+                    {MODALIDADES.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field form-create-place-full-width">
                   <label className="form-create-place-label">
@@ -623,13 +742,16 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                   <label className="form-create-place-label">
                     Nivel de ruido
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Aislado"
+                  <select
                     value={newPlaceForm.nivel_ruido}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, nivel_ruido: e.target.value })}
                     className="form-create-place-input"
-                  />
+                  >
+                    <option value="">Selecciona nivel de ruido</option>
+                    {NIVELES_RUIDO.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-create-place-field form-create-place-full-width">
                   <label className="form-create-place-label">
@@ -712,36 +834,52 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                         />
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          defaultValue={p.tipo}
-                          onBlur={e => updatePlace(p.id, { tipo: e.target.value })}
-                          className="table-input"
-                        />
+                        <select
+                          defaultValue={p.tipo || ''}
+                          onChange={e => updatePlace(p.id, { tipo: e.target.value })}
+                          className="table-select"
+                        >
+                          <option value="">(vacío)</option>
+                          {TIPOS_LUGAR.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
-                        <input
-                          type="text"
+                        <select
                           defaultValue={p.barrio || ''}
-                          onBlur={e => updatePlace(p.id, { barrio: e.target.value })}
-                          className="table-input"
-                        />
+                          onChange={e => updatePlace(p.id, { barrio: e.target.value })}
+                          className="table-select"
+                        >
+                          <option value="">(vacío)</option>
+                          {BARRIOS_MEDELLIN.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
-                        <input
-                          type="text"
+                        <select
                           defaultValue={p.ciudad || ''}
-                          onBlur={e => updatePlace(p.id, { ciudad: e.target.value })}
-                          className="table-input"
-                        />
+                          onChange={e => updatePlace(p.id, { ciudad: e.target.value })}
+                          className="table-select"
+                        >
+                          <option value="">(vacío)</option>
+                          {CIUDADES_COLOMBIA.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
-                        <input
-                          type="text"
+                        <select
                           defaultValue={p.capacidad || ''}
-                          onBlur={e => updatePlace(p.id, { capacidad: e.target.value })}
-                          className="table-input"
-                        />
+                          onChange={e => updatePlace(p.id, { capacidad: e.target.value })}
+                          className="table-select"
+                        >
+                          <option value="">(vacío)</option>
+                          {CAPACIDADES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
                         <input
@@ -749,17 +887,22 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           min={0}
                           defaultValue={p.precio_hora ?? 0}
                           onBlur={e => updatePlace(p.id, { precio_hora: Number(e.target.value) || 0 })}
+                          onWheel={preventWheelNumberChange}
                           className="table-input"
                           style={{ width: '6rem' }}
                         />
                       </td>
                       <td>
-                        <input
-                          type="text"
+                        <select
                           defaultValue={p.modalidad || ''}
-                          onBlur={e => updatePlace(p.id, { modalidad: e.target.value })}
-                          className="table-input"
-                        />
+                          onChange={e => updatePlace(p.id, { modalidad: e.target.value })}
+                          className="table-select"
+                        >
+                          <option value="">(vacío)</option>
+                          {MODALIDADES.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
                         <input
