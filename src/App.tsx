@@ -11,25 +11,9 @@ import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
 import Settings from './components/Settings'
 import Checkout from './components/Checkout'
-import PlacesList from './components/PlacesList'
 import PlacesPage from './components/PlacesPage'
 
 const API = 'http://localhost:3001'
-
-interface Place {
-  id: number
-  name: string
-  tipo: string
-  barrio: string | null
-  ciudad: string | null
-  capacidad: string | null
-  precio_hora: number | null
-  modalidad: string | null
-  caracteristicas: string | null
-  nivel_ruido: string | null
-  image_url: string | null
-  active: boolean
-}
 
 function Landing({
   isDark,
@@ -43,50 +27,7 @@ function Landing({
   onLogout?: () => void
 }) {
   const navigate = useNavigate()
-  // Eliminado: lógica de lugares, ahora en PlacesPage
-
-  useEffect(() => {
-    let cancelled = false
-    async function fetchPlaces() {
-      try {
-        // Solo cargar espacios si el usuario está autenticado
-        if (!user?.id) {
-          setPlaces([])
-          setLoadingSpaces(false)
-          return
-        }
-
-        const res = await fetch(`${API}/api/places`, {
-          headers: {
-            'x-user-id': String(user.id),
-          },
-        })
-        const data = await res.json()
-        if (cancelled) return
-        if (!res.ok) {
-          setSpacesError(data.error || 'Error al cargar espacios disponibles')
-          return
-        }
-        setPlaces(data.places || [])
-      } catch (_e) {
-        if (!cancelled) setSpacesError('No se pudieron cargar los espacios disponibles.')
-      } finally {
-        if (!cancelled) setLoadingSpaces(false)
-      }
-    }
-    fetchPlaces()
-    return () => { cancelled = true }
-  }, [user?.id])
-
-  function handleReserve(placeId: number) {
-    if (user && user.id != null) {
-      navigate(`/checkout/${placeId}`)
-    } else {
-      const redirect = encodeURIComponent(`/checkout/${placeId}`)
-      navigate(`/login?redirect=${redirect}`)
-    }
-  }
-
+  
   return (
     <>
       {/* shared header/navigation */}
@@ -263,10 +204,14 @@ function App() {
   }, [isDark])
 
   // now receive object with id, username, role, fullName, and email
-  function handleLogin(userInfo: { id?: number; username: string; role?: string; fullName?: string; email?: string }) {
+  function handleLogin(userInfo: { id?: number; username: string; role?: string; fullName?: string; email?: string }, remember: boolean) {
     setUser(userInfo)
     setIsAdmin(userInfo.role === 'admin')
-    saveUser(userInfo)
+    if (remember) {
+      saveUser(userInfo)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
   }
 
   function handleLogout() {

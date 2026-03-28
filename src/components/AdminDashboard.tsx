@@ -1,5 +1,7 @@
+
 import Navbar from './Navbar'
 import './AdminDashboard.css'
+import CapacidadCellInput from './CapacidadCellInput'
 
 interface AdminDashboardProps {
   user: { username: string; role?: string }
@@ -36,27 +38,66 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     'Otro',
   ]
 
-  const BARRIOS_MEDELLIN = [
-    'El Poblado',
-    'Laureles - Estadio',
-    'Belén',
-    'Envigado',
-    'Sabaneta',
-    'Itagüí',
-    'Robledo',
-    'Buenos Aires',
-    'La América',
-    'San Javier',
-    'Aranjuez',
-    'Manrique',
-    'Castilla',
-    'Doce de Octubre',
-    'Popular',
-    'Santa Cruz',
-    'Guayabal',
-    'Centro',
-    'Otro / No aplica',
-  ]
+
+  // Relación ciudad-barrio
+  const BARRIOS_POR_CIUDAD: Record<string, string[]> = {
+    'Medellín': [
+      'El Poblado', 'Laureles - Estadio', 'Belén', 'Robledo', 'Buenos Aires', 'La América', 'San Javier', 'Aranjuez', 'Manrique', 'Castilla', 'Doce de Octubre', 'Popular', 'Santa Cruz', 'Guayabal', 'Centro', 'Otro / No aplica',
+    ],
+    'Bello': [
+      'Centro', 'Niquía', 'Zamora', 'Santa Ana', 'París', 'El Trapiche', 'Manchester', 'El Rosario', 'San Félix', 'Navarra', 'La Gabriela', 'La Madera', 'Cabañas', 'Otro / No aplica'
+    ],
+    'Envigado': [
+      'Centro', 'El Dorado', 'San Marcos', 'La Magnolia', 'El Portal', 'Las Casitas', 'La Paz', 'El Trianón', 'Loma del Barro', 'Alto de las Flores', 'El Esmeraldal', 'Zúñiga', 'Otro / No aplica'
+    ],
+    'Sabaneta': [
+      'Centro', 'San Joaquín', 'Aliadas', 'María Auxiliadora', 'Prados de Sabaneta', 'La Doctora', 'Las Lomitas', 'Restrepo Naranjo', 'Vegas de San José', 'Otro / No aplica'
+    ],
+    'Itagüí': [
+      'Centro', 'Ditaires', 'San Pío', 'Santa María', 'El Rosario', 'Las Margaritas', 'Simón Bolívar', 'La Gloria', 'San Gabriel', 'El Tablazo', 'Otro / No aplica'
+    ],
+    'Bogotá': [
+      'Chapinero', 'Usaquén', 'Teusaquillo', 'Centro', 'Suba', 'Kennedy', 'Fontibón', 'Engativá', 'Bosa', 'Barrios Unidos', 'Puente Aranda', 'San Cristóbal', 'Rafael Uribe Uribe', 'Tunjuelito', 'Santa Fe', 'Otro / No aplica'
+    ],
+    'Cali': [
+      'San Antonio', 'Granada', 'Centro', 'El Peñón', 'Versalles', 'San Fernando', 'Ciudad Jardín', 'La Flora', 'Alameda', 'El Ingenio', 'Otro / No aplica'
+    ],
+    'Barranquilla': [
+      'Centro', 'El Prado', 'Alto Prado', 'Villa Country', 'Ciudad Jardín', 'Boston', 'Las Delicias', 'La Concepción', 'Otro / No aplica'
+    ],
+    'Cartagena': [
+      'Centro', 'Getsemaní', 'Bocagrande', 'Manga', 'El Laguito', 'Crespo', 'Pie de la Popa', 'La Boquilla', 'Otro / No aplica'
+    ],
+    'Bucaramanga': [
+      'Centro', 'Cabecera', 'Alarcón', 'Antonia Santos', 'Sotomayor', 'La Universidad', 'San Alonso', 'Mutis', 'Otro / No aplica'
+    ],
+    'Pereira': [
+      'Centro', 'Cuba', 'Alamos', 'Los Alpes', 'Boston', 'San Joaquín', 'Villavicencio', 'Otro / No aplica'
+    ],
+    'Manizales': [
+      'Centro', 'Palogrande', 'Chipre', 'La Enea', 'Milán', 'San Jorge', 'Campohermoso', 'Otro / No aplica'
+    ],
+    'Santa Marta': [
+      'Centro', 'El Rodadero', 'Taganga', 'Mamatoco', 'Gaira', 'Bello Horizonte', 'Los Almendros', 'Otro / No aplica'
+    ],
+    'Cúcuta': [
+      'Centro', 'La Ceiba', 'San Luis', 'Blanco', 'La Cabrera', 'Colón', 'La Merced', 'San Rafael', 'Otro / No aplica'
+    ],
+    'Otra': ['Otro / No aplica'],
+  };
+
+  // Obtener barrios según ciudad seleccionada
+  const getBarriosForCiudad = (ciudad: string) => {
+    return BARRIOS_POR_CIUDAD[ciudad] || [];
+  };
+
+  // Obtener ciudad según barrio seleccionado
+  const getCiudadForBarrio = (barrio: string): string | undefined => {
+    for (const ciudad in BARRIOS_POR_CIUDAD) {
+      if (BARRIOS_POR_CIUDAD[ciudad].includes(barrio)) return ciudad;
+    }
+    return undefined;
+  };
 
   const CIUDADES_COLOMBIA = [
     'Medellín',
@@ -76,19 +117,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     'Otra',
   ]
 
-  const CAPACIDADES = [
-    '1 persona',
-    '2 personas',
-    '3-4 personas',
-    '5-6 personas',
-    '7-10 personas',
-    '11-15 personas',
-    '16-25 personas',
-    '26-50 personas',
-    '51-100 personas',
-    'Más de 100 personas',
-    'No especificado',
-  ]
+
 
   const MODALIDADES = [
     'Por hora',
@@ -114,13 +143,39 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     // Evita que al hacer scroll sobre un input type="number" se modifique el valor
     ;(e.currentTarget as HTMLInputElement).blur()
   }
-  const [users, setUsers] = useState<Array<any>>([]);
-  const [reservations, setReservations] = useState<Array<any>>([]);
-  const [places, setPlaces] = useState<Array<any>>([]);
+  interface Place {
+    id: number;
+    name: string;
+    tipo: string;
+    barrio: string | null;
+    ciudad: string | null;
+    capacidad: string | null;
+    precio_hora: number | null;
+    modalidad: string | null;
+    caracteristicas: string | null;
+    nivel_ruido: string | null;
+    image_url: string | null;
+    active: boolean;
+  }
+  interface Reservation {
+    id: number;
+    // Agrega aquí los campos relevantes de Reservation si los tienes
+    [key: string]: unknown;
+  }
+  interface User {
+    id: number;
+    username: string;
+    role?: string;
+    [key: string]: unknown;
+  }
+  const [users, setUsers] = useState<User[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [places, setPlaces] = useState<Place[]>([]);
   const [error, setError] = useState('');
   const [showCreatePlaceForm, setShowCreatePlaceForm] = useState(false);
   const [editingImagePlaceId, setEditingImagePlaceId] = useState<number | null>(null);
   const [editingImageUrl, setEditingImageUrl] = useState('');
+
   const [newPlaceForm, setNewPlaceForm] = useState({
     name: '',
     tipo: '',
@@ -133,6 +188,21 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     nivel_ruido: '',
     image_url: '',
   });
+
+  // Sincronizar barrio y ciudad
+  useEffect(() => {
+    // Si selecciona ciudad, limpiar barrio si no pertenece
+    if (newPlaceForm.ciudad && newPlaceForm.barrio && !getBarriosForCiudad(newPlaceForm.ciudad).includes(newPlaceForm.barrio)) {
+      setNewPlaceForm(f => ({ ...f, barrio: '' }));
+    }
+    // Si selecciona barrio, autocompletar ciudad
+    if (newPlaceForm.barrio && (!newPlaceForm.ciudad || !getBarriosForCiudad(newPlaceForm.ciudad).includes(newPlaceForm.barrio))) {
+      const ciudadDetectada = getCiudadForBarrio(newPlaceForm.barrio);
+      if (ciudadDetectada && ciudadDetectada !== newPlaceForm.ciudad) {
+        setNewPlaceForm(f => ({ ...f, ciudad: ciudadDetectada }));
+      }
+    }
+  }, [newPlaceForm.ciudad, newPlaceForm.barrio]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -253,7 +323,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     }
   };
 
-  const updateReservation = async (id: number, payload: any) => {
+  const updateReservation = async (id: number, payload: Partial<Reservation>) => {
     try {
       const res = await fetch(`http://localhost:3001/api/admin/reservations/${id}`, {
         method: 'PUT',
@@ -288,7 +358,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     }
   };
 
-  const updatePlace = async (id: number, payload: any) => {
+  const updatePlace = async (id: number, payload: Partial<Place>) => {
     try {
       const res = await fetch(`http://localhost:3001/api/admin/places/${id}`, {
         method: 'PUT',
@@ -491,8 +561,8 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                   {users.map(u => (
                     <tr key={u.id}>
                       <td className="user-id">#{u.id}</td>
-                      <td className="user-name">{u.full_name}</td>
-                      <td className="user-email">{u.email}</td>
+                      <td className="user-name">{String(u.full_name ?? '')}</td>
+                      <td className="user-email">{String(u.email ?? '')}</td>
                       <td className="user-username">@{u.username}</td>
                       <td>
                         <select 
@@ -556,17 +626,17 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                   {reservations.map(r => (
                     <tr key={r.id}>
                       <td>#{r.id}</td>
-                      <td>{r.username || `Usuario #${r.user_id}`}</td>
-                      <td>{r.email || 'N/A'}</td>
-                      <td>{r.hotel}</td>
-                      <td>{r.ubicacion}</td>
-                      <td>{r.check_in}</td>
-                      <td>{r.check_out}</td>
+                      <td>{String(r.username ?? `Usuario #${r.user_id ?? ''}`)}</td>
+                      <td>{String(r.email ?? 'N/A')}</td>
+                      <td>{String(r.hotel ?? '')}</td>
+                      <td>{String(r.ubicacion ?? '')}</td>
+                      <td>{String(r.check_in ?? '')}</td>
+                      <td>{String(r.check_out ?? '')}</td>
                       <td>
                         <input
                           type="number"
                           min={1}
-                          value={r.huespedes}
+                          value={typeof r.huespedes === 'number' ? r.huespedes : 1}
                           onChange={e => updateReservation(r.id, { huespedes: Number(e.target.value) || 1 })}
                           className="table-input"
                           style={{ width: '4rem' }}
@@ -574,7 +644,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                       </td>
                       <td>
                         <select
-                          value={r.estado}
+                          value={typeof r.estado === 'string' ? r.estado : ''}
                           onChange={e => updateReservation(r.id, { estado: e.target.value })}
                           className="table-select"
                         >
@@ -656,21 +726,6 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
-                    Barrio
-                  </label>
-                  <select
-                    value={newPlaceForm.barrio}
-                    onChange={e => setNewPlaceForm({ ...newPlaceForm, barrio: e.target.value })}
-                    className="form-create-place-input"
-                  >
-                    <option value="">Selecciona un barrio</option>
-                    {BARRIOS_MEDELLIN.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-create-place-field">
-                  <label className="form-create-place-label">
                     Ciudad
                   </label>
                   <select
@@ -686,18 +741,31 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
-                    Capacidad
+                    Barrio
                   </label>
                   <select
+                    value={newPlaceForm.barrio}
+                    onChange={e => setNewPlaceForm({ ...newPlaceForm, barrio: e.target.value })}
+                    className="form-create-place-input"
+                    disabled={!newPlaceForm.ciudad}
+                  >
+                    <option value="">Selecciona un barrio</option>
+                    {(getBarriosForCiudad(newPlaceForm.ciudad) || []).map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-create-place-field">
+                  <label className="form-create-place-label">
+                    Capacidad
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 10 personas"
                     value={newPlaceForm.capacidad}
                     onChange={e => setNewPlaceForm({ ...newPlaceForm, capacidad: e.target.value })}
                     className="form-create-place-input"
-                  >
-                    <option value="">Selecciona capacidad</option>
-                    {CAPACIDADES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="form-create-place-field">
                   <label className="form-create-place-label">
@@ -852,7 +920,7 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                           className="table-select"
                         >
                           <option value="">(vacío)</option>
-                          {BARRIOS_MEDELLIN.map((b) => (
+                          {getBarriosForCiudad(p.ciudad || 'Medellín').map((b) => (
                             <option key={b} value={b}>{b}</option>
                           ))}
                         </select>
@@ -870,16 +938,11 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
                         </select>
                       </td>
                       <td>
-                        <select
-                          defaultValue={p.capacidad || ''}
-                          onChange={e => updatePlace(p.id, { capacidad: e.target.value })}
-                          className="table-select"
-                        >
-                          <option value="">(vacío)</option>
-                          {CAPACIDADES.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
+                        {/* Input controlado localmente para evitar salto de cursor */}
+                        <CapacidadCellInput
+                          value={p.capacidad || ''}
+                          onSave={val => updatePlace(p.id, { capacidad: val })}
+                        />
                       </td>
                       <td>
                         <input

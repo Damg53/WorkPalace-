@@ -550,3 +550,26 @@
     width: 100%;
   }
 }
+
+.user-delete-button {
+  background: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+.user-delete-button:hover {
+  background: #d32f2f;
+}
+[data-theme="light"] .user-delete-button {
+  background: #ff6b6b;
+  color: #fff;
+}
+[data-theme="light"] .user-delete-button:hover {
+  background: #e74c3c;
+}
