@@ -8,6 +8,7 @@ Estudios de grabación · Cocinas industriales · Talleres de carpintería · Es
 
 ![TypeScript](https://img.shields.io/badge/Backend-TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![ISO 25010](https://img.shields.io/badge/Calidad-ISO%2FIEC%2025010-2EA44F?style=for-the-badge)
 ![Medellín](https://img.shields.io/badge/Ciudad-Medell%C3%ADn-6366F1?style=for-the-badge)
 
@@ -64,11 +65,11 @@ Estas cifras dimensionan el volumen económico que actualmente no se está captu
 
 | Icono | Funcionalidad |
 |:---:|---|
-| ⏰ | **Reservas por bloques horarios** |
-| 💳 | **Pagos en línea** |
-| 🪪 | **Verificación de identidad** |
-| ⚡ | **Disponibilidad en tiempo real** |
-| 🔎 | **Filtros y búsqueda avanzada** |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/clock.svg" width="18" alt="Reloj" /> | **Reservas por bloques horarios** |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/credit-card.svg" width="18" alt="Tarjeta" /> | **Pagos en línea** |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/id-card.svg" width="18" alt="Identificación" /> | **Verificación de identidad** |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/bolt.svg" width="18" alt="Rayo" /> | **Disponibilidad en tiempo real** |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/magnifying-glass.svg" width="18" alt="Búsqueda" /> | **Filtros y búsqueda avanzada** |
 
 ## Atributos de calidad
 
@@ -76,7 +77,7 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 
 | Seguridad | Fiabilidad | Usabilidad | Eficiencia de desempeño |
 |:---:|:---:|:---:|:---:|
-| 🔒 | ✅ | 🖱️ | 📈 |
+| <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/lock.svg" width="18" alt="Candado" /> | <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/circle-check.svg" width="18" alt="Verificado" /> | <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/computer-mouse.svg" width="18" alt="Usabilidad" /> | <img src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/svgs/solid/chart-line.svg" width="18" alt="Rendimiento" /> |
 
 ## Tecnologías
 
@@ -84,7 +85,7 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 |---|---|
 | Backend | ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white) |
 | Frontend | ![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=black) |
-| Despliegue | ![Railway](https://img.shields.io/badge/-Railway-0B0D0E?logo=railway&logoColor=white) |
+| Despliegue | ![Railway](https://img.shields.io/badge/-Railway-0B0D0E?logo=railway&logoColor=white) ![Vercel](https://img.shields.io/badge/-Vercel-000000?logo=vercel&logoColor=white) |
 | Base de datos | PostgreSQL |
 
 ## Inicio rápido
