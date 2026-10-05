@@ -1,0 +1,392 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url('https://img.freepik.com/foto-gratis/fondo-azul-degradado-lujo-abstracto-azul-oscuro-liso-banner-estudio-vineta-negra_1258-52393.jpg?semt=ais_user_personalization&w=740&q=80') center/cover no-repeat fixed;
+  background-color: #001f3f;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: -1;
+}
+
+html[data-theme="dark"] body {
+  background: linear-gradient(135deg, #0a1f3f 0%, #1a3a5c 100%);
+}
+
+.auth-page {
+  display: flex;
+  width: min(1050px, 96vw);
+  min-height: 650px;
+  max-height: 90vh;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  color: #333;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.auth-visual {
+  flex: 1.2;
+  background: url('../img/bckgrnd.jpeg') center/cover no-repeat;
+  background-size: cover;
+}
+
+.auth-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  overflow: auto;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  gap: 0.2rem;
+}
+
+.auth-back-link {
+  display: inline-block;
+  color: rgba(0, 0, 0, 0.5);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.auth-back-link:hover {
+  color: #333;
+}
+
+.auth-title {
+  text-align: center;
+  margin-bottom: 1.2rem;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.auth-subtitle {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  color: rgba(0, 0, 0, 0.7);
+  max-width: 380px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-field label {
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+.auth-field input {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 12px;
+  transition: border-color 200ms, box-shadow 200ms, transform 200ms;
+  font-size: 1rem;
+  color: #333;
+  background-color: rgba(255, 255, 255, 0.9);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-field input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  outline: none;
+  background-color: #fff;
+  transform: translateY(-1px);
+}
+
+.auth-field input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.auth-remember {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-remember label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0;
+}
+
+.auth-remember input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 1);
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  cursor: pointer;
+}
+
+.auth-remember input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #6c5ce7, #4a90e2);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-remember input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.auth-message {
+  width: 100%;
+  max-width: 420px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  text-align: center;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.auth-error {
+  color: #b42318;
+  background: rgba(254, 228, 226, 0.9);
+  border: 1px solid rgba(180, 35, 24, 0.25);
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.05);
+}
+
+.auth-success {
+  color: #227a3b;
+  background: rgba(227, 252, 234, 0.9);
+  border: 1px solid rgba(34, 122, 59, 0.25);
+  box-shadow: 0 0 0 3px rgba(34, 122, 59, 0.05);
+}
+
+.auth-status-alert {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.auth-status-alert code {
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.auth-button {
+  padding: 0.9rem 1.2rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 200ms, transform 100ms, box-shadow 200ms, opacity 200ms;
+  box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3);
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  font-size: 1rem;
+}
+
+.auth-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3d7fd1, #5a4fb8);
+  transform: translateY(-1px);
+}
+
+.auth-button[aria-busy="true"] {
+  opacity: 0.9;
+  cursor: wait;
+}
+
+.auth-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 1rem;
+  color: #666;
+}
+
+.auth-footer a {
+  color: #667eea;
+  text-decoration: none;
+  transition: color 200ms;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+  color: #764ba2;
+}
+
+@media (max-width: 768px) {
+  .auth-page {
+    flex-direction: column;
+    min-height: auto;
+    max-height: none;
+  }
+
+  .auth-visual {
+    display: none;
+  }
+
+  .auth-panel {
+    padding: 1.5rem 1rem;
+  }
+}
+
+html[data-theme="dark"] .auth-page {
+  background: rgba(45, 45, 45, 0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(139, 155, 219, 0.2);
+}
+
+html[data-theme="dark"] .auth-panel {
+  background: rgba(20, 20, 30, 0.8);
+}
+
+html[data-theme="dark"] .auth-title {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .auth-subtitle {
+  color: rgba(240, 240, 240, 0.7);
+}
+
+html[data-theme="dark"] .auth-back-link {
+  color: rgba(139, 155, 219, 0.7);
+}
+
+html[data-theme="dark"] .auth-back-link:hover {
+  color: #8b9bdb;
+}
+
+html[data-theme="dark"] .auth-field label {
+  color: #e0e0e0;
+}
+
+html[data-theme="dark"] .auth-field input {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(139, 155, 219, 0.3);
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .auth-field input:focus {
+  border-color: #8b9bdb;
+  background-color: rgba(139, 155, 219, 0.1);
+  box-shadow: 0 0 0 3px rgba(139, 155, 219, 0.2);
+}
+
+html[data-theme="dark"] .auth-field input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+html[data-theme="dark"] .auth-remember label {
+  color: #e0e0e0;
+}
+
+html[data-theme="dark"] .auth-remember input[type="checkbox"] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(139, 155, 219, 0.4);
+}
+
+html[data-theme="dark"] .auth-button {
+  background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+  box-shadow: 0 4px 12px rgba(139, 155, 219, 0.3);
+}
+
+html[data-theme="dark"] .auth-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #357abd, #5a4fb8);
+  box-shadow: 0 6px 18px rgba(139, 155, 219, 0.4);
+}
+
+html[data-theme="dark"] .auth-error {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff8a8a;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+html[data-theme="dark"] .auth-success {
+  background: rgba(76, 175, 80, 0.15);
+  color: #7cff7c;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+html[data-theme="dark"] .auth-footer {
+  color: #b0b0b0;
+}
+
+html[data-theme="dark"] .auth-footer a {
+  color: #8b9bdb;
+}
+
+html[data-theme="dark"] .auth-footer a:hover {
+  color: #a8b5e8;
+}
