@@ -10,9 +10,9 @@
 
 Estudios de grabación · Cocinas industriales · Talleres de carpintería · Estudios fotográficos
 
-![TypeScript](https://img.shields.io/badge/Backend-TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![Frontend](https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
+![Database](https://img.shields.io/badge/Database-Neon-00E599?style=for-the-badge&logo=neon&logoColor=white)
 ![ISO 25010](https://img.shields.io/badge/Calidad-ISO%2FIEC%2025010-2EA44F?style=for-the-badge)
 ![Medellín](https://img.shields.io/badge/Ciudad-Medell%C3%ADn-6366F1?style=for-the-badge)
 
@@ -87,10 +87,11 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 
 | Capa | Tecnología |
 |---|---|
-| Backend | ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white) |
+| Backend | Node.js + Express |
 | Frontend | ![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=black) |
-| Despliegue | ![Railway](https://img.shields.io/badge/-Railway-0B0D0E?logo=railway&logoColor=white) ![Vercel](https://img.shields.io/badge/-Vercel-000000?logo=vercel&logoColor=white) |
-| Base de datos | PostgreSQL |
+| Despliegue del frontend | ![Vercel](https://img.shields.io/badge/-Vercel-000000?logo=vercel&logoColor=white) |
+| Despliegue del backend | ![Render](https://img.shields.io/badge/-Render-46E3B7?logo=render&logoColor=white) |
+| Base de datos | PostgreSQL en [Neon](https://neon.tech/) |
 
 ## Inicio rápido
 
