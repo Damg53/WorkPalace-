@@ -69,11 +69,11 @@ Estas cifras dimensionan el volumen económico que actualmente no se está captu
 
 | Icono | Funcionalidad |
 |:---:|---|
-| <img src="https://api.iconify.design/fa6-solid/clock.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Reloj" /><img src="https://api.iconify.design/fa6-solid/clock.svg?color=%23333333#gh-light-mode-only" width="18" alt="Reloj" /> | **Reservas por bloques horarios** |
-| <img src="https://api.iconify.design/fa6-solid/credit-card.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Tarjeta" /><img src="https://api.iconify.design/fa6-solid/credit-card.svg?color=%23333333#gh-light-mode-only" width="18" alt="Tarjeta" /> | **Pagos en línea** |
-| <img src="https://api.iconify.design/fa6-solid/id-card.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Identificación" /><img src="https://api.iconify.design/fa6-solid/id-card.svg?color=%23333333#gh-light-mode-only" width="18" alt="Identificación" /> | **Verificación de identidad** |
-| <img src="https://api.iconify.design/fa6-solid/bolt.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Rayo" /><img src="https://api.iconify.design/fa6-solid/bolt.svg?color=%23333333#gh-light-mode-only" width="18" alt="Rayo" /> | **Disponibilidad en tiempo real** |
-| <img src="https://api.iconify.design/fa6-solid/magnifying-glass.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Búsqueda" /><img src="https://api.iconify.design/fa6-solid/magnifying-glass.svg?color=%23333333#gh-light-mode-only" width="18" alt="Búsqueda" /> | **Filtros y búsqueda avanzada** |
+| <img src="https://api.iconify.design/fa6-solid/clock.svg?color=%23f0f0f0" width="18" alt="Reloj" /> | **Reservas por bloques horarios** |
+| <img src="https://api.iconify.design/fa6-solid/credit-card.svg?color=%23f0f0f0" width="18" alt="Tarjeta" /> | **Pagos en línea** |
+| <img src="https://api.iconify.design/fa6-solid/id-card.svg?color=%23f0f0f0" width="18" alt="Identificación" /> | **Verificación de identidad** |
+| <img src="https://api.iconify.design/fa6-solid/bolt.svg?color=%23f0f0f0" width="18" alt="Rayo" /> | **Disponibilidad en tiempo real** |
+| <img src="https://api.iconify.design/fa6-solid/magnifying-glass.svg?color=%23f0f0f0" width="18" alt="Búsqueda" /> | **Filtros y búsqueda avanzada** |
 
 ## Atributos de calidad
 
@@ -81,7 +81,7 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 
 | Seguridad | Fiabilidad | Usabilidad | Eficiencia de desempeño |
 |:---:|:---:|:---:|:---:|
-| <img src="https://api.iconify.design/fa6-solid/lock.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Candado" /><img src="https://api.iconify.design/fa6-solid/lock.svg?color=%23333333#gh-light-mode-only" width="18" alt="Candado" /> | <img src="https://api.iconify.design/fa6-solid/circle-check.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Verificado" /><img src="https://api.iconify.design/fa6-solid/circle-check.svg?color=%23333333#gh-light-mode-only" width="18" alt="Verificado" /> | <img src="https://api.iconify.design/fa6-solid/computer-mouse.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Usabilidad" /><img src="https://api.iconify.design/fa6-solid/computer-mouse.svg?color=%23333333#gh-light-mode-only" width="18" alt="Usabilidad" /> | <img src="https://api.iconify.design/fa6-solid/chart-line.svg?color=%23f0f0f0#gh-dark-mode-only" width="18" alt="Rendimiento" /><img src="https://api.iconify.design/fa6-solid/chart-line.svg?color=%23333333#gh-light-mode-only" width="18" alt="Rendimiento" /> |
+| <img src="https://api.iconify.design/fa6-solid/lock.svg?color=%23f0f0f0" width="18" alt="Candado" /> | <img src="https://api.iconify.design/fa6-solid/circle-check.svg?color=%23f0f0f0" width="18" alt="Verificado" /> | <img src="https://api.iconify.design/fa6-solid/computer-mouse.svg?color=%23f0f0f0" width="18" alt="Usabilidad" /> | <img src="https://api.iconify.design/fa6-solid/chart-line.svg?color=%23f0f0f0" width="18" alt="Rendimiento" /> |
 
 ## Tecnologías
 
