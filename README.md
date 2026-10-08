@@ -93,6 +93,10 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 | Despliegue del backend | ![Render](https://img.shields.io/badge/-Render-46E3B7?logo=render&logoColor=white) |
 | Base de datos | PostgreSQL en [Neon](https://neon.tech/) |
 
+## Documentación de arquitectura
+
+- ADR 001: Selección de Estilo Arquitectónico: [docs/adr/ADR-001-Seleccion-de-Estilo-Arquitectonico.md](docs/adr/ADR-001-Seleccion-de-Estilo-Arquitectonico.md)
+
 ## Inicio rápido
 
 > Nota: para ejecutar el proyecto, se recomienda tener Node.js 18 o superior.
