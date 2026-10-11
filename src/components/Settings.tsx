@@ -31,16 +31,16 @@ const PREFERENCES_KEY = 'workpalace-user-preferences'
 function loadPreferencesFromStorage() {
   try {
     const raw = localStorage.getItem(PREFERENCES_KEY)
-    if (!raw) return { phone: '', city: 'Medellín', preferences: 'Trabajo remoto, reuniones y sesiones creativas', notificationsEnabled: true }
+    if (!raw) return { phone: '', city: '', preferences: 'Trabajo remoto, reuniones y sesiones creativas', notificationsEnabled: true }
     const parsed = JSON.parse(raw)
     return {
       phone: typeof parsed.phone === 'string' ? parsed.phone : '',
-      city: typeof parsed.city === 'string' ? parsed.city : 'Medellín',
+      city: typeof parsed.city === 'string' ? parsed.city : '',
       preferences: typeof parsed.preferences === 'string' ? parsed.preferences : 'Trabajo remoto, reuniones y sesiones creativas',
       notificationsEnabled: typeof parsed.notificationsEnabled === 'boolean' ? parsed.notificationsEnabled : true,
     }
   } catch {
-    return { phone: '', city: 'Medellín', preferences: 'Trabajo remoto, reuniones y sesiones creativas', notificationsEnabled: true }
+    return { phone: '', city: '', preferences: 'Trabajo remoto, reuniones y sesiones creativas', notificationsEnabled: true }
   }
 }
 
@@ -275,7 +275,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="Medellín"
+                  placeholder="Tu ciudad"
                 />
               </div>
             </div>

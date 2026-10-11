@@ -36,7 +36,7 @@ function loadUserPreferences() {
     if (!raw) {
       return {
         phone: '',
-        city: 'Medellín',
+        city: '',
         preferences: 'Trabajo remoto, reuniones y sesiones creativas',
         notificationsEnabled: true,
       }
@@ -44,14 +44,14 @@ function loadUserPreferences() {
     const parsed = JSON.parse(raw)
     return {
       phone: typeof parsed.phone === 'string' ? parsed.phone : '',
-      city: typeof parsed.city === 'string' ? parsed.city : 'Medellín',
+      city: typeof parsed.city === 'string' ? parsed.city : '',
       preferences: typeof parsed.preferences === 'string' ? parsed.preferences : 'Trabajo remoto, reuniones y sesiones creativas',
       notificationsEnabled: typeof parsed.notificationsEnabled === 'boolean' ? parsed.notificationsEnabled : true,
     }
   } catch {
     return {
       phone: '',
-      city: 'Medellín',
+      city: '',
       preferences: 'Trabajo remoto, reuniones y sesiones creativas',
       notificationsEnabled: true,
     }

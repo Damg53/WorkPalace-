@@ -2,9 +2,9 @@
 
 # WorkPalace
 
-### Reserva de espacios especializados por horas en Medellín
+### Reserva de espacios especializados por horas en Colombia
 
-> Proyecto en fase inicial: la plataforma está enfocada en conectar usuarios con espacios especializados disponibles por bloques de tiempo.
+> Proyecto en fase inicial: la plataforma está enfocada en conectar usuarios con espacios especializados disponibles por bloques de tiempo, sin limitarse a una sola ciudad.
 
 > Este repositorio incluye la versión actual del frontend y del backend para la gestión de reservas.
 
@@ -14,7 +14,7 @@ Estudios de grabación · Cocinas industriales · Talleres de carpintería · Es
 ![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
 ![Database](https://img.shields.io/badge/Database-Neon-00E599?style=for-the-badge&logo=neon&logoColor=white)
 ![ISO 25010](https://img.shields.io/badge/Calidad-ISO%2FIEC%2025010-2EA44F?style=for-the-badge)
-![Medellín](https://img.shields.io/badge/Ciudad-Medell%C3%ADn-6366F1?style=for-the-badge)
+![Colombia](https://img.shields.io/badge/Ubicaci%C3%B3n-Colombia-6366F1?style=for-the-badge)
 
 [Descripción](#descripción) · [Problema](#problema) · [Solución](#solución) · [Cifras](#cifras-iniciales) · [Funcionalidades](#funcionalidades-clave) · [Calidad](#atributos-de-calidad) · [Equipo](#equipo)
 
@@ -24,16 +24,16 @@ Estudios de grabación · Cocinas industriales · Talleres de carpintería · Es
 
 ## Descripción
 
-Muchos profesionales independientes, emprendedores y creativos en Medellín requieren acceso a espacios especializados para desarrollar su actividad económica. Sin embargo, la inversión permanente en este tipo de infraestructura resulta inasumible para la mayoría de ellos, especialmente cuando el uso es esporádico u ocasional.
+Muchos profesionales independientes, emprendedores y creativos en distintas ciudades de Colombia requieren acceso a espacios especializados para desarrollar su actividad económica. Sin embargo, la inversión permanente en este tipo de infraestructura resulta inasumible para la mayoría de ellos, especialmente cuando el uso es esporádico u ocasional.
 
-Paralelamente, la ciudad presenta un alto nivel de espacios especializados infrautilizados: instalaciones que permanecen ociosas durante buena parte del día o de la semana, lo que representa una pérdida de oportunidades económicas tanto para sus propietarios como para el ecosistema productivo local.
+Paralelamente, muchas localidades presentan un alto nivel de espacios especializados infrautilizados: instalaciones que permanecen ociosas durante buena parte del día o de la semana, lo que representa una pérdida de oportunidades económicas tanto para sus propietarios como para el ecosistema productivo local.
 
 ## Problema
 
 | Pregunta | Respuesta |
 |---|---|
 | ¿Qué problema existe? | Acceso limitado a infraestructura costosa combinado con la existencia de espacios vacíos que generan pérdida de oportunidades económicas para propietarios y usuarios. |
-| ¿A quién afecta? | Profesionales independientes, emprendedores, creativos y propietarios de espacios infrautilizados en Medellín. |
+| ¿A quién afecta? | Profesionales independientes, emprendedores, creativos y propietarios de espacios infrautilizados en distintas ciudades de Colombia. |
 
 ## Solución
 
@@ -141,5 +141,5 @@ npm run server
 ---
 
 <div align="center">
-Proyecto integrador · Medellín, Colombia
+Proyecto integrador · Colombia
 </div>
