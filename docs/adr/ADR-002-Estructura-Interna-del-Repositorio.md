@@ -16,42 +16,57 @@ Además, se busca mantener la lógica del negocio separada de los detalles tecno
 
 ## 2. Decisión tomada
 
-Se propone organizar el repositorio de WorkPalace por módulos funcionales, manteniendo una separación entre las responsabilidades de cada módulo. Dentro de estos módulos, el código podrá organizarse en capas de dominio, aplicación e infraestructura cuando corresponda.
+Se propone mantener diferenciadas las responsabilidades del frontend y del backend, y organizar progresivamente la lógica de negocio del backend por módulos funcionales. Dentro de los módulos que lo requieran, el código podrá separarse en capas de dominio, aplicación e infraestructura.
 
-La estructura propuesta es la siguiente:
+La propuesta no implica que estos módulos y capas ya estén implementados. La estructura actual del repositorio es:
 
 ```text
 workpalace/
-├── src/
-│   ├── modules/
-│   │   ├── users/
-│   │   │   ├── domain/
-│   │   │   ├── application/
-│   │   │   └── infrastructure/
-│   │   ├── verification/
-│   │   │   ├── domain/
-│   │   │   ├── application/
-│   │   │   └── infrastructure/
-│   │   ├── spaces/
-│   │   │   ├── domain/
-│   │   │   ├── application/
-│   │   │   └── infrastructure/
-│   │   ├── search/
-│   │   ├── reservations/
-│   │   ├── availability/
-│   │   └── payments/
-│   ├── shared/
-│   ├── config/
-│   └── main.ts
-├── tests/
 ├── docs/
-│   ├── ADR-001.md
-│   └── ADR-002.md
+│   └── adr/
+├── public/
+├── server/
+│   ├── db.js
+│   ├── schema.sql
+│   ├── server.js
+│   ├── swagger.js
+│   └── test-*.js
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── img/
+│   ├── services/
+│   ├── App.tsx
+│   └── main.tsx
 ├── package.json
 └── README.md
 ```
 
-Esta estructura es una propuesta conceptual y deberá ajustarse a los archivos, herramientas y convenciones que ya existan en el repositorio.
+El backend ya integra Swagger UI mediante `server/swagger.js` y `server/server.js`; la documentación interactiva está disponible en `/api-docs` y la especificación OpenAPI en `/api-docs.json`. Las pruebas del backend también están actualmente dentro de `server/`.
+
+Como objetivo de evolución, se propone organizar las funcionalidades del backend de esta forma:
+
+```text
+server/
+├── modules/
+│   ├── users/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   └── infrastructure/
+│   ├── verification/
+│   ├── spaces/
+│   ├── search/
+│   ├── reservations/
+│   ├── availability/
+│   └── payments/
+├── tests/
+├── db.js
+├── schema.sql
+├── server.js
+└── swagger.js
+```
+
+La estructura objetivo es conceptual y deberá ajustarse gradualmente a los archivos, herramientas y convenciones del repositorio. No requiere mover archivos ni crear capas que todavía no aporten una responsabilidad concreta.
 
 Los módulos tendrán las siguientes responsabilidades:
 
@@ -63,9 +78,9 @@ Los módulos tendrán las siguientes responsabilidades:
 - **Availability:** gestión de horarios y disponibilidad de los espacios.
 - **Payments:** procesamiento y seguimiento de los pagos.
 
-Dentro de los módulos que requieran esta separación, el dominio contendrá las reglas del negocio; la aplicación coordinará los casos de uso; y la infraestructura implementará los mecanismos técnicos necesarios, como el acceso a la base de datos o la integración con servicios externos.
+Dentro de los módulos que requieran esta separación, el dominio contendrá las reglas del negocio; la aplicación coordinará los casos de uso; y la infraestructura implementará los mecanismos técnicos necesarios, como el acceso a la base de datos o la integración con servicios externos. El frontend conservará sus componentes y servicios de interfaz en `src/`.
 
-El directorio `shared` contendrá únicamente elementos realmente compartidos entre módulos, mientras que `config` agrupará la configuración general de la aplicación. La carpeta `tests` contendrá las pruebas automatizadas y `docs` conservará la documentación técnica y los registros de decisiones arquitectónicas.
+Los elementos compartidos entre módulos deberán limitarse a utilidades realmente comunes. La configuración general continuará en los archivos de configuración existentes; si su crecimiento lo justifica, podrá organizarse en un directorio específico. Las pruebas automatizadas podrán organizarse en `server/tests/` a medida que se modularice el backend, mientras que `docs/adr/` conservará los registros de decisiones arquitectónicas.
 
 ## 3. Alternativas consideradas
 
@@ -121,8 +136,9 @@ Para mantener la coherencia de la estructura propuesta, se establecen las siguie
 3. **Inversión de dependencias:** la lógica del negocio no debe depender directamente de implementaciones concretas de bases de datos o servicios externos.
 4. **Pruebas automatizadas:** los casos de uso y las reglas del negocio deben contar con pruebas apropiadas para verificar su funcionamiento.
 5. **Configuración centralizada:** las configuraciones generales y los secretos deben gestionarse de forma segura, sin incluir credenciales en el repositorio.
-6. **Documentación actualizada:** los cambios significativos en la estructura o en las decisiones arquitectónicas deben quedar documentados.
-7. **Consistencia con el proyecto real:** la estructura debe seguir las convenciones de la tecnología utilizada y no crear carpetas o capas que no aporten una responsabilidad concreta.
+6. **Documentación Swagger/OpenAPI:** mantener la especificación de `server/swagger.js` sincronizada con los endpoints, sus parámetros, respuestas y requisitos de autenticación; verificar que `/api-docs` y `/api-docs.json` sigan disponibles al modificar la API.
+7. **Documentación actualizada:** los cambios significativos en la estructura o en las decisiones arquitectónicas deben quedar documentados.
+8. **Consistencia con el proyecto real:** la estructura debe seguir las convenciones de la tecnología utilizada y no crear carpetas o capas que no aporten una responsabilidad concreta.
 
 ## 6. Conclusión
 

@@ -96,6 +96,7 @@ Seleccionados bajo el estándar **ISO/IEC 25010**:
 ## Documentación de arquitectura
 
 - ADR 001: Selección de Estilo Arquitectónico: [docs/adr/ADR-001-Seleccion-de-Estilo-Arquitectonico.md](docs/adr/ADR-001-Seleccion-de-Estilo-Arquitectonico.md)
+- ADR 002: Estructura Interna del repositorio: [docs/adr/ADR-002-Estructura-Interna-del-Repositorio.md](docs/adr/ADR-002-Estructura-Interna-del-Repositorio.md). Distingue la estructura actual de la propuesta modular e incluye las prácticas de documentación Swagger/OpenAPI.
 
 ## Inicio rápido
 
