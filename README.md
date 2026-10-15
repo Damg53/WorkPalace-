@@ -126,6 +126,11 @@ npm run dev
 npm run server
 ```
 
+Con el backend activo, la documentación interactiva de la API está en
+`http://localhost:3001/api-docs` (especificación OpenAPI JSON:
+`http://localhost:3001/api-docs.json`). Si modificas `PORT` en `.env`, sustituye
+`3001` por el puerto configurado; la dirección también aparece en la consola del backend.
+
 ## Equipo
 
 | Integrante |

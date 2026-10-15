@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import bcryptjs from 'bcryptjs';
 import { randomInt, randomUUID } from 'node:crypto';
+import swaggerUi from 'swagger-ui-express';
 import pool, { initializationReady } from './db.js';
+import { openApiSpec } from './swagger.js';
 
 dotenv.config();
 
@@ -53,6 +55,13 @@ app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`);
   next();
 });
+
+app.get('/api-docs.json', (_req, res) => {
+  res.json(openApiSpec);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
+  customSiteTitle: 'WorkPalace API - Swagger UI',
+}));
 
 // Ruta de debug
 app.get('/api/debug', async (req, res) => {
@@ -1332,5 +1341,6 @@ app.delete('/api/admin/places/:id', requireAdmin, async (req, res) => {
 initializationReady.then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+    console.log(`📚 Swagger UI disponible en http://localhost:${PORT}/api-docs`);
   });
 });
