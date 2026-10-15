@@ -1,0 +1,552 @@
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+/* ── Tokens ─────────────────────────────────────────── */
+:root {
+  --otp-bg: #eeeafe;
+  --otp-panel: #ffffff;
+  --otp-line: #d9d2f7;
+  --otp-text: #1b1444;
+  --otp-muted: #5f5790;
+  --otp-err-text: #c81f44;
+  --otp-ok-text: #0b7a50;
+
+  /* los reels son tambores oscuros en ambos temas */
+  --otp-reel: #1b1444;
+  --otp-reel-ink: #f3f0ff;
+  --otp-mango: #ffb627;
+  --otp-mint: #3ddc97;
+  --otp-cherry: #ff4d6d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --otp-bg: #120e33;
+    --otp-panel: #1c1650;
+    --otp-line: #34297a;
+    --otp-text: #f3f0ff;
+    --otp-muted: #a9a0da;
+    --otp-err-text: #ff7a93;
+    --otp-ok-text: #3ddc97;
+    --otp-reel: #0c0925;
+  }
+}
+
+:root[data-theme='dark'] {
+  --otp-bg: #120e33;
+  --otp-panel: #1c1650;
+  --otp-line: #34297a;
+  --otp-text: #f3f0ff;
+  --otp-muted: #a9a0da;
+  --otp-err-text: #ff7a93;
+  --otp-ok-text: #3ddc97;
+  --otp-reel: #0c0925;
+}
+
+/* ── Panel ──────────────────────────────────────────── */
+.otp,
+.otp *,
+.otp *::before,
+.otp *::after {
+  box-sizing: border-box;
+}
+
+.otp {
+  width: min(100%, 26.5rem);
+  margin-inline: auto;
+  padding: 2rem clamp(1rem, 5vw, 1.5rem) 1.5rem;
+  background: var(--otp-panel);
+  border: 1px solid var(--otp-line);
+  border-radius: 1.75rem;
+  color: var(--otp-text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  text-align: center;
+}
+
+/* ── Candado: el cerrojo se cierra a medida que escribes ── */
+.otp-badge {
+  --badge-bg: var(--otp-reel);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  background: var(--badge-bg);
+  color: var(--otp-mango);
+  transition: background 0.4s, color 0.4s;
+}
+
+.otp-badge svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  overflow: visible;
+}
+
+.otp-shackle {
+  transform-box: view-box;
+  transform-origin: 16px 11px;
+  transform: translateY(calc((1 - var(--p, 0)) * -2.2px))
+    rotate(calc((1 - var(--p, 0)) * 34deg));
+  transition: transform 0.5s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.otp-keyhole {
+  fill: var(--badge-bg);
+  transition: fill 0.4s;
+}
+
+.otp-title {
+  margin: 0 0 0.5rem;
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-size: clamp(1.2rem, 5vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.otp-sub {
+  max-width: 30ch;
+  margin: 0 auto;
+  color: var(--otp-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.otp-sub strong {
+  color: var(--otp-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.otp-dev-code {
+  width: fit-content;
+  margin: 0.9rem auto 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px dashed var(--otp-mango);
+  border-radius: 0.55rem;
+  color: var(--otp-muted);
+  font-size: 0.85rem;
+}
+
+.otp-dev-code strong {
+  color: var(--otp-text);
+  font-family: 'Unbounded', system-ui, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.otp-cancel {
+  margin-top: 0.9rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--otp-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.otp-cancel:hover {
+  color: var(--otp-text);
+}
+
+/* ── Reels ──────────────────────────────────────────── */
+.otp-reels {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.75rem 0 1rem;
+}
+
+.otp-dash {
+  flex: 0 0 0.55rem;
+  align-self: center;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--otp-line);
+}
+
+.otp-slot {
+  position: relative;
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: clamp(1.35rem, 6.2vw, 1.9rem);
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.otp-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px; /* evita el zoom en iOS */
+  cursor: text;
+}
+
+.otp-drum {
+  position: relative;
+  display: block;
+  height: 2.1em;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: var(--otp-reel);
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+
+/* sombreado de cilindro */
+.otp-drum::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(0, 0, 0, 0) 70%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* cursor parpadeante en el reel activo y vacío */
+.otp-drum::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 0.09em;
+  height: 0.9em;
+  border-radius: 1em;
+  background: var(--otp-mango);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.otp-slot:focus-within:not([data-filled]) .otp-drum::before {
+  opacity: 1;
+  animation: otp-blink 1s steps(1) infinite;
+}
+
+.otp-slot:focus-within .otp-drum {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 3px var(--otp-panel), 0 0 0 5px var(--otp-mango);
+}
+
+/* la tira: [blanco, 0…9]; --i elige la celda y el reel gira hasta ella */
+.otp-strip {
+  display: block;
+  color: var(--otp-reel-ink);
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 700;
+  transform: translateY(calc(var(--i, 0) * -2.1em));
+  transition: transform 0.62s cubic-bezier(0.2, 1.15, 0.3, 1) var(--d, 0ms),
+    color 0.3s;
+  will-change: transform;
+}
+
+.otp-strip i {
+  display: block;
+  height: 2.1em;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  line-height: 2.1em;
+  text-align: center;
+}
+
+/* ── Estados ────────────────────────────────────────── */
+.otp[data-state='verifying'] .otp-drum {
+  animation: otp-hop 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--n) * 90ms);
+}
+
+.otp[data-state='success'] .otp-drum {
+  box-shadow: 0 0 0 3px var(--otp-panel), 0 0 0 5px var(--otp-mint);
+  animation: otp-lock 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: calc(var(--n) * 70ms);
+}
+
+.otp[data-state='success'] .otp-strip {
+  color: var(--otp-mint);
+}
+
+.otp[data-state='success'] .otp-badge {
+  --badge-bg: var(--otp-mint);
+  color: var(--otp-reel);
+  animation: otp-pop 0.5s 0.45s both;
+}
+
+.otp[data-state='error'] .otp-reels {
+  animation: otp-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.otp[data-state='error'] .otp-drum {
+  box-shadow: 0 0 0 3px var(--otp-panel), 0 0 0 5px var(--otp-cherry);
+}
+
+.otp[data-state='error'] .otp-strip {
+  color: var(--otp-cherry);
+}
+
+@keyframes otp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes otp-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(255, 182, 39, 0);
+  }
+  30% {
+    transform: translateY(-6px);
+    box-shadow: 0 0 0 3px var(--otp-panel), 0 0 0 5px var(--otp-mango);
+  }
+}
+
+@keyframes otp-lock {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-5px) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes otp-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes otp-shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-7px);
+  }
+  40%,
+  60% {
+    transform: translateX(7px);
+  }
+}
+
+/* ── Mensaje, botón, reenvío ────────────────────────── */
+.otp-msg {
+  min-height: 1.4em;
+  margin: 0 0 1.1rem;
+  color: var(--otp-muted);
+  font-size: 0.9rem;
+}
+
+.otp-msg[data-tone='error'] {
+  color: var(--otp-err-text);
+}
+
+.otp-msg[data-tone='ok'] {
+  color: var(--otp-ok-text);
+}
+
+.otp-btn {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--otp-mango);
+  color: #1b1444;
+  font: 600 1rem 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.3s, opacity 0.2s;
+}
+
+.otp-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.otp-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.otp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.otp[data-state='verifying'] .otp-btn:disabled {
+  opacity: 0.8;
+  cursor: progress;
+}
+
+.otp[data-state='success'] .otp-btn:disabled {
+  background: var(--otp-mint);
+  opacity: 1;
+  cursor: default;
+}
+
+.otp-btn:focus-visible,
+.otp-link:focus-visible {
+  outline: 3px solid var(--otp-mango);
+  outline-offset: 3px;
+}
+
+.otp-resend {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.otp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--otp-text);
+  font: 500 0.9rem 'DM Sans', system-ui, sans-serif;
+  text-decoration: underline var(--otp-mango);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.otp-link:disabled {
+  color: var(--otp-muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+.otp-link:not(:disabled) .otp-ring {
+  display: none;
+}
+
+.otp-ring {
+  width: 1.1rem;
+  height: 1.1rem;
+  transform: rotate(-90deg);
+}
+
+.otp-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.otp-ring-bg {
+  stroke: var(--otp-line);
+}
+
+.otp-ring-fg {
+  stroke: var(--otp-mango);
+  stroke-dasharray: 50.27; /* 2π · 8 */
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+/* ── Explosión de confeti al verificar ──────────────── */
+.otp-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.otp-burst i {
+  --c: var(--otp-mango);
+  --r: 3.4rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--c);
+  opacity: 0;
+}
+
+.otp-burst i:nth-child(4n + 2) { --c: var(--otp-mint); }
+.otp-burst i:nth-child(4n + 3) { --c: var(--otp-cherry); }
+.otp-burst i:nth-child(4n) { --c: var(--otp-reel-ink); }
+.otp-burst i:nth-child(even) { --r: 4.6rem; width: 0.28rem; height: 0.7rem; border-radius: 2px; }
+
+.otp[data-state='success'] .otp-burst i {
+  animation: otp-burst 0.95s cubic-bezier(0.15, 0.8, 0.3, 1) 0.45s both;
+}
+
+/* onda expansiva desde el candado */
+.otp-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--otp-mint);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.otp[data-state='success'] .otp-badge::after {
+  animation: otp-ripple 0.9s ease-out 0.45s both;
+}
+
+@keyframes otp-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(var(--r) * -1))
+      rotate(200deg) scale(0.5);
+  }
+}
+
+@keyframes otp-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp *,
+  .otp *::before,
+  .otp *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}
