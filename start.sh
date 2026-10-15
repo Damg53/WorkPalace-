@@ -42,6 +42,7 @@ echo ""
 echo "✅ WorkPalace iniciado correctamente!"
 echo ""
 echo "🌐 Abre en tu navegador: http://localhost:5173"
+echo "📚 Swagger UI: http://localhost:3001/api-docs"
 echo "📌 Presiona Ctrl+C para detener todos los servicios"
 echo ""
 

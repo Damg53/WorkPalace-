@@ -29,4 +29,5 @@ Write-Host "✅ WorkPalace iniciado correctamente!" -ForegroundColor Green
 Write-Host ""
 Write-Host "🌐 Abre en tu navegador: http://localhost:5173" -ForegroundColor Magenta
 Write-Host "📊 Backend en: http://localhost:3001" -ForegroundColor Magenta
+Write-Host "📚 Swagger UI: http://localhost:3001/api-docs" -ForegroundColor Magenta
 Write-Host "📌 Los servidores están corriendo en terminales separadas" -ForegroundColor Yellow

@@ -60,7 +60,17 @@ npm run server
 
 El servidor debería iniciarse en `http://localhost:3001`
 
-### 5. En otra terminal, ejecutar la aplicación React
+### 5. Documentación interactiva de la API (Swagger)
+
+Con el backend ejecutándose, abre Swagger UI en:
+
+```text
+http://localhost:3001/api-docs
+```
+
+La especificación OpenAPI en formato JSON está disponible en `http://localhost:3001/api-docs.json`. Si cambias `PORT` en `.env`, utiliza ese puerto en ambas direcciones. El servidor también imprime la dirección de Swagger al iniciar.
+
+### 6. En otra terminal, ejecutar la aplicación React
 
 ```bash
 npm run dev
