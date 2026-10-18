@@ -18,6 +18,10 @@ Además, se busca mantener la lógica del negocio separada de los detalles tecno
 
 Se propone mantener diferenciadas las responsabilidades del frontend y del backend, y organizar progresivamente la lógica de negocio del backend por módulos funcionales. Dentro de los módulos que lo requieran, el código podrá separarse en capas de dominio, aplicación e infraestructura.
 
+**Estrategia de alojamiento del código: Monorepo.** El frontend y el backend se mantienen en un mismo repositorio, con una raíz y configuración de proyecto compartidas, en lugar de dividirlos en repositorios independientes (Multirepo). Se elige este enfoque porque WorkPalace parte de un Monolito Modular: permite coordinar y versionar conjuntamente cambios que afectan a ambas partes, reutilizar herramientas y simplificar el desarrollo y la integración mientras el equipo y el sistema se mantienen en esta etapa. La separación en `src/` y `server/` conserva sus responsabilidades diferenciadas sin requerir repositorios separados.
+
+**Criterio de organización: por feature o dominio.** En el backend, cada módulo agrupa el código relacionado con una funcionalidad o dominio del negocio, como `users/`, `spaces/` o `reservations/`. Este criterio contrasta con una organización por capas técnicas globales, que reuniría en carpetas comunes todos los controladores, servicios o modelos de funcionalidades distintas y dispersaría el código de cada feature. Cuando sea pertinente, las capas de dominio, aplicación e infraestructura se organizarán dentro del módulo correspondiente, no como criterio global que sustituya la división por funcionalidades.
+
 La propuesta no implica que estos módulos y capas ya estén implementados. La estructura actual del repositorio es:
 
 ```text
