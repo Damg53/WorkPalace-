@@ -177,6 +177,10 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
+    const favicon = document.querySelector<HTMLLinkElement>('#page-favicon')
+    if (favicon) {
+      favicon.href = isDark ? '/favicon.svg?v=3' : '/favicon-light.svg?v=1'
+    }
   }, [isDark])
 
   useEffect(() => {
