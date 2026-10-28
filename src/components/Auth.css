@@ -46,10 +46,39 @@ html[data-theme="dark"] body {
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+html[data-theme="light"] .auth-page {
+  background: #f8f9fb;
+}
+
 .auth-visual {
   flex: 1.2;
-  background: url('../img/bckgrnd.jpeg') center/cover no-repeat;
-  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1.5rem;
+  background: radial-gradient(ellipse at center, #174c91 0%, #0d2f5c 58%, #091d3a 100%);
+  color: #fff;
+  text-align: center;
+}
+
+html[data-theme="light"] .auth-visual {
+  background: radial-gradient(ellipse at center, #ffffff 0%, #edf1f7 72%, #e2e8f0 100%);
+  color: #172554;
+}
+
+.auth-visual-logo {
+  display: block;
+  width: min(100%, 440px);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.auth-visual p {
+  margin: -2rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  line-height: 1.45;
 }
 
 .auth-panel {
@@ -58,7 +87,7 @@ html[data-theme="dark"] body {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(245, 247, 250, 0.92);
   overflow: auto;
 }
 
@@ -294,7 +323,19 @@ html[data-theme="dark"] body {
   }
 
   .auth-visual {
-    display: none;
+    flex: none;
+    min-height: 180px;
+    padding: 0.5rem;
+    gap: 0;
+  }
+
+  .auth-visual-logo {
+    width: min(100%, 210px);
+  }
+
+  .auth-visual p {
+    margin-top: -1rem;
+    font-size: 0.95rem;
   }
 
   .auth-panel {

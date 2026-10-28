@@ -48,7 +48,7 @@ body {
 
 /* Header Navigation */
 .landing-header {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(248, 249, 251, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: 0.75rem 1.5rem;
@@ -79,7 +79,6 @@ nav {
 nav .logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
   color: #25283a;
   font-size: 1.35rem;
   line-height: 1;
@@ -88,16 +87,12 @@ nav .logo {
   margin-right: auto;
 }
 
-nav .logo-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: #fff;
-  font-size: 1.15rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 10px;
-  box-shadow: 0 6px 14px rgba(102, 126, 234, 0.28);
+nav .logo-image {
+  display: block;
+  width: 160px;
+  height: 80px;
+  object-fit: contain;
+  object-position: center;
 }
 
 nav .nav-links {
@@ -231,7 +226,7 @@ nav .nav-links a:focus-visible::after {
 
 /* Features Section */
 .features {
-  background: white;
+  background: #f3f4f6;
   padding: 4rem 2rem;
   margin-top: 0;
 }
@@ -396,7 +391,7 @@ html[data-theme="dark"] .feature-card::before {
 
 /* Content Section */
 .content-section {
-  background: white;
+  background: #f3f4f6;
   padding: 4rem 2rem;
 }
 
@@ -952,13 +947,6 @@ html[data-theme="dark"] nav .logo {
   background-clip: text;
 }
 
-html[data-theme="dark"] nav .logo-mark {
-  background: linear-gradient(135deg, #8b9bdb, #9b8bdb);
-  -webkit-background-clip: initial;
-  background-clip: initial;
-  -webkit-text-fill-color: #ffffff;
-  color: #ffffff;
-}
 
 html[data-theme="dark"] .logo {
   color: #f0f0f0;

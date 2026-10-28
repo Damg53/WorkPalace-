@@ -32,8 +32,8 @@ export default function Navbar({ isDark, setIsDark, user, onLogout }: NavbarProp
     <header className={`landing-header ${visible ? '' : 'hidden'}`}> 
       <nav>
         <Link to="/" className="logo" aria-label="WorkPalace, página de inicio">
-          <span className="logo-mark" aria-hidden="true">✦</span>
-          <span>WorkPalace</span>
+          <img className="logo-image brand-logo-dark" src="/workpalace-logo-dark.png" alt="" aria-hidden="true" />
+          <img className="logo-image brand-logo-light" src="/workpalace-logo-light.png" alt="" aria-hidden="true" />
         </Link>
         <ul className="nav-links">
           {user ? (

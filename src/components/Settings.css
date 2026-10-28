@@ -6,7 +6,7 @@
 }
 
 [data-theme="light"] .settings-page {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f3f4f6;
   color: #333;
 }
 
@@ -22,7 +22,7 @@
 }
 
 [data-theme="light"] .settings-container {
-  background: white;
+  background: #f8f9fb;
   border-color: rgba(102, 126, 234, 0.2);
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
 }

@@ -32,7 +32,8 @@ export default function Sidebar({ user, isDark, setIsDark, onLogout }: SidebarPr
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand">
-        <span className="sidebar-brand-mark">W</span>
+        <img className="sidebar-brand-mark brand-logo-dark" src="/workpalace-logo-dark.png" alt="" aria-hidden="true" />
+        <img className="sidebar-brand-mark brand-logo-light" src="/workpalace-logo-light.png" alt="" aria-hidden="true" />
         <span className="sidebar-brand-text">WorkPalace</span>
       </div>
 

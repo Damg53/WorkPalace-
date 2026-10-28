@@ -88,7 +88,11 @@ export default function ForgotPassword() {
 
   return (
     <div className="auth-page">
-      <div className="auth-visual" />
+      <div className="auth-visual">
+        <img src="/workpalace-logo-dark.png" alt="WorkPalace" className="auth-visual-logo brand-logo-dark" />
+        <img src="/workpalace-logo-light.png" alt="WorkPalace" className="auth-visual-logo brand-logo-light" />
+        <p>Espacios especializados<br />para trabajar de forma flexible</p>
+      </div>
       <div className="auth-panel">
         <form onSubmit={handleSubmit} className="auth-form">
           <Link to="/" className="auth-back-link">← Volver al Inicio</Link>
