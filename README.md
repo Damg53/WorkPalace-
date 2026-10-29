@@ -224,6 +224,56 @@ Con el backend activo, la documentación interactiva de la API queda en [`http:/
 | `npm run lint` | Ejecuta el linter |
 | `npm run preview` | Previsualiza el build |
 
+### Comandos básicos de Git
+
+Clona el repositorio y entra a su carpeta:
+
+```bash
+git clone https://github.com/Damg53/WorkPalace-.git
+cd WorkPalace-
+```
+
+Consulta el estado de tus archivos y las ramas disponibles:
+
+```bash
+git status
+git branch
+```
+
+Para trabajar en una rama nueva, actualiza `main` y crea tu rama:
+
+```bash
+git switch main
+git pull origin main
+git switch -c feature/nombre-del-cambio
+```
+
+Después de realizar cambios, prepara los archivos, crea un commit y súbelo:
+
+```bash
+git add .
+git status
+git commit -m "Describe brevemente el cambio"
+git push -u origin feature/nombre-del-cambio
+```
+
+`git add .` prepara todos los cambios del directorio actual. Si quieres incluir solo algunos archivos, reemplázalo por `git add ruta/al/archivo`. Para enviar cambios posteriores de la misma rama, puedes usar `git push`.
+
+Para actualizar tu rama con los cambios más recientes de `main`:
+
+```bash
+git pull origin main
+```
+
+Otros comandos útiles:
+
+```bash
+git fetch origin                 # Consulta cambios remotos sin integrarlos
+git log --oneline                # Muestra el historial resumido
+git switch main                  # Cambia a la rama main
+git switch -c feature/nombre     # Crea y cambia a una rama nueva
+```
+
 ### Solución de problemas comunes
 
 <details>
@@ -271,6 +321,16 @@ Asegúrate de que el backend esté activo antes de probar las pantallas de auten
 │   └── adr/
 ├── public/
 ├── server/
+│   ├── middleware/
+│   ├── modules/
+│   │   ├── availability/
+│   │   ├── payments/
+│   │   ├── reservations/
+│   │   ├── search/
+│   │   ├── spaces/
+│   │   ├── users/
+│   │   └── verification/
+│   ├── shared/
 │   ├── db.js
 │   ├── schema.sql
 │   ├── server.js
@@ -298,7 +358,8 @@ Asegúrate de que el backend esté activo antes de probar las pantallas de auten
 | [SETUP_BACKEND.md](SETUP_BACKEND.md) | Configuración del backend y PostgreSQL |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Soluciones a problemas comunes de conexión y login |
 | [ADR 001](docs/adr/ADR-001-Seleccion-de-Estilo-Arquitectonico.md) | Selección de estilo arquitectónico |
-| [ADR 002](docs/adr/ADR-002-Estructura-Interna-del-Repositorio.md) | Estructura interna del repositorio: actual vs. propuesta modular, y prácticas Swagger/OpenAPI |
+| [ADR 002](docs/adr/ADR-002-Estructura-Interna-del-Repositorio.md) | Estructura modular actual del backend en siete módulos y prácticas Swagger/OpenAPI |
+| [ADR 003](docs/adr/ADR-003-Estrategia-de-Comunicacion.md) | Estrategia de comunicación síncrona REST, contratos OpenAPI y alternativas consideradas |
 
 ## Equipo
 
