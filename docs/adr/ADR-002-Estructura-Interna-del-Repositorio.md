@@ -1,6 +1,6 @@
 # ADR 002: Estructura Interna del repositorio
 
-**Estado:** Propuesto
+**Estado:** Aceptado
 
 **Decisión:** Organizar el repositorio de WorkPalace mediante una estructura modular por responsabilidades, alineada con la arquitectura de Monolito Modular seleccionada en el ADR-001.
 
@@ -16,13 +16,13 @@ Además, se busca mantener la lógica del negocio separada de los detalles tecno
 
 ## 2. Decisión tomada
 
-Se propone mantener diferenciadas las responsabilidades del frontend y del backend, y organizar progresivamente la lógica de negocio del backend por módulos funcionales. Dentro de los módulos que lo requieran, el código podrá separarse en capas de dominio, aplicación e infraestructura.
+Se adopta una estructura de monorepo que mantiene diferenciadas las responsabilidades del frontend y del backend, y organiza la API del backend en siete módulos funcionales. Las rutas de cada módulo se agrupan en un router propio. Las responsabilidades compartidas se mantienen en utilidades y middleware comunes, y los servicios de dominio se ubican en el módulo al que pertenecen. Se podrán introducir capas de dominio, aplicación e infraestructura dentro de un módulo cuando su complejidad lo justifique.
 
 **Estrategia de alojamiento del código: Monorepo.** El frontend y el backend se mantienen en un mismo repositorio, con una raíz y configuración de proyecto compartidas, en lugar de dividirlos en repositorios independientes (Multirepo). Se elige este enfoque porque WorkPalace parte de un Monolito Modular: permite coordinar y versionar conjuntamente cambios que afectan a ambas partes, reutilizar herramientas y simplificar el desarrollo y la integración mientras el equipo y el sistema se mantienen en esta etapa. La separación en `src/` y `server/` conserva sus responsabilidades diferenciadas sin requerir repositorios separados.
 
 **Criterio de organización: por feature o dominio.** En el backend, cada módulo agrupa el código relacionado con una funcionalidad o dominio del negocio, como `users/`, `spaces/` o `reservations/`. Este criterio contrasta con una organización por capas técnicas globales, que reuniría en carpetas comunes todos los controladores, servicios o modelos de funcionalidades distintas y dispersaría el código de cada feature. Cuando sea pertinente, las capas de dominio, aplicación e infraestructura se organizarán dentro del módulo correspondiente, no como criterio global que sustituya la división por funcionalidades.
 
-La propuesta no implica que estos módulos y capas ya estén implementados. La estructura actual del repositorio es:
+La estructura actual del repositorio es:
 
 ```text
 workpalace/
@@ -30,6 +30,27 @@ workpalace/
 │   └── adr/
 ├── public/
 ├── server/
+│   ├── middleware/
+│   │   └── admin.js
+│   ├── modules/
+│   │   ├── availability/
+│   │   │   ├── routes.js
+│   │   │   └── service.js
+│   │   ├── payments/
+│   │   │   ├── routes.js
+│   │   │   └── service.js
+│   │   ├── reservations/
+│   │   │   └── routes.js
+│   │   ├── search/
+│   │   │   └── routes.js
+│   │   ├── spaces/
+│   │   │   └── routes.js
+│   │   ├── users/
+│   │   │   └── routes.js
+│   │   └── verification/
+│   │       └── routes.js
+│   ├── shared/
+│   │   └── validation.js
 │   ├── db.js
 │   ├── schema.sql
 │   ├── server.js
@@ -46,45 +67,21 @@ workpalace/
 └── README.md
 ```
 
-El backend ya integra Swagger UI mediante `server/swagger.js` y `server/server.js`; la documentación interactiva está disponible en `/api-docs` y la especificación OpenAPI en `/api-docs.json`. Las pruebas del backend también están actualmente dentro de `server/`.
+El backend integra Swagger UI mediante `server/swagger.js` y `server/server.js`; la documentación interactiva está disponible en `/api-docs` y la especificación OpenAPI en `/api-docs.json`. Esta especificación documenta la API completa del backend y no requiere un Swagger independiente por módulo. Las pruebas del backend se mantienen en archivos `server/test-*.js`.
 
-Como objetivo de evolución, se propone organizar las funcionalidades del backend de esta forma:
+Los siete módulos están implementados como routers Express montados por `server/server.js`. Cada ruta conserva su dirección HTTP actual; la modularización organiza el código internamente sin cambiar los contratos de la API. Sus responsabilidades actuales son:
 
-```text
-server/
-├── modules/
-│   ├── users/
-│   │   ├── domain/
-│   │   ├── application/
-│   │   └── infrastructure/
-│   ├── verification/
-│   ├── spaces/
-│   ├── search/
-│   ├── reservations/
-│   ├── availability/
-│   └── payments/
-├── tests/
-├── db.js
-├── schema.sql
-├── server.js
-└── swagger.js
-```
-
-La estructura objetivo es conceptual y deberá ajustarse gradualmente a los archivos, herramientas y convenciones del repositorio. No requiere mover archivos ni crear capas que todavía no aporten una responsabilidad concreta.
-
-Los módulos tendrán las siguientes responsabilidades:
-
-- **Users:** registro, autenticación y administración de perfiles.
-- **Verification:** validación de identidad de los usuarios.
+- **Users:** registro de cuentas, perfiles, roles, favoritos, notificaciones y administración de usuarios.
+- **Verification:** inicio de sesión y flujos de verificación mediante código OTP. Este módulo no representa todavía una verificación de identidad documental.
 - **Spaces:** publicación, consulta y administración de espacios.
-- **Search:** búsqueda y filtrado de espacios según los criterios del usuario.
+- **Search:** listado y consulta de espacios, incluyendo el filtro de fecha disponible en la API actual.
 - **Reservations:** creación y administración de reservas.
-- **Availability:** gestión de horarios y disponibilidad de los espacios.
-- **Payments:** procesamiento y seguimiento de los pagos.
+- **Availability:** consulta de reservas disponibles, administración de bloqueos de espacios y sincronización de disponibilidad.
+- **Payments:** validación y administración de cupones, y validación del vencimiento de tarjeta en el flujo actual de reservas. No hay todavía un proveedor integrado ni procesamiento de pagos o endpoints de transacciones.
 
-Dentro de los módulos que requieran esta separación, el dominio contendrá las reglas del negocio; la aplicación coordinará los casos de uso; y la infraestructura implementará los mecanismos técnicos necesarios, como el acceso a la base de datos o la integración con servicios externos. El frontend conservará sus componentes y servicios de interfaz en `src/`.
+Los routers registran las operaciones HTTP y utilizan el pool de base de datos compartido. La autenticación administrativa está centralizada en `server/middleware/admin.js`; las validaciones reutilizables están en `server/shared/validation.js`. La lógica de disponibilidad y cupones que comparten varios flujos se ubica respectivamente en `server/modules/availability/service.js` y `server/modules/payments/service.js`. Las capas de dominio, aplicación e infraestructura no se han creado de forma generalizada; podrán incorporarse dentro de un módulo cuando separen responsabilidades reales. El frontend conserva sus componentes y servicios de interfaz en `src/`.
 
-Los elementos compartidos entre módulos deberán limitarse a utilidades realmente comunes. La configuración general continuará en los archivos de configuración existentes; si su crecimiento lo justifica, podrá organizarse en un directorio específico. Las pruebas automatizadas podrán organizarse en `server/tests/` a medida que se modularice el backend, mientras que `docs/adr/` conservará los registros de decisiones arquitectónicas.
+Los elementos compartidos entre módulos deberán limitarse a utilidades realmente comunes. La configuración general continuará en los archivos de configuración existentes; si su crecimiento lo justifica, podrá organizarse en un directorio específico. Las pruebas automatizadas podrán trasladarse a `server/tests/` si el volumen futuro lo justifica, mientras que `docs/adr/` conservará los registros de decisiones arquitectónicas.
 
 ## 3. Alternativas consideradas
 
@@ -133,7 +130,7 @@ No se descarta como principio de diseño, ya que puede complementar la decisión
 
 ## 5. Buenas prácticas de implementación
 
-Para mantener la coherencia de la estructura propuesta, se establecen las siguientes prácticas:
+Para mantener la coherencia de la estructura adoptada, se establecen las siguientes prácticas:
 
 1. **Separación de responsabilidades:** cada módulo debe tener una función claramente definida y evitar asumir responsabilidades que pertenecen a otros módulos.
 2. **Control de dependencias:** los módulos deben interactuar mediante interfaces o contratos definidos cuando sea necesario, evitando el acceso directo e indiscriminado a sus componentes internos.
@@ -146,11 +143,11 @@ Para mantener la coherencia de la estructura propuesta, se establecen las siguie
 
 ## 6. Conclusión
 
-Se propone organizar el repositorio de WorkPalace mediante módulos funcionales alineados con la arquitectura de Monolito Modular seleccionada en el ADR-001. Esta decisión busca mantener el código organizado, facilitar el mantenimiento y reducir el acoplamiento entre las funcionalidades del sistema.
+Se adopta y se implementa la organización del backend de WorkPalace en siete módulos funcionales, alineados con la arquitectura de Monolito Modular seleccionada en el ADR-001. Esta decisión busca mantener el código organizado, facilitar el mantenimiento y reducir el acoplamiento entre las funcionalidades del sistema, sin convertir los módulos en servicios independientes.
 
-La estructura propuesta también permite aplicar principios de separación de responsabilidades e inversión de dependencias, manteniendo la posibilidad de utilizar patrones como la Arquitectura Hexagonal dentro de los módulos cuando resulte conveniente.
+La estructura también permite aplicar principios de separación de responsabilidades e inversión de dependencias, manteniendo la posibilidad de utilizar patrones como la Arquitectura Hexagonal dentro de los módulos cuando resulte conveniente. El módulo Payments organiza ahora la validación y administración de cupones; la integración de pagos reales queda como funcionalidad futura, no como una capacidad ya implementada.
 
-La decisión podrá revisarse si la evolución del proyecto evidencia la necesidad de modificar la organización interna del repositorio.
+La decisión podrá revisarse si la evolución del proyecto evidencia la necesidad de modificar la organización interna del repositorio o extraer módulos como servicios independientes.
 
 ## Referencias
 
