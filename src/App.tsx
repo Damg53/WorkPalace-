@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
 import ForgotPassword from './components/ForgotPassword.tsx'
+import ResetPassword from './components/ResetPassword.tsx'
 import Navbar from './components/Navbar'
 import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
@@ -145,6 +146,7 @@ function loadStoredUser(): { id: number; username: string; role?: string; fullNa
 
 function saveUser(user: { id?: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean } | null) {
   if (!user) {
+    localStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(STORAGE_KEY)
     return
   }
@@ -173,6 +175,10 @@ function App() {
     return saved ? saved === 'dark' : false
   })
 
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEY)
+  }, [])
+
   // Aplicar tema al documento
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
@@ -190,6 +196,7 @@ function App() {
         if (response.status === 403 || response.status === 404) {
           setUser(null)
           setIsAdmin(false)
+          localStorage.removeItem(STORAGE_KEY)
           sessionStorage.removeItem(STORAGE_KEY)
         }
       })
@@ -204,6 +211,7 @@ function App() {
   }
 
   function handleLogout() {
+    localStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem('workpalace-user-preferences')
     setUser(null)
@@ -253,6 +261,14 @@ function App() {
           element={
             <div className="auth-layout">
               <ForgotPassword />
+            </div>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <div className="auth-layout">
+              <ResetPassword />
             </div>
           }
         />
