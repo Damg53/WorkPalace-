@@ -11,6 +11,7 @@ import searchRoutes from './modules/search/routes.js';
 import reservationsRoutes from './modules/reservations/routes.js';
 import availabilityRoutes from './modules/availability/routes.js';
 import paymentsRoutes from './modules/payments/routes.js';
+import passwordResetRoutes from './modules/verification/password-reset.js';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use(usersRoutes);
 app.use(verificationRoutes);
+app.use(passwordResetRoutes);
 app.use(spacesRoutes);
 app.use(searchRoutes);
 app.use(reservationsRoutes);

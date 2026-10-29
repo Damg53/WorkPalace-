@@ -171,6 +171,67 @@ html[data-theme="light"] .auth-visual {
   color: rgba(0, 0, 0, 0.45);
 }
 
+.auth-password-control {
+  position: relative;
+  width: 100%;
+}
+
+.auth-password-control input {
+  padding-right: 3.2rem;
+}
+
+.auth-password-control--text-toggle input {
+  padding-right: 4.7rem;
+}
+
+.auth-password-control--text-toggle .auth-password-toggle {
+  width: auto;
+  min-width: 3.6rem;
+  padding: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #53617a;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.auth-password-toggle:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 1px;
+}
+
+.auth-password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.auth-password-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .auth-remember {
   flex-direction: row;
   align-items: center;
@@ -387,6 +448,14 @@ html[data-theme="dark"] .auth-field input:focus {
 
 html[data-theme="dark"] .auth-field input::placeholder {
   color: rgba(255, 255, 255, 0.4);
+}
+
+html[data-theme="dark"] .auth-password-toggle {
+  color: #c4cbea;
+}
+
+html[data-theme="dark"] .auth-password-toggle:hover:not(:disabled) {
+  background: rgba(139, 155, 219, 0.16);
 }
 
 html[data-theme="dark"] .auth-remember label {
