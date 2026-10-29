@@ -134,6 +134,32 @@ router.post('/api/forgot-password', forgotPasswordRateLimit, async (req, res) =>
   }
 });
 
+router.post('/api/reset-password/validate', async (req, res) => {
+  const token = typeof req.body?.token === 'string' ? req.body.token : '';
+
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    return res.status(400).json({ error: 'El enlace de recuperación no es válido o ya venció.' });
+  }
+
+  try {
+    const tokenResult = await pool.query(
+      `SELECT 1 FROM password_reset_tokens
+       WHERE token_hash = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+       LIMIT 1`,
+      [hashToken(token)]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({ error: 'El enlace de recuperación no es válido o ya venció.' });
+    }
+
+    return res.json({ valid: true });
+  } catch (error) {
+    console.error('Error validando el enlace de restablecimiento de contraseña:', error);
+    return res.status(500).json({ error: 'No se pudo validar el enlace. Intenta de nuevo más tarde.' });
+  }
+});
+
 router.post('/api/reset-password', async (req, res) => {
   const token = typeof req.body?.token === 'string' ? req.body.token : '';
   const password = typeof req.body?.password === 'string' ? req.body.password : '';

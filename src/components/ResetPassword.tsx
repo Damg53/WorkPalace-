@@ -7,23 +7,59 @@ export default function ResetPassword() {
   const location = useLocation();
   const navigate = useNavigate();
   const [token] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
+  const [tokenStatus, setTokenStatus] = useState<'checking' | 'valid' | 'invalid'>(
+    /^[a-f0-9]{64}$/i.test(token) ? 'checking' : 'invalid'
+  );
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState(token ? '' : 'El enlace no es válido o no contiene un token.');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (token && location.search) {
+    if (tokenStatus === 'invalid') {
+      navigate('/forgot-password', { replace: true });
+      return;
+    }
+
+    if (tokenStatus !== 'checking') return;
+
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/api/reset-password/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('invalid-token');
+        if (!cancelled) setTokenStatus('valid');
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTokenStatus('invalid');
+          navigate('/forgot-password', { replace: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, token, tokenStatus]);
+
+  useEffect(() => {
+    if (tokenStatus === 'valid' && location.search) {
       navigate(location.pathname, { replace: true, state: location.state });
     }
-  }, [location.pathname, location.search, location.state, navigate, token]);
+  }, [location.pathname, location.search, location.state, navigate, tokenStatus]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
 
+    if (tokenStatus !== 'valid') {
+      return;
+    }
     if (password.length < 6 || password.length > 128) {
       setError('La contraseña debe tener entre 6 y 128 caracteres.');
       return;
@@ -55,6 +91,10 @@ export default function ResetPassword() {
     }
   };
 
+  if (tokenStatus !== 'valid') {
+    return null;
+  }
+
   return (
     <div className="auth-page">
       <div className="auth-visual">
@@ -78,7 +118,7 @@ export default function ResetPassword() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                disabled={loading || !token}
+                disabled={loading}
                 required
               />
               <button
@@ -105,7 +145,7 @@ export default function ResetPassword() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                disabled={loading || !token}
+                disabled={loading}
                 required
               />
               <button
@@ -124,7 +164,7 @@ export default function ResetPassword() {
 
           {error && <p className="auth-message auth-error" role="alert">{error}</p>}
 
-          <button type="submit" className="auth-button" disabled={loading || !token}>
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'Actualizando...' : 'Guardar nueva contraseña'}
           </button>
         </form>

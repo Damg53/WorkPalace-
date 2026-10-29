@@ -109,6 +109,12 @@ async function createTablesIfNotExist() {
     `);
     console.log('✅ Columna phone verificada/creada en users');
 
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+    console.log('✅ Columna updated_at verificada/creada en users');
+
     // columna active para desactivar usuarios sin borrarlos
     await pool.query(`
       ALTER TABLE users
