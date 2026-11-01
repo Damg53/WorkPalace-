@@ -17,7 +17,7 @@ router.get('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
     const result = await pool.query(
-      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, coupon_code, created_at
+      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, coupon_code, total_amount, created_at
        FROM reservations
        WHERE user_id = $1
        ORDER BY check_in DESC`,
@@ -54,8 +54,9 @@ router.post('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'La tarjeta está vencida o la fecha no es válida.' });
     }
 
+    let coupon = null;
     if (couponCode) {
-      const coupon = await findCoupon(couponCode);
+      coupon = await findCoupon(couponCode);
       if (!coupon) {
         return res.status(400).json({ error: 'El cupón no es válido.' });
       }
@@ -74,7 +75,7 @@ router.post('/api/reservations', async (req, res) => {
     inTransaction = true;
 
     const placeResult = await client.query(
-      `SELECT id, name, tipo, barrio, ciudad, active FROM places WHERE id = $1 FOR UPDATE`,
+      `SELECT id, name, tipo, barrio, ciudad, precio_hora, active FROM places WHERE id = $1 FOR UPDATE`,
       [pid]
     );
     if (placeResult.rows.length === 0) {
@@ -88,6 +89,15 @@ router.post('/api/reservations', async (req, res) => {
       return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
     }
     const place = placeResult.rows[0];
+    const quantity = Number(huespedes ?? 1);
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 120) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'La cantidad de unidades de la reserva no es válida.' });
+    }
+    const subtotal = Number(place.precio_hora ?? 45000) * quantity;
+    const discount = coupon ? Math.round(subtotal * (Number(coupon.discount) / 100)) : 0;
+    const simulatedTotal = subtotal - discount + Math.round((subtotal - discount) * 0.08);
 
     const existingReservation = await client.query(
       `SELECT id FROM reservations
@@ -118,10 +128,10 @@ router.post('/api/reservations', async (req, res) => {
     const ubicacion = ubicacionParts.join(', ');
 
     const insert = await client.query(
-      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 1), 'pendiente', $8, $9)
-       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code, created_at`,
-      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, huespedes || 1, pid, couponCode]
+      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code, total_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendiente', $8, $9, $10)
+       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code, total_amount, created_at`,
+      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, quantity, pid, couponCode, simulatedTotal]
     );
 
     if (couponCode) await client.query('UPDATE coupons SET used_count = used_count + 1, updated_at = CURRENT_TIMESTAMP WHERE code = $1', [couponCode]);
@@ -156,9 +166,27 @@ router.get('/api/admin/reservations', requireAdmin, async (_req, res) => {
               r.huespedes,
               r.estado,
               r.active,
+              COALESCE(
+                r.total_amount::numeric,
+                estimate.subtotal
+                  - ROUND(estimate.subtotal * estimate.discount / 100)
+                  + ROUND((estimate.subtotal - ROUND(estimate.subtotal * estimate.discount / 100)) * 0.08)
+              ) AS total_amount,
+              r.total_amount IS NULL AS total_amount_estimated,
               r.created_at
        FROM reservations r
        LEFT JOIN users u ON u.id = r.user_id
+       LEFT JOIN places p ON p.id = r.place_id
+       LEFT JOIN coupons c ON c.code = r.coupon_code
+       CROSS JOIN LATERAL (
+         SELECT
+           COALESCE(
+             p.precio_hora,
+             (SELECT legacy_place.precio_hora FROM places legacy_place WHERE legacy_place.name = r.hotel ORDER BY legacy_place.id DESC LIMIT 1),
+             45000
+           )::numeric * COALESCE(r.huespedes, 1) AS subtotal,
+           COALESCE(c.discount, 0)::numeric AS discount
+       ) estimate
        ORDER BY r.check_in DESC, r.id DESC`
     );
     res.json({ reservations: result.rows });
@@ -185,7 +213,7 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
          estado = COALESCE($4, estado),
          active = COALESCE($5, active)
        WHERE id = $6
-      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, active, place_id, created_at`,
+      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, active, place_id, total_amount, created_at`,
       [
         checkIn || null,
         checkOut || null,

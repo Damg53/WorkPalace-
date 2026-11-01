@@ -13,6 +13,7 @@ const adminPool = new Pool({
   database: 'postgres',
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  connectionTimeoutMillis: 2000,
 });
 
 // Pool principal
@@ -176,11 +177,13 @@ async function createTablesIfNotExist() {
         huespedes INT NOT NULL DEFAULT 1,
         estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
         coupon_code VARCHAR(50),
+        total_amount BIGINT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;');
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
@@ -323,7 +326,7 @@ export const initializationReady = (async () => {
     await createTablesIfNotExist();
   } catch (err) {
     console.error('❌ Error al inicializar la base de datos:', err.message);
-    process.exit(1);
+    throw err;
   }
 })();
 

@@ -103,7 +103,7 @@ router.post('/api/signup', async (req, res) => {
 
 router.get('/api/users', requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, full_name, email, username, role, active FROM users ORDER BY id');
+    const result = await pool.query('SELECT id, full_name, email, username, role, active, created_at FROM users ORDER BY id');
     res.json({ users: result.rows });
   } catch (error) {
     console.error('Error obteniendo usuarios:', error);

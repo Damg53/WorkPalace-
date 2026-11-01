@@ -53,34 +53,64 @@ function Landing({
         <div className="features-container">
           <h2 className="section-title">Cómo funciona WorkPalace</h2>
           <div className="features-grid">
-            <div className="feature-card">
-              <h3>Búsqueda filtrada de espacios</h3>
-              <p>Encuentra el espacio ideal filtrando por tipo de lugar, ubicación en Colombia y equipamiento disponible. Estudios, cocinas, talleres y más, al alcance de tu mano.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">01</span>
+                <div>
+                  <p className="feature-group-kicker">Empieza aquí</p>
+                  <h3>Descubre tu espacio</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Búsqueda filtrada de espacios</h4>
+                  <p>Encuentra el espacio ideal filtrando por tipo de lugar, ubicación en Colombia y equipamiento disponible.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Disponibilidad en tiempo real</h4>
+                  <p>Consulta qué horarios están libres antes de decidir y evita perder tiempo con opciones ocupadas.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="feature-card">
-              <h3>Reservas flexibles</h3>
-              <p>Reserva por horas, media jornada o jornada completa según lo que necesites. Sin contratos largos ni grandes inversiones, solo el tiempo que realmente usas.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">02</span>
+                <div>
+                  <p className="feature-group-kicker">A tu medida</p>
+                  <h3>Reserva con libertad</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Reservas flexibles</h4>
+                  <p>Reserva por horas, media jornada o jornada completa, sin contratos largos ni grandes inversiones.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Pagos y seguridad integrados</h4>
+                  <p>Disfruta pagos integrados y verificación de identidad para que cada transacción sea confiable.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="feature-card">
-              <h3>Disponibilidad en tiempo real</h3>
-              <p>Consulta la disponibilidad de cualquier espacio en tiempo real y confirma tu reserva al instante o solicita aprobación del propietario según el tipo de espacio.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Pagos y seguridad integrados</h3>
-              <p>Sistema de pago integrado y verificación de identidad para arrendadores y arrendatarios. Confianza y trazabilidad en cada transacción.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Comunicación directa</h3>
-              <p>Chat interno para coordinar todos los detalles con el dueño del espacio antes y durante tu reserva. Sin intermediarios innecesarios.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Reseñas y calificaciones</h3>
-              <p>Sistema de reseñas bidireccional entre arrendadores y arrendatarios para construir una comunidad confiable y transparente en Colombia.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">03</span>
+                <div>
+                  <p className="feature-group-kicker">Después de reservar</p>
+                  <h3>Trabaja en comunidad</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Comunicación directa</h4>
+                  <p>Coordina todos los detalles con el dueño del espacio antes y durante tu reserva.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Reseñas y calificaciones</h4>
+                  <p>Construye una comunidad confiable y transparente compartiendo tu experiencia.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -84,11 +84,11 @@ El archivo `.env.example` contiene los nombres de variables y valores ilustrativ
 npm run server
 ```
 
-El servidor debería iniciarse en `http://localhost:3001`
+El servidor inicia en `http://localhost:3001`. PostgreSQL (por ejemplo, el contenedor Docker) es necesario para las operaciones de la API que usan la base de datos, pero no para consultar Swagger. Si la base de datos no está disponible al arrancar, esas operaciones responden con `503`; al encenderla, reinicia el backend para inicializar las tablas.
 
 ### 5. Documentación interactiva de la API (Swagger)
 
-Con el backend ejecutándose, abre Swagger UI en:
+Con el backend ejecutándose, incluso si PostgreSQL está apagado, abre Swagger UI en:
 
 ```text
 http://localhost:3001/api-docs

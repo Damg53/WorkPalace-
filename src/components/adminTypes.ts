@@ -1,5 +1,6 @@
 export interface AdminPlace {
   id: number
+  created_at?: string
   name: string
   tipo: string
   barrio: string | null
@@ -15,11 +16,13 @@ export interface AdminPlace {
 
 export interface AdminReservation {
   id: number
+  created_at?: string
   [key: string]: unknown
 }
 
 export interface AdminUser {
   id: number
+  created_at?: string
   username: string
   role?: string
   [key: string]: unknown

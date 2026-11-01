@@ -212,7 +212,7 @@ npm run server
 npm run dev
 ```
 
-Con el backend activo, la documentación interactiva de la API queda en [`http://localhost:3001/api-docs`](http://localhost:3001/api-docs) y la especificación OpenAPI en [`/api-docs.json`](http://localhost:3001/api-docs.json). Si cambias `PORT`, sustituye `3001` por tu puerto; la dirección también aparece en la consola del backend.
+Con el backend activo, la documentación interactiva de la API queda en [`http://localhost:3001/api-docs`](http://localhost:3001/api-docs) y la especificación OpenAPI en [`/api-docs.json`](http://localhost:3001/api-docs.json), incluso si PostgreSQL está apagado. Las operaciones que requieren la base de datos responderán `503` hasta que esté disponible; después de encenderla, reinicia el backend para inicializar las tablas. Si cambias `PORT`, sustituye `3001` por tu puerto; la dirección también aparece en la consola del backend.
 
 ### Scripts disponibles
 

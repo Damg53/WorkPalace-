@@ -52,6 +52,14 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'Server is running' });
 });
 
+let databaseReady = false;
+app.use('/api', (_req, res, next) => {
+  if (!databaseReady) {
+    return res.status(503).json({ error: 'La base de datos no está disponible.' });
+  }
+  next();
+});
+
 app.use(usersRoutes);
 app.use(verificationRoutes);
 app.use(passwordResetRoutes);
@@ -61,9 +69,13 @@ app.use(reservationsRoutes);
 app.use(availabilityRoutes);
 app.use(paymentsRoutes);
 
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+  console.log(`📚 Swagger UI disponible en http://localhost:${PORT}/api-docs`);
+});
+
 initializationReady.then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-    console.log(`📚 Swagger UI disponible en http://localhost:${PORT}/api-docs`);
-  });
+  databaseReady = true;
+}).catch((error) => {
+  console.error(`⚠️ El servidor sigue disponible, pero la base de datos no pudo inicializarse: ${error.message}`);
 });

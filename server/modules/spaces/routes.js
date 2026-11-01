@@ -7,7 +7,7 @@ const router = Router();
 router.get('/api/admin/places', requireAdmin, async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active
+      `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active, created_at
        FROM places
        ORDER BY id ASC`
     );

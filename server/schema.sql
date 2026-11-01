@@ -54,11 +54,13 @@ CREATE TABLE IF NOT EXISTS reservations (
   huespedes INT NOT NULL DEFAULT 1,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
   coupon_code VARCHAR(50),
+  total_amount BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);
 
 CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);
