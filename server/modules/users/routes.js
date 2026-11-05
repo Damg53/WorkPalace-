@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcryptjs from 'bcryptjs';
 import pool from '../../db.js';
 import { normalizeColombianPhone, normalizeText, isSafeEmail, isSafeName, isSafePassword, isSafeUsername } from '../../shared/validation.js';
+import { getProfileImageUrl, storeProfileImage } from '../../shared/neon-storage.js';
 import { logAdminAction, requireAdmin } from '../../middleware/admin.js';
 
 const router = Router();
@@ -146,7 +147,9 @@ router.put('/api/users/:id/active', requireAdmin, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    user.profile_image_url = await getProfileImageUrl(user.profile_image_url);
+    res.json({ user });
   } catch (error) {
     console.error('Error al actualizar estado de usuario:', error);
     res.status(500).json({ error: 'Error en el servidor' });
@@ -227,7 +230,18 @@ router.put('/api/users/:id/profile', async (req, res) => {
     const newFullName = full_name !== undefined ? full_name.trim() : existing.full_name;
     const newEmail = email !== undefined ? email.trim() : existing.email;
     const newUsername = username !== undefined ? username.trim() : existing.username;
-    const newProfileImage = profile_image_url !== undefined ? String(profile_image_url).trim() || null : existing.profile_image_url;
+    let newProfileImage = existing.profile_image_url;
+    let profileImageDataUrl = null;
+    if (profile_image_url !== undefined) {
+      const requestedImage = String(profile_image_url).trim();
+      if (requestedImage.startsWith('data:')) {
+        profileImageDataUrl = requestedImage;
+      } else if (
+        !(existing.profile_image_url?.startsWith('neon-object://assets/') && requestedImage.startsWith('https://'))
+      ) {
+        newProfileImage = requestedImage || null;
+      }
+    }
     const newPhone = phone !== undefined ? normalizeColombianPhone(phone) : existing.phone;
     const newTwoFactor = typeof two_factor_enabled === 'boolean'
       ? two_factor_enabled
@@ -255,6 +269,10 @@ router.put('/api/users/:id/profile', async (req, res) => {
       }
     }
 
+    if (profileImageDataUrl) {
+      newProfileImage = await storeProfileImage(userId, profileImageDataUrl);
+    }
+
     const update = await pool.query(
       `UPDATE users SET 
         full_name = COALESCE($1, full_name),
@@ -268,9 +286,14 @@ router.put('/api/users/:id/profile', async (req, res) => {
       [newFullName || null, newEmail || null, newUsername || null, newProfileImage, newPhone || null, newTwoFactor, userId]
     );
 
-    res.json({ user: update.rows[0] });
+    const updatedUser = update.rows[0];
+    updatedUser.profile_image_url = await getProfileImageUrl(updatedUser.profile_image_url);
+    res.json({ user: updatedUser });
   } catch (error) {
     console.error('Error al actualizar perfil:', error);
+    if (error.statusCode === 400) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

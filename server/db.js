@@ -5,9 +5,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const { Pool } = pg;
+const databaseUrl = process.env.DATABASE_URL?.trim();
 
 // Pool para conectarse a la BD de sistema (para crear DB)
-const adminPool = new Pool({
+const adminPool = databaseUrl ? null : new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT) || 5432,
   database: 'postgres',
@@ -18,14 +19,19 @@ const adminPool = new Pool({
 
 // Pool principal
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  ...(databaseUrl ? {
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10000,
+  } : {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectionTimeoutMillis: 2000,
+  }),
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
 });
 
 pool.on('error', (err) => {
@@ -38,6 +44,11 @@ pool.on('connect', () => {
 
 // Función para crear la base de datos si no existe
 async function createDatabaseIfNotExists() {
+  if (databaseUrl) {
+    console.log('✅ Base de datos provisionada por Neon; usando DATABASE_URL');
+    return;
+  }
+
   const client = await adminPool.connect();
   try {
     console.log('🔍 Verificando si la base de datos existe...');

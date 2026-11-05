@@ -3,6 +3,7 @@ import bcryptjs from 'bcryptjs';
 import { randomInt, randomUUID } from 'node:crypto';
 import pool from '../../db.js';
 import { normalizeText } from '../../shared/validation.js';
+import { getProfileImageUrl } from '../../shared/neon-storage.js';
 
 const router = Router();
 const otpChallenges = new Map();
@@ -15,14 +16,14 @@ const maskEmail = (email) => {
   return `${name.slice(0, 2)}***@${domain}`;
 };
 
-function publicUser(userData) {
+async function publicUser(userData) {
   return {
     id: userData.id,
     username: userData.username,
     fullName: userData.full_name,
     email: userData.email,
     role: userData.role,
-    profileImage: userData.profile_image_url || null,
+    profileImage: await getProfileImageUrl(userData.profile_image_url),
   };
 }
 
@@ -91,7 +92,7 @@ router.post('/api/login', async (req, res) => {
         fullName: userData.full_name,
         email: userData.email,
         role: userData.role,
-        profileImage: userData.profile_image_url || null
+        profileImage: await getProfileImageUrl(userData.profile_image_url)
       }
     });
   } catch (error) {
@@ -122,7 +123,7 @@ router.post('/api/login/otp/verify', async (req, res) => {
     );
     otpChallenges.delete(challengeId);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.json({ user: publicUser(result.rows[0]) });
+    res.json({ user: await publicUser(result.rows[0]) });
   } catch (error) {
     console.error('Error verificando OTP:', error);
     res.status(500).json({ error: 'Error en el servidor' });

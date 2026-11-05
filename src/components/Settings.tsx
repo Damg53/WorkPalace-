@@ -111,8 +111,13 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Selecciona una imagen válida.' })
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage({ type: 'error', text: 'Selecciona una imagen JPEG, PNG o WebP.' })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'La imagen no puede superar los 5 MB.' })
       return
     }
 
@@ -215,7 +220,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
               <input
                 id="settings-profile-image"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={handleProfileImageChange}
                 className="settings-upload-input"
               />
