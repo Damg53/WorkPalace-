@@ -17,7 +17,7 @@ router.get('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
     const result = await pool.query(
-      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, coupon_code, total_amount, created_at
+      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, coupon_code, total_amount, created_at
        FROM reservations
        WHERE user_id = $1
        ORDER BY check_in DESC`,
@@ -134,6 +134,18 @@ router.post('/api/reservations', async (req, res) => {
       [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, quantity, pid, couponCode, simulatedTotal]
     );
 
+    await client.query(
+      `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        uid,
+        insert.rows[0].id,
+        'Solicitud de reserva enviada',
+        `Tu reserva para ${place.name} del ${checkIn} al ${checkOut} quedó pendiente de confirmación.`,
+        'info',
+      ]
+    );
+
     if (couponCode) await client.query('UPDATE coupons SET used_count = used_count + 1, updated_at = CURRENT_TIMESTAMP WHERE code = $1', [couponCode]);
     await client.query('COMMIT');
     inTransaction = false;
@@ -165,6 +177,7 @@ router.get('/api/admin/reservations', requireAdmin, async (_req, res) => {
               r.check_out,
               r.huespedes,
               r.estado,
+              r.cancellation_reason,
               r.active,
               COALESCE(
                 r.total_amount::numeric,
@@ -197,23 +210,57 @@ router.get('/api/admin/reservations', requireAdmin, async (_req, res) => {
 });
 
 router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
+  let client;
+  let inTransaction = false;
   try {
     const { id } = req.params;
     const { checkIn, checkOut, huespedes, estado, active } = req.body || {};
+    const cancellationReason = typeof req.body?.cancellationReason === 'string'
+      ? req.body.cancellationReason.trim()
+      : '';
     const rid = parseInt(id, 10);
     if (isNaN(rid)) {
       return res.status(400).json({ error: 'ID de reserva inválido' });
     }
 
-    const result = await pool.query(
+    client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+
+    const previousResult = await client.query(
+      'SELECT id, user_id, hotel, estado, check_in, check_out, huespedes FROM reservations WHERE id = $1 FOR UPDATE',
+      [rid]
+    );
+    if (previousResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+    if (estado === 'cancelada' && previousResult.rows[0].estado !== 'cancelada' && !cancellationReason) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'Selecciona un motivo para cancelar la reserva.' });
+    }
+    if (cancellationReason.length > 500) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'El motivo de cancelación no puede superar 500 caracteres.' });
+    }
+
+    const result = await client.query(
       `UPDATE reservations SET
          check_in = COALESCE($1, check_in),
          check_out = COALESCE($2, check_out),
          huespedes = COALESCE($3, huespedes),
          estado = COALESCE($4, estado),
-         active = COALESCE($5, active)
+         active = COALESCE($5, active),
+         cancellation_reason = CASE
+           WHEN $4 = 'cancelada' THEN COALESCE($7, cancellation_reason)
+           WHEN $4 IS NOT NULL THEN NULL
+           ELSE cancellation_reason
+         END
        WHERE id = $6
-      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, active, place_id, total_amount, created_at`,
+      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, active, place_id, total_amount, created_at`,
       [
         checkIn || null,
         checkOut || null,
@@ -221,11 +268,54 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
         estado || null,
         active === undefined ? null : !!active,
         rid,
+        cancellationReason || null,
       ]
     );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    const previous = previousResult.rows[0];
+    const updated = result.rows[0];
+    const statusChanged = previous.estado !== updated.estado;
+    const normalizeDate = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    const detailsChanged =
+      normalizeDate(previous.check_in) !== normalizeDate(updated.check_in) ||
+      normalizeDate(previous.check_out) !== normalizeDate(updated.check_out) ||
+      Number(previous.huespedes) !== Number(updated.huespedes);
+
+    if (statusChanged || detailsChanged) {
+      const stateLabels = {
+        pendiente: 'pendiente de confirmación',
+        confirmada: 'confirmada',
+        cancelada: 'cancelada',
+        completada: 'completada',
+      };
+      await client.query(
+        `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          previous.user_id,
+          rid,
+          statusChanged
+            ? updated.estado === 'confirmada'
+              ? 'Reserva confirmada'
+              : updated.estado === 'cancelada'
+                ? 'Reserva cancelada por administración'
+                : 'Estado de reserva actualizado'
+            : 'Reserva actualizada',
+          statusChanged
+            ? updated.estado === 'cancelada'
+              ? `Tu reserva para ${previous.hotel} fue cancelada por administración. Motivo: ${cancellationReason}`
+              : `Tu reserva para ${previous.hotel} ahora está ${stateLabels[updated.estado] || updated.estado}.`
+            : `Administración actualizó los detalles de tu reserva para ${previous.hotel}.`,
+          statusChanged && updated.estado === 'confirmada'
+            ? 'success'
+            : statusChanged && updated.estado === 'cancelada' ? 'warning' : 'info',
+        ]
+      );
     }
+
+    await client.query('COMMIT');
+    inTransaction = false;
+
     if (['completada', 'cancelada'].includes(result.rows[0].estado)) {
       await pool.query(
         'UPDATE places SET active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
@@ -236,31 +326,61 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     }
     res.json({ reservation: result.rows[0] });
   } catch (error) {
+    if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error actualizando reserva (admin):', error);
     res.status(500).json({ error: 'Error en el servidor' });
+  } finally {
+    if (client) client.release();
   }
 });
 
 router.delete('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
+  let client;
+  let inTransaction = false;
   try {
     const { id } = req.params;
     const rid = parseInt(id, 10);
     if (isNaN(rid)) {
       return res.status(400).json({ error: 'ID de reserva inválido' });
     }
-    const result = await pool.query('DELETE FROM reservations WHERE id = $1 RETURNING id, place_id', [rid]);
-    if (result.rows.length === 0) {
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+    const reservation = await client.query(
+      'SELECT id, user_id, hotel, place_id FROM reservations WHERE id = $1 FOR UPDATE',
+      [rid]
+    );
+    if (reservation.rows.length === 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
-    await syncPlaceReservationState(result.rows[0].place_id);
+
+    const reservationData = reservation.rows[0];
+    await client.query(
+      `INSERT INTO user_notifications (user_id, title, detail, tone)
+       VALUES ($1, 'Reserva eliminada', $2, 'warning')`,
+      [reservationData.user_id, `La reserva para ${reservationData.hotel} fue eliminada por administración.`]
+    );
+    await client.query('DELETE FROM reservations WHERE id = $1', [rid]);
+    await client.query('COMMIT');
+    inTransaction = false;
+
+    await syncPlaceReservationState(reservationData.place_id);
     res.status(204).send();
   } catch (error) {
+    if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error eliminando reserva (admin):', error);
     res.status(500).json({ error: 'Error en el servidor' });
+  } finally {
+    if (client) client.release();
   }
 });
 
 router.delete('/api/reservations/:id', async (req, res) => {
+  let client;
+  let inTransaction = false;
   try {
     const userId = req.header('x-user-id');
     if (!userId) {
@@ -278,32 +398,54 @@ router.delete('/api/reservations/:id', async (req, res) => {
     }
 
     // Verificar que la reservación pertenece al usuario
-    const reserva = await pool.query(
-      'SELECT id, user_id, place_id FROM reservations WHERE id = $1',
+    client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+
+    const reserva = await client.query(
+      'SELECT id, user_id, place_id, hotel, estado FROM reservations WHERE id = $1 FOR UPDATE',
       [rid]
     );
     if (reserva.rows.length === 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
 
     const reservationData = reserva.rows[0];
     if (reservationData.user_id !== uid) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(403).json({ error: 'No tienes permiso para cancelar esta reserva' });
     }
 
     // Actualizar estado a cancelada
-    const updated = await pool.query(
-      'UPDATE reservations SET estado = $1 WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, created_at',
+    const updated = await client.query(
+      "UPDATE reservations SET estado = $1, cancellation_reason = 'Cancelada por el usuario.' WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, created_at",
       ['cancelada', rid]
     );
+
+    if (reservationData.estado !== 'cancelada') {
+      await client.query(
+        `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone)
+         VALUES ($1, $2, 'Reserva cancelada', $3, 'warning')`,
+        [uid, rid, `Cancelaste tu reserva para ${reservationData.hotel}.`]
+      );
+    }
+
+    await client.query('COMMIT');
+    inTransaction = false;
 
     // Reactivar el lugar si existe
     await syncPlaceReservationState(reservationData.place_id);
 
     res.json({ reservation: updated.rows[0], message: '✅ Reserva cancelada exitosamente' });
   } catch (error) {
+    if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error cancelando reserva:', error);
     res.status(500).json({ error: 'Error en el servidor' });
+  } finally {
+    if (client) client.release();
   }
 });
 

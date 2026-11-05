@@ -70,10 +70,8 @@ router.post('/api/signup', async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO user_notifications (user_id, title, detail, tone) VALUES
-        ($1, 'Bienvenido a WorkPalace', 'Tu cuenta quedó lista para empezar a reservar.', 'success'),
-        ($1, 'Recordatorio', 'Te avisaremos con fechas y cambios importantes de tus reservas.', 'info'),
-        ($1, 'Política flexible', 'Puedes cancelar con reembolso hasta 48 horas antes del inicio.', 'warning')`,
+      `INSERT INTO user_notifications (user_id, title, detail, tone)
+       VALUES ($1, 'Bienvenido a WorkPalace', 'Tu cuenta quedó lista para empezar a reservar.', 'success')`,
       [result.rows[0].id]
     );
 
@@ -201,7 +199,9 @@ router.get('/api/users/:id/profile', async (req, res) => {
     if (result.rows[0].active === false) {
       return res.status(403).json({ error: 'Esta cuenta está desactivada.' });
     }
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    user.profile_image_url = await getProfileImageUrl(user.profile_image_url);
+    res.json({ user });
   } catch (error) {
     console.error('Error al obtener perfil:', error);
     res.status(500).json({ error: 'Error en el servidor' });
@@ -397,7 +397,7 @@ router.get('/api/users/:id/notifications', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, title, detail, tone, is_read, created_at
+      `SELECT id, reservation_id, title, detail, tone, is_read, created_at
        FROM user_notifications
        WHERE user_id = $1
        ORDER BY created_at DESC
@@ -405,10 +405,36 @@ router.get('/api/users/:id/notifications', async (req, res) => {
       [userId]
     );
 
-    res.json({ notifications: result.rows });
+    const unreadResult = await pool.query(
+      'SELECT COUNT(*)::int AS unread_count FROM user_notifications WHERE user_id = $1 AND is_read = FALSE',
+      [userId]
+    );
+
+    res.json({ notifications: result.rows, unreadCount: unreadResult.rows[0].unread_count });
   } catch (error) {
     console.error('Error obteniendo notificaciones:', error);
     res.status(500).json({ error: 'No se pudieron cargar las notificaciones' });
+  }
+});
+
+router.delete('/api/users/:id/notifications', async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    const sessionUserId = Number.parseInt(req.header('x-user-id') || '', 10);
+
+    if (!Number.isInteger(userId) || !Number.isInteger(sessionUserId) || sessionUserId !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM user_notifications WHERE user_id = $1 RETURNING id',
+      [userId]
+    );
+
+    res.json({ deletedCount: result.rowCount ?? result.rows.length });
+  } catch (error) {
+    console.error('Error limpiando notificaciones:', error);
+    res.status(500).json({ error: 'No se pudieron limpiar las notificaciones' });
   }
 });
 

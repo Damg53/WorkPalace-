@@ -135,6 +135,23 @@
 .sidebar-link.active { background: #000; color: #fff; }
 .sidebar-link .fa { display: table-cell; width: 60px; height: 44px; vertical-align: middle; font-size: 20px; text-align: center; }
 .sidebar-link > span { display: table-cell; width: 190px; vertical-align: middle; font-family: 'Titillium Web', sans-serif; }
+.sidebar-link .sidebar-notification-badge {
+  position: absolute;
+  top: 3px;
+  left: 34px;
+  display: grid;
+  place-items: center;
+  width: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid #212121;
+  border-radius: 999px;
+  background: #e53935;
+  color: #fff;
+  font: 700 10px/1 Arial, sans-serif;
+}
+
 .sidebar-bottom {
   position: absolute;
   right: 0;
@@ -176,4 +193,10 @@ html[data-theme='light'] .sidebar-link:hover,
 html[data-theme='light'] .sidebar-link.active {
   background: #e1e4ec;
   color: #20242c;
+}
+
+html[data-theme='light'] .sidebar-link .sidebar-notification-badge {
+  border-color: #edf0f5;
+  background: #d32f2f;
+  color: #fff;
 }

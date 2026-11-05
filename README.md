@@ -224,6 +224,40 @@ Con el backend activo, la documentación interactiva de la API queda en [`http:/
 | `npm run lint` | Ejecuta el linter |
 | `npm run preview` | Previsualiza el build |
 
+### Revisar dependencias y corregir problemas
+
+Después de clonar el proyecto, instala las versiones registradas en el lockfile y revisa las vulnerabilidades:
+
+```bash
+npm ci
+npm audit
+```
+
+Si `npm audit` reporta vulnerabilidades, aplica las actualizaciones compatibles y vuelve a comprobar:
+
+```bash
+npm audit fix
+npm audit
+npm run build
+```
+
+No uses `npm audit fix --force` sin revisar antes los cambios: puede instalar versiones mayores con cambios incompatibles. Revisa y prueba los paquetes que npm indique.
+
+Para encontrar problemas de estilo o código:
+
+```bash
+npm run lint
+```
+
+El arreglo automático puede corregir algunos problemas sencillos:
+
+```bash
+npm run lint -- --fix
+npm run lint
+```
+
+Los errores que permanezcan deben corregirse en los archivos señalados por ESLint; `npm audit fix` no corrige errores del linter.
+
 ### Comandos básicos de Git
 
 Clona el repositorio y entra a su carpeta:

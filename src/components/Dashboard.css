@@ -160,6 +160,16 @@
   margin-top: 0.2rem;
 }
 
+[data-theme="dark"] #favorites-and-notifications .mini-list-item strong,
+[data-theme="dark"] #favorites-and-notifications .notification-item strong {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] #favorites-and-notifications .mini-list-item span,
+[data-theme="dark"] #favorites-and-notifications .notification-item span {
+  color: #cbd5e1;
+}
+
 .notification-item {
   flex-direction: column;
   align-items: flex-start;
@@ -175,6 +185,204 @@
 
 .notification-item--warning {
   border-left: 4px solid #f59e0b;
+}
+
+.notification-heading {
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.notification-clear-button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  background: transparent;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.notification-clear-button:hover:not(:disabled) {
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.notification-clear-button:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
+.notification-clear-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.notification-error {
+  color: #b91c1c;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.reservation-cancellation-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-left: 4px solid #ef4444;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #7f1d1d;
+}
+
+.reservation-cancellation-reason span {
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .reservation-cancellation-reason {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+}
+
+[data-theme="dark"] #favorites-and-notifications .notification-error {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] #favorites-and-notifications .notification-clear-button {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] #favorites-and-notifications .notification-clear-button:hover:not(:disabled) {
+  background: rgba(252, 165, 165, 0.12);
+}
+
+[data-theme="dark"] #favorites-and-notifications .notification-clear-button:focus-visible {
+  outline-color: #fca5a5;
+}
+
+.notification-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.notification-confirm-dialog {
+  width: min(100%, 420px);
+  padding: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 20px;
+  background: #fff;
+  color: #1f2937;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.notification-confirm-dialog__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 1rem;
+  border-radius: 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 1.15rem;
+}
+
+.notification-confirm-dialog__icon svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.notification-confirm-dialog h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.2rem;
+}
+
+.notification-confirm-dialog p {
+  margin: 0.6rem 0 1.4rem;
+  color: #5b6472;
+  line-height: 1.55;
+}
+
+.notification-confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.notification-confirm-dialog__actions button {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.notification-confirm-dialog__actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.notification-confirm-dialog__actions button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.notification-confirm-dialog__actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.notification-confirm-dialog__cancel {
+  border-color: #d1d5db !important;
+  background: #fff;
+  color: #374151;
+}
+
+.notification-confirm-dialog__cancel:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.notification-confirm-dialog__confirm {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.notification-confirm-dialog__confirm:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+[data-theme="dark"] .notification-confirm-dialog {
+  border-color: #374151;
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .notification-confirm-dialog h2 {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .notification-confirm-dialog p {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .notification-confirm-dialog__cancel {
+  border-color: #4b5563 !important;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .notification-confirm-dialog__cancel:hover:not(:disabled) {
+  background: #4b5563;
 }
 
 .support-panel__inner {

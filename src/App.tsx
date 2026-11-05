@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 
 
@@ -14,6 +14,7 @@ import Settings from './components/Settings'
 import Checkout from './components/Checkout'
 import PlacesPage from './components/PlacesPage'
 import ContactDock from './components/ContactDock'
+import { cacheProfileImageFromUrl, loadCachedProfileImage } from './services/profileImageCache'
 
 function Landing({
   isDark,
@@ -187,7 +188,9 @@ function saveUser(user: { id?: number; username: string; role?: string; fullName
     role: user.role,
     fullName: user.fullName,
     email: user.email,
-    profileImage: user.profileImage || '',
+    profileImage: user.profileImage?.startsWith('data:image/') || user.profileImage?.startsWith('blob:')
+      ? ''
+      : user.profileImage || '',
     twoFactorEnabled: user.twoFactorEnabled || false,
   }
 
@@ -204,6 +207,36 @@ function App() {
     const saved = localStorage.getItem('theme-mode')
     return saved ? saved === 'dark' : false
   })
+
+  useEffect(() => {
+    if (user?.id == null) return
+    const profileUserId = user.id
+    const profileImageSource = user.profileImage
+    if (profileImageSource?.startsWith('data:image/')) return
+    let cancelled = false
+
+    async function restoreProfileImage() {
+      try {
+        const cachedImage = await loadCachedProfileImage(profileUserId)
+        const image = cachedImage || (profileImageSource
+          ? await cacheProfileImageFromUrl(profileUserId, profileImageSource)
+          : null)
+        if (!cancelled && image) {
+          setUser((current) => {
+            if (!current || current.id !== profileUserId) return current
+            const next = { ...current, profileImage: image }
+            saveUser(next)
+            return next
+          })
+        }
+      } catch (error) {
+        console.error('No se pudo restaurar la copia local de la foto de perfil:', error)
+      }
+    }
+
+    restoreProfileImage()
+    return () => { cancelled = true }
+  }, [user?.id, user?.profileImage])
 
   useEffect(() => {
     localStorage.removeItem(STORAGE_KEY)
@@ -248,13 +281,13 @@ function App() {
     setIsAdmin(false)
   }
 
-  function handleProfileUpdate(updated: { id: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean }) {
+  const handleProfileUpdate = useCallback((updated: { id: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean }) => {
     setUser(prev => {
       const next = prev ? { ...prev, ...updated } : null
       if (next) saveUser(next)
       return next
     })
-  }
+  }, [])
 
   return (
     <BrowserRouter>

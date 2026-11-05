@@ -210,6 +210,7 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
             modalidades={modalidades}
           />
           <PlacesList
+            userId={user.id}
             places={filtered}
             loading={loadingSpaces}
             error={spacesError}
