@@ -61,7 +61,7 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
           <form className="admin-form-grid" onSubmit={submitCoupon}>
             <input placeholder="Código" value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value })} required />
             <input placeholder="Descripción" value={couponForm.label} onChange={(event) => setCouponForm({ ...couponForm, label: event.target.value })} required />
-            <input type="number" min="1" max="100" placeholder="Descuento %" value={couponForm.discount} onChange={(event) => setCouponForm({ ...couponForm, discount: Number(event.target.value) })} required />
+            <label>Descuento (%)<input type="number" min="1" max="100" placeholder="Ej.: 10 = 10% menos" value={couponForm.discount} onChange={(event) => setCouponForm({ ...couponForm, discount: Number(event.target.value) })} required /></label>
             <input type="number" min="1" placeholder="Usos máximos" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} />
             <label>Desde<input type="date" value={couponForm.startsAt} onChange={(event) => setCouponForm({ ...couponForm, startsAt: event.target.value })} /></label>
             <label>Hasta<input type="date" value={couponForm.endsAt} onChange={(event) => setCouponForm({ ...couponForm, endsAt: event.target.value })} /></label>

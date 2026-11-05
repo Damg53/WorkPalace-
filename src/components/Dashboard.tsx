@@ -25,6 +25,28 @@ interface Reserva {
   checkOutRaw: string
   huespedes: number
   estado: EstadoReserva
+  cancellationReason: string | null
+}
+
+interface ReservaApiRecord {
+  id: number
+  hotel: string
+  tipo_alojamiento: string
+  ubicacion: string
+  check_in: string
+  check_out: string
+  huespedes: number
+  estado: string
+  cancellation_reason?: string | null
+}
+
+interface NotificationItem {
+  id: number
+  reservation_id: number | null
+  title: string
+  detail: string
+  tone: string
+  is_read: boolean
 }
 
 const API = 'http://localhost:3001'
@@ -69,6 +91,22 @@ function formatDate(dateStr: string): string {
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
 }
 
+function mapReservation(reservation: ReservaApiRecord): Reserva {
+  return {
+    id: Number(reservation.id),
+    hotel: reservation.hotel,
+    tipo: reservation.tipo_alojamiento,
+    ubicacion: reservation.ubicacion,
+    checkIn: formatDate(reservation.check_in),
+    checkOut: formatDate(reservation.check_out),
+    checkInRaw: reservation.check_in,
+    checkOutRaw: reservation.check_out,
+    huespedes: reservation.huespedes,
+    estado: reservation.estado as EstadoReserva,
+    cancellationReason: reservation.cancellation_reason ?? null,
+  }
+}
+
 function isoDateOnly(date: Date): string {
   // YYYY-MM-DD in local time (avoids timezone shifting issues for comparisons)
   const y = date.getFullYear()
@@ -108,9 +146,13 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   const [cancelling, setCancelling] = useState<number | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [selectedReservation, setSelectedReservation] = useState<Reserva | null>(null)
+  const [reservationToCancel, setReservationToCancel] = useState<Reserva | null>(null)
   const [preferences] = useState(loadUserPreferences)
   const [favoriteSpaces, setFavoriteSpaces] = useState<Array<{ id: number; place_id: number; place_name: string; place_city: string | null }>>([])
-  const [notificationItems, setNotificationItems] = useState<Array<{ id: number; title: string; detail: string; tone: string; is_read: boolean }>>([])
+  const [notificationItems, setNotificationItems] = useState<NotificationItem[]>([])
+  const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [clearingNotifications, setClearingNotifications] = useState(false)
+  const [showClearNotificationsDialog, setShowClearNotificationsDialog] = useState(false)
   const [suggestedPlaces, setSuggestedPlaces] = useState<Array<{ id: number; name: string; ciudad: string | null }>>([])
 
   const prioritizeSuggestedPlaces = (places: Array<{ id: number; name: string; ciudad?: string | null; active?: boolean; precio_hora?: number | null }>, userCity: string) => {
@@ -144,11 +186,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
 
     async function fetchUserExtras() {
       try {
-        const [favoritesRes, notificationsRes, placesRes] = await Promise.all([
+        const [favoritesRes, placesRes] = await Promise.all([
           fetch(`${API}/api/users/${user.id}/favorites`, {
-            headers: { 'x-user-id': String(user.id) },
-          }),
-          fetch(`${API}/api/users/${user.id}/notifications`, {
             headers: { 'x-user-id': String(user.id) },
           }),
           fetch(`${API}/api/places?date=${encodeURIComponent(todayIso)}`, {
@@ -161,11 +200,6 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
           setFavoriteSpaces(favoritesData.favorites || [])
         }
 
-        if (notificationsRes.ok) {
-          const notificationsData = await notificationsRes.json()
-          setNotificationItems(notificationsData.notifications || [])
-        }
-
         if (placesRes.ok) {
           const placesData = await placesRes.json()
           const places = Array.isArray(placesData.places) ? placesData.places : []
@@ -176,13 +210,58 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
             ciudad: place.ciudad || null,
           })))
         }
-      } catch (_error) {
-        // ignorar y usar valores vacíos; la UI seguirá funcionando
+      } catch (error) {
+        console.error('Error cargando datos complementarios del panel:', error)
       }
     }
 
     fetchUserExtras()
   }, [user.id, todayIso, preferences.city])
+
+  useEffect(() => {
+    if (!user.id) return
+
+    let active = true
+    let requestInProgress = false
+
+    const fetchNotifications = async () => {
+      if (requestInProgress) return
+      requestInProgress = true
+      try {
+        const response = await fetch(`${API}/api/users/${user.id}/notifications`, {
+          headers: { 'x-user-id': String(user.id) },
+        })
+        if (!response.ok) {
+          throw new Error('No se pudieron cargar las notificaciones.')
+        }
+
+        const data = await response.json()
+        if (active) {
+          setNotificationItems(Array.isArray(data.notifications) ? data.notifications : [])
+          setNotificationError(null)
+        }
+      } catch (error) {
+        if (active) {
+          setNotificationError(error instanceof Error ? error.message : 'No se pudieron cargar las notificaciones.')
+        }
+      } finally {
+        requestInProgress = false
+      }
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void fetchNotifications()
+    }
+
+    void fetchNotifications()
+    const intervalId = window.setInterval(fetchNotifications, 60000)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [user.id])
 
   const toggleFavorite = async (place: { id: number; name: string; ciudad: string | null }) => {
     if (!user.id) return
@@ -225,8 +304,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         },
         ...prev,
       ])
-    } catch (_error) {
-      console.error('Error actualizando favorito')
+    } catch (error) {
+      console.error('Error actualizando favorito:', error)
     }
   }
 
@@ -239,13 +318,75 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         headers: { 'x-user-id': String(user.id) },
       })
 
-      if (!res.ok) return
+      if (!res.ok) {
+        setNotificationError('No se pudo marcar la notificación como leída.')
+        return
+      }
 
       setNotificationItems((prev) => prev.map((item) =>
         item.id === notificationId ? { ...item, is_read: true } : item
       ))
-    } catch (_error) {
-      console.error('Error actualizando notificación')
+      setNotificationError(null)
+      window.dispatchEvent(new Event('workpalace-notifications-updated'))
+    } catch {
+      setNotificationError('No se pudo marcar la notificación como leída.')
+    }
+  }
+
+  const clearNotifications = async () => {
+    if (!user.id || clearingNotifications || notificationItems.length === 0) return
+
+    setClearingNotifications(true)
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/notifications`, {
+        method: 'DELETE',
+        headers: { 'x-user-id': String(user.id) },
+      })
+      const data: { error?: string } = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(
+          response.status === 503
+            ? 'La base de datos no está disponible. Revisa que el servidor de base de datos esté iniciado y vuelve a intentar.'
+            : data.error || `No se pudieron limpiar las notificaciones (error ${response.status}).`
+        )
+      }
+
+      setNotificationItems([])
+      setNotificationError(null)
+      setShowClearNotificationsDialog(false)
+      window.dispatchEvent(new Event('workpalace-notifications-updated'))
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'No se pudieron limpiar las notificaciones.')
+    } finally {
+      setClearingNotifications(false)
+    }
+  }
+
+  const openNotificationReservation = async (item: NotificationItem) => {
+    if (!user.id || item.reservation_id == null) return
+
+    try {
+      const response = await fetch(`${API}/api/reservations`, {
+        headers: { 'x-user-id': String(user.id) },
+      })
+      const data: { reservations?: ReservaApiRecord[]; error?: string } = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo cargar la reserva.')
+      }
+
+      const rows = Array.isArray(data.reservations) ? data.reservations : []
+      const matchingReservation = rows.find((reservation) => Number(reservation.id) === item.reservation_id)
+      if (!matchingReservation) {
+        setNotificationError('La reserva asociada ya no está disponible.')
+        return
+      }
+
+      const updatedReservations = rows.map(mapReservation)
+      setReservas(updatedReservations)
+      setSelectedReservation(updatedReservations.find((reservation) => reservation.id === item.reservation_id) ?? null)
+      await markNotificationRead(item.id)
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'No se pudo abrir la reserva.')
     }
   }
 
@@ -266,27 +407,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
           setError(data.error || 'Error al cargar reservas')
           return
         }
-        const rows = (data.reservations || []).map((r: {
-          id: number
-          hotel: string
-          tipo_alojamiento: string
-          ubicacion: string
-          check_in: string
-          check_out: string
-          huespedes: number
-          estado: string
-        }) => ({
-          id: r.id,
-          hotel: r.hotel,
-          tipo: r.tipo_alojamiento,
-          ubicacion: r.ubicacion,
-          checkIn: formatDate(r.check_in),
-          checkOut: formatDate(r.check_out),
-          checkInRaw: r.check_in,
-          checkOutRaw: r.check_out,
-          huespedes: r.huespedes,
-          estado: r.estado as EstadoReserva,
-        }))
+        const rows = (data.reservations || []).map(mapReservation)
         setReservas(rows)
       } catch {
         if (!cancelled) setError('Error de conexión. ¿Está el servidor en marcha?')
@@ -308,6 +429,28 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [selectedReservation])
+
+  useEffect(() => {
+    if (!showClearNotificationsDialog || clearingNotifications) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowClearNotificationsDialog(false)
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showClearNotificationsDialog, clearingNotifications])
+
+  useEffect(() => {
+    if (!reservationToCancel || cancelling != null) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setReservationToCancel(null)
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [reservationToCancel, cancelling])
 
   const reservasDisponiblesBase = reservas.filter((r) => {
     // "Disponibles" = próximas (desde hoy) y activas (pendiente/confirmada)
@@ -341,18 +484,6 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     .sort((a, b) => new Date(a.checkInRaw).getTime() - new Date(b.checkInRaw).getTime())[0]
 
   const handleCancelReservation = async (reservaId: number) => {
-    const reservation = reservas.find((item) => item.id === reservaId)
-    if (!reservation) return
-
-    const policy = getCancellationPolicy(reservation)
-    const confirmed = window.confirm(
-      `¿Cancelar ${reservation.hotel}?\n\nPolítica: ${policy.label}. ${policy.detail}`
-    )
-
-    if (!confirmed) {
-      return
-    }
-
     setCancelling(reservaId)
     setCancelError(null)
 
@@ -364,7 +495,9 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
       // Actualizar la lista de reservaciones
       setReservas((prev) => 
         prev.map((r) => 
-          r.id === reservaId ? { ...r, estado: 'cancelada' as EstadoReserva } : r
+          r.id === reservaId
+            ? { ...r, estado: 'cancelada' as EstadoReserva, cancellationReason: 'Cancelada por el usuario.' }
+            : r
         )
       )
       setSelectedReservation(null)
@@ -375,6 +508,18 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     } finally {
       setCancelling(null)
     }
+  }
+
+  const requestCancelReservation = (reservaId: number) => {
+    const reservation = reservas.find((item) => item.id === reservaId)
+    if (reservation) setReservationToCancel(reservation)
+  }
+
+  const confirmCancelReservation = async () => {
+    if (!reservationToCancel) return
+    const reservationId = reservationToCancel.id
+    setReservationToCancel(null)
+    await handleCancelReservation(reservationId)
   }
 
   function renderReservationsTable(rows: Reserva[], emptyText: string, showActions: boolean = false) {
@@ -421,7 +566,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                         {(r.estado === 'pendiente' || r.estado === 'confirmada') ? (
                           <button
                             className="cancel-btn"
-                            onClick={() => handleCancelReservation(r.id)}
+                            onClick={() => requestCancelReservation(r.id)}
                             disabled={cancelling === r.id}
                             title="Cancelar esta reservación"
                           >
@@ -496,7 +641,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                   <button
                     type="button"
                     className="cancel-btn"
-                    onClick={() => handleCancelReservation(r.id)}
+                    onClick={() => requestCancelReservation(r.id)}
                     disabled={cancelling === r.id}
                   >
                     {cancelling === r.id ? 'Cancelando...' : 'Cancelar'}
@@ -605,12 +750,25 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
           </div>
 
           <div className="user-box">
-            <div className="section-title-row section-title-row--tight">
+            <div className="section-title-row section-title-row--tight notification-heading">
               <h2 className="section-title">Notificaciones</h2>
+              {notificationItems.length > 0 && (
+                <button
+                  type="button"
+                  className="notification-clear-button"
+                  onClick={() => setShowClearNotificationsDialog(true)}
+                  disabled={clearingNotifications}
+                >
+                  Limpiar
+                </button>
+              )}
             </div>
             <div className="notification-list">
+              {notificationError && (
+                <p className="notification-error" role="alert">{notificationError}</p>
+              )}
               {notificationItems.length === 0 ? (
-                <div className="reservation-empty-state">No tienes notificaciones nuevas.</div>
+                <div className="reservation-empty-state">No tienes notificaciones.</div>
               ) : (
                 notificationItems.map((item) => (
                   <div className={`notification-item notification-item--${item.tone}`} key={item.id}>
@@ -618,7 +776,15 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                       <strong>{item.title}</strong>
                       <span>{item.detail}</span>
                     </div>
-                    {!item.is_read && (
+                    {item.reservation_id != null ? (
+                      <button
+                        type="button"
+                        className="reservation-card__ghost"
+                        onClick={() => openNotificationReservation(item)}
+                      >
+                        Ver reserva
+                      </button>
+                    ) : !item.is_read && (
                       <button
                         type="button"
                         className="reservation-card__ghost"
@@ -813,12 +979,19 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
               <span>{getCancellationPolicy(selectedReservation).detail}</span>
             </div>
 
+            {selectedReservation.estado === 'cancelada' && selectedReservation.cancellationReason && (
+              <div className="reservation-cancellation-reason">
+                <strong>Motivo de cancelación</strong>
+                <span>{selectedReservation.cancellationReason}</span>
+              </div>
+            )}
+
             <div className="reservation-detail-modal__footer">
               {(selectedReservation.estado === 'pendiente' || selectedReservation.estado === 'confirmada') && (
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() => handleCancelReservation(selectedReservation.id)}
+                  onClick={() => requestCancelReservation(selectedReservation.id)}
                   disabled={cancelling === selectedReservation.id}
                 >
                   {cancelling === selectedReservation.id ? 'Cancelando...' : 'Cancelar reserva'}
@@ -826,6 +999,100 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
               )}
               <button type="button" className="reservation-detail-modal__done" onClick={() => setSelectedReservation(null)}>
                 Cerrar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showClearNotificationsDialog && (
+        <div
+          className="notification-confirm-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !clearingNotifications) {
+              setShowClearNotificationsDialog(false)
+            }
+          }}
+        >
+          <section
+            className="notification-confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="notification-confirm-title"
+            aria-describedby="notification-confirm-description"
+          >
+            <div className="notification-confirm-dialog__icon" aria-hidden="true">
+              <i className="fa fa-trash-o" />
+            </div>
+            <h2 id="notification-confirm-title">Limpiar notificaciones</h2>
+            <p id="notification-confirm-description">
+              Se eliminarán todas tus notificaciones. Esta acción no se puede deshacer.
+            </p>
+            <div className="notification-confirm-dialog__actions">
+              <button
+                type="button"
+                className="notification-confirm-dialog__cancel"
+                onClick={() => setShowClearNotificationsDialog(false)}
+                disabled={clearingNotifications}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="notification-confirm-dialog__confirm"
+                onClick={clearNotifications}
+                disabled={clearingNotifications}
+              >
+                {clearingNotifications ? 'Limpiando...' : 'Sí, limpiar'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {reservationToCancel && (
+        <div
+          className="notification-confirm-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && cancelling == null) setReservationToCancel(null)
+          }}
+        >
+          <section
+            className="notification-confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="reservation-cancel-title"
+            aria-describedby="reservation-cancel-description"
+          >
+            <div className="notification-confirm-dialog__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M16 3v4M8 3v4M3 10h18M9 14l6 5M15 14l-6 5" />
+              </svg>
+            </div>
+            <h2 id="reservation-cancel-title">Cancelar reserva</h2>
+            <p id="reservation-cancel-description">
+              ¿Quieres cancelar la reserva de {reservationToCancel.hotel}?{' '}
+              {getCancellationPolicy(reservationToCancel).label}: {getCancellationPolicy(reservationToCancel).detail}
+            </p>
+            <div className="notification-confirm-dialog__actions">
+              <button
+                type="button"
+                className="notification-confirm-dialog__cancel"
+                onClick={() => setReservationToCancel(null)}
+                disabled={cancelling != null}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="notification-confirm-dialog__confirm"
+                onClick={() => void confirmCancelReservation()}
+                disabled={cancelling != null}
+              >
+                {cancelling != null ? 'Cancelando...' : 'Sí, cancelar reserva'}
               </button>
             </div>
           </section>

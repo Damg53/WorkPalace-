@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import CapacidadCellInput from './CapacidadCellInput'
 import type { AdminPlace, NewPlaceForm } from './adminTypes'
 
@@ -32,6 +32,112 @@ const BARRIOS: Record<string, string[]> = {
   Otra: ['Otro / No aplica'],
 }
 const EMPTY: NewPlaceForm = { name: '', tipo: '', barrio: '', ciudad: '', capacidad: '', precio_hora: '', modalidad: '', caracteristicas: '', nivel_ruido: '', image_url: '' }
+
+interface PlaceImagePickerProps {
+  id: string
+  value: string
+  onChange: (value: string) => void
+}
+
+function PlaceImagePicker({ id, value, onChange }: PlaceImagePickerProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [fileName, setFileName] = useState('')
+  const [previewError, setPreviewError] = useState(false)
+  const [fileError, setFileError] = useState('')
+  const isUploadedImage = value.startsWith('data:image/')
+
+  const handleFile = (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setFileError('Selecciona un archivo de imagen válido.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        setFileError('No se pudo leer la imagen. Inténtalo de nuevo.')
+        return
+      }
+      onChange(reader.result)
+      setFileName(file.name)
+      setPreviewError(false)
+      setFileError('')
+    }
+    reader.onerror = () => setFileError('No se pudo leer la imagen. Inténtalo de nuevo.')
+    reader.readAsDataURL(file)
+  }
+
+  const clearImage = () => {
+    onChange('')
+    setFileName('')
+    setPreviewError(false)
+    setFileError('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  return (
+    <div className="place-image-picker">
+      <div className="place-image-picker__fields">
+        <label className="place-image-picker__url-field" htmlFor={`${id}-url`}>
+          <span>Enlace de imagen</span>
+          <input
+            id={`${id}-url`}
+            type="text"
+            inputMode="url"
+            value={isUploadedImage ? '' : value}
+            onChange={(event) => {
+              onChange(event.target.value)
+              setFileName('')
+              setPreviewError(false)
+              setFileError('')
+            }}
+            placeholder={isUploadedImage ? 'Usando imagen seleccionada desde tu equipo' : 'https://ejemplo.com/imagen.jpg'}
+            autoComplete="url"
+          />
+        </label>
+        <div className="place-image-picker__file-field">
+          <span>O selecciona un archivo</span>
+          <input
+            ref={fileInputRef}
+            id={`${id}-file`}
+            className="place-image-picker__file-input"
+            type="file"
+            accept="image/*"
+            onChange={(event) => handleFile(event.target.files?.[0])}
+          />
+          <label className="place-image-picker__file-button" htmlFor={`${id}-file`}>
+            <i className="fa fa-upload" aria-hidden="true" />
+            Elegir imagen
+          </label>
+          <small>{fileName || (isUploadedImage ? 'Imagen cargada desde archivo' : 'JPG, PNG o WEBP')}</small>
+        </div>
+      </div>
+
+      <div className="place-image-picker__preview" aria-live="polite">
+        {value && !previewError ? (
+          <img
+            src={value}
+            alt="Vista previa de la imagen del espacio"
+            onError={() => setPreviewError(true)}
+          />
+        ) : (
+          <div className="place-image-picker__empty">
+            <i className={`fa ${previewError ? 'fa-exclamation-circle' : 'fa-picture-o'}`} aria-hidden="true" />
+            <span>{previewError ? 'No se pudo cargar esta imagen' : 'La vista previa aparecerá aquí'}</span>
+          </div>
+        )}
+      </div>
+
+      {fileError && <p className="place-image-picker__error" role="alert">{fileError}</p>}
+      {value && (
+        <button type="button" className="place-image-picker__remove" onClick={clearImage}>
+          Quitar imagen
+        </button>
+      )}
+    </div>
+  )
+}
 
 const getSuggestedPrice = (tipo: string, ciudad: string, barrioActual: string, capacidad: string, modalidad: string) => {
   const baseByType: Record<string, number> = {
@@ -181,12 +287,6 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const [editingUrl, setEditingUrl] = useState('')
   const setField = (field: keyof NewPlaceForm, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const stopWheel = (event: React.WheelEvent<HTMLInputElement>) => event.currentTarget.blur()
-  const readImage = (file: File | undefined, onRead: (value: string) => void) => {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => onRead(String(event.target?.result || ''))
-    reader.readAsDataURL(file)
-  }
 
   const suggestedPrice = getSuggestedPrice(form.tipo, form.ciudad, form.barrio, form.capacidad, form.modalidad)
 
@@ -223,11 +323,13 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       <select className="form-create-place-input" value={form.nivel_ruido} onChange={(e) => setField('nivel_ruido', e.target.value)}><option value="">Nivel de ruido</option>{RUIDO.map((item) => <option key={item}>{item}</option>)}</select>
       <textarea className="form-create-place-textarea form-create-place-full-width" placeholder="Características" value={form.caracteristicas} onChange={(e) => setField('caracteristicas', e.target.value)} />
       {form.tipo && form.ciudad && form.modalidad && (
-        <div className="form-create-place-full-width" style={{ color: '#dfe7ff', fontSize: '0.9rem', marginTop: '0.2rem' }}>
+        <div className="form-create-place-full-width form-create-place-suggested-price">
           Precio sugerido: <strong>{formatPriceForModality(suggestedPrice, form.modalidad)}</strong>
         </div>
       )}
-      <div className="form-create-place-full-width"><input className="form-create-place-input" placeholder="URL de imagen" value={form.image_url} onChange={(e) => setField('image_url', e.target.value)} /><input type="file" accept="image/*" onChange={(e) => readImage(e.target.files?.[0], (value) => setField('image_url', value))} /></div>
+      <div className="form-create-place-full-width">
+        <PlaceImagePicker id="create-place-image" value={form.image_url} onChange={(value) => setField('image_url', value)} />
+      </div>
     </div><button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
     {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper"><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
       {places.map((place) => <tr key={place.id}><td>#{place.id}</td><td><input className="table-input" defaultValue={place.name}
@@ -239,6 +341,41 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
        </div></td><td><select className="table-select" defaultValue={place.modalidad || ''} onChange={(e) => updatePlace(place.id, { modalidad: e.target.value })}>{MODALIDADES.map((item) => <option key={item}>{item}</option>)}</select></td><td><input type="checkbox" checked={place.active !== false} onChange={(e) => togglePlaceActive(place.id, e.target.checked)} 
        /></td><td><button className="btn btn-secondary" onClick={() => { setEditingId(place.id); setEditingUrl(place.image_url || '') }}>Imagen</button> <button className="user-delete-button" onClick={() => deletePlace(place.id)}>Eliminar</button></td></tr>)}
     </tbody></table></div>}
-    {editingId !== null && <div className="admin-image-modal"><div className="admin-image-dialog"><h3>Editar imagen del lugar</h3><input value={editingUrl} onChange={(e) => setEditingUrl(e.target.value)} placeholder="URL de la imagen" /><input type="file" accept="image/*" onChange={(e) => readImage(e.target.files?.[0], setEditingUrl)} />{editingUrl && <img src={editingUrl} alt="Vista previa" />}<div><button className="btn btn-secondary" onClick={() => setEditingId(null)}>Cancelar</button><button className="btn btn-primary" onClick={async () => { await updatePlace(editingId, { image_url: editingUrl }); setEditingId(null) }}>Guardar</button></div></div></div>}
+    {editingId !== null && (
+      <div
+        className="admin-image-modal"
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setEditingId(null)
+        }}
+      >
+        <section className="admin-image-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-place-image-title">
+          <div className="admin-image-dialog__heading">
+            <div>
+              <span className="admin-image-dialog__eyebrow">Lugares publicados</span>
+              <h3 id="edit-place-image-title">Actualizar imagen</h3>
+              <p>Usa un enlace público o elige una imagen de tu dispositivo.</p>
+            </div>
+            <button type="button" className="admin-image-dialog__close" onClick={() => setEditingId(null)} aria-label="Cerrar">
+              <i className="fa fa-times" aria-hidden="true" />
+            </button>
+          </div>
+          <PlaceImagePicker id="edit-place-image" value={editingUrl} onChange={setEditingUrl} />
+          <div className="admin-image-dialog__actions">
+            <button className="btn btn-secondary" type="button" onClick={() => setEditingId(null)}>Cancelar</button>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={async () => {
+                await updatePlace(editingId, { image_url: editingUrl })
+                setEditingId(null)
+              }}
+            >
+              Guardar imagen
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
   </section>
 }

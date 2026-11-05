@@ -862,15 +862,65 @@ html[data-theme="light"] {
   --color-border: #e0e0e0;
 }
 
+html[data-theme="light"] body {
+  background-color: #f3f4f6;
+  color: #333333;
+}
+
+html[data-theme="light"] .landing-header {
+  background: rgba(248, 249, 251, 0.92);
+  border-bottom: 1px solid rgba(35, 38, 52, 0.1);
+  box-shadow: 0 8px 24px rgba(35, 38, 52, 0.06);
+}
+
+html[data-theme="light"] nav .logo {
+  color: #25283a;
+}
+
+html[data-theme="light"] nav .nav-links a {
+  color: #454856;
+}
+
+html[data-theme="light"] .hero {
+  background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('./img/fondo-hero-claro.jpg');
+  color: #ffffff;
+}
+
+html[data-theme="light"] .features {
+  background: #f3f4f6;
+}
+
+html[data-theme="light"] .section-title {
+  color: #333333;
+}
+
 html[data-theme="light"] .features-grid {
-  background: linear-gradient(135deg, #f7f9ff 0%, #eef2ff 100%);
-  border-color: #dfe5f5;
-  box-shadow: 0 16px 40px rgba(55, 72, 120, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, #f4f6fb 0%, #e9edf6 100%);
+  border-color: #d8deeb;
+  box-shadow: 0 16px 40px rgba(55, 72, 120, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 html[data-theme="light"] .features-grid::before {
   background: radial-gradient(circle at 80% 10%, rgba(102, 126, 234, 0.08) 0%, transparent 70%),
               radial-gradient(circle at 20% 90%, rgba(118, 75, 162, 0.05) 0%, transparent 70%);
+}
+
+html[data-theme="light"] .feature-group {
+  background: #e5e9f2;
+  border-color: #d4dbea;
+}
+
+html[data-theme="light"] .feature-group-number {
+  border-color: #b6c2e8;
+  color: #6474b8;
+}
+
+html[data-theme="light"] .feature-group-kicker {
+  color: #6879bd;
+}
+
+html[data-theme="light"] .feature-group-heading h3 {
+  color: #252b3d;
 }
 
 html[data-theme="light"] .feature-card {
@@ -894,6 +944,16 @@ html[data-theme="light"] .feature-card h4 {
 
 html[data-theme="light"] .feature-card p {
   color: #59627a;
+}
+
+html[data-theme="light"] .content-section {
+  background: #f3f4f6;
+  color: #333333;
+}
+
+html[data-theme="light"] .content-section h2,
+html[data-theme="light"] .content-section p {
+  color: #333333;
 }
 
 /* Apply Dark Mode */

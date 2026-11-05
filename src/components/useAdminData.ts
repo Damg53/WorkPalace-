@@ -3,6 +3,13 @@ import type { AdminAuditLog, AdminBlock, AdminCoupon, AdminPlace, AdminReservati
 
 const API = 'http://localhost:3001'
 
+interface PendingConfirmation {
+  title: string
+  message: string
+  confirmLabel: string
+  action: () => Promise<void>
+}
+
 export function useAdminData(userId?: number) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [reservations, setReservations] = useState<AdminReservation[]>([])
@@ -11,6 +18,8 @@ export function useAdminData(userId?: number) {
   const [blocks, setBlocks] = useState<AdminBlock[]>([])
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([])
   const [error, setError] = useState('')
+  const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null)
+  const [confirmingAction, setConfirmingAction] = useState(false)
 
   const adminHeaders = useMemo(() => ({
     'Content-Type': 'application/json',
@@ -74,24 +83,46 @@ export function useAdminData(userId?: number) {
   }
 
   async function deleteUser(id: number) {
-    if (!window.confirm(`¿Eliminar usuario #${id}? Esto también eliminará sus reservas.`)) return
-    const response = await fetch(`${API}/api/users/${id}`, { method: 'DELETE', headers: adminHeaders })
-    if (!response.ok && response.status !== 204) return setError('Error al eliminar usuario')
-    window.location.reload()
+    setConfirmation({
+      title: `Eliminar usuario #${id}`,
+      message: 'Esto también eliminará sus reservas. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar usuario',
+      action: async () => {
+        const response = await fetch(`${API}/api/users/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error('Error al eliminar usuario')
+        window.location.reload()
+      },
+    })
   }
 
-  async function updateReservation(id: number, payload: Partial<AdminReservation>) {
-    const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(payload) })
-    const data = await response.json()
-    if (!response.ok) return setError('Error al actualizar reserva')
-    setReservations((current) => current.map((item) => item.id === data.reservation.id ? data.reservation : item))
+  async function updateReservation(id: number, payload: Partial<AdminReservation>): Promise<boolean> {
+    try {
+      const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(payload) })
+      const data = await response.json()
+      if (!response.ok) {
+        setError(data.error || 'Error al actualizar reserva')
+        return false
+      }
+      setReservations((current) => current.map((item) => item.id === data.reservation.id ? data.reservation : item))
+      setError('')
+      return true
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Error al actualizar reserva')
+      return false
+    }
   }
 
   async function deleteReservation(id: number) {
-    if (!window.confirm(`¿Eliminar reserva #${id}?`)) return
-    const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'DELETE', headers: adminHeaders })
-    if (!response.ok && response.status !== 204) return setError('Error al eliminar reserva')
-    window.location.reload()
+    setConfirmation({
+      title: `Eliminar reserva #${id}`,
+      message: 'La reserva se eliminará permanentemente.',
+      confirmLabel: 'Eliminar reserva',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error('Error al eliminar reserva')
+        window.location.reload()
+      },
+    })
   }
 
   async function updatePlace(id: number, payload: Partial<AdminPlace>) {
@@ -107,10 +138,16 @@ export function useAdminData(userId?: number) {
   }
 
   async function deletePlace(id: number) {
-    if (!window.confirm(`¿Eliminar lugar #${id}?`)) return
-    const response = await fetch(`${API}/api/admin/places/${id}`, { method: 'DELETE', headers: adminHeaders })
-    if (!response.ok && response.status !== 204) return setError('Error al eliminar lugar')
-    window.location.reload()
+    setConfirmation({
+      title: `Eliminar lugar #${id}`,
+      message: 'El lugar se eliminará permanentemente.',
+      confirmLabel: 'Eliminar lugar',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/places/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error('Error al eliminar lugar')
+        window.location.reload()
+      },
+    })
   }
 
   async function createPlace(place: Omit<AdminPlace, 'id' | 'active'>) {
@@ -135,10 +172,30 @@ export function useAdminData(userId?: number) {
   }
 
   async function deleteCoupon(id: number) {
-    if (!window.confirm(`¿Eliminar cupón #${id}?`)) return
-    const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'DELETE', headers: adminHeaders })
-    if (!response.ok && response.status !== 204) return setError('Error al eliminar cupón')
-    setCoupons((current) => current.filter((item) => item.id !== id))
+    setConfirmation({
+      title: `Eliminar cupón #${id}`,
+      message: 'El cupón se eliminará permanentemente.',
+      confirmLabel: 'Eliminar cupón',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error('Error al eliminar cupón')
+        setCoupons((current) => current.filter((item) => item.id !== id))
+      },
+    })
+  }
+
+  async function confirmPendingAction() {
+    if (!confirmation || confirmingAction) return
+    setConfirmingAction(true)
+    try {
+      await confirmation.action()
+      setConfirmation(null)
+      setError('')
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'No se pudo completar la acción')
+    } finally {
+      setConfirmingAction(false)
+    }
   }
 
   async function createBlock(payload: { placeId: number; startsAt: string; endsAt: string; reason: string }) {
@@ -154,5 +211,11 @@ export function useAdminData(userId?: number) {
     setBlocks((current) => current.filter((item) => item.id !== id))
   }
 
-  return { users, reservations, places, coupons, blocks, auditLogs, error, updateRole, toggleUserActive, deleteUser, updateReservation, deleteReservation, updatePlace, togglePlaceActive, deletePlace, createPlace, createCoupon, toggleCoupon, deleteCoupon, createBlock, deleteBlock }
+  return {
+    users, reservations, places, coupons, blocks, auditLogs, error,
+    confirmation, confirmingAction, setConfirmation, confirmPendingAction,
+    updateRole, toggleUserActive, deleteUser, updateReservation, deleteReservation,
+    updatePlace, togglePlaceActive, deletePlace, createPlace, createCoupon,
+    toggleCoupon, deleteCoupon, createBlock, deleteBlock,
+  }
 }

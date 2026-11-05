@@ -187,12 +187,14 @@ async function createTablesIfNotExist() {
         check_out DATE NOT NULL,
         huespedes INT NOT NULL DEFAULT 1,
         estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+        cancellation_reason TEXT,
         coupon_code VARCHAR(50),
         total_amount BIGINT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;');
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);');
@@ -280,6 +282,7 @@ async function createTablesIfNotExist() {
       CREATE TABLE IF NOT EXISTS user_notifications (
         id SERIAL PRIMARY KEY,
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reservation_id INT,
         title VARCHAR(255) NOT NULL,
         detail TEXT NOT NULL,
         tone VARCHAR(20) NOT NULL DEFAULT 'info',
@@ -287,6 +290,7 @@ async function createTablesIfNotExist() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS reservation_id INT;');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id, created_at DESC);');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_audit_logs (

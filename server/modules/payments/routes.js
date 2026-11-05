@@ -48,12 +48,18 @@ router.put('/api/admin/coupons/:id', requireAdmin, async (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     const result = await pool.query(
       `UPDATE coupons SET label = COALESCE($1, label), discount = COALESCE($2, discount),
-       max_uses = $3, starts_at = $4, ends_at = $5, active = COALESCE($6, active), updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6
+       max_uses = CASE WHEN $8 THEN $3 ELSE max_uses END,
+       starts_at = CASE WHEN $9 THEN $4 ELSE starts_at END,
+       ends_at = CASE WHEN $10 THEN $5 ELSE ends_at END,
+       active = COALESCE($6, active), updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
        RETURNING id, code, label, discount, max_uses, used_count, starts_at, ends_at, active, created_at`,
       [req.body?.label || null, Number.isInteger(req.body?.discount) ? req.body.discount : null,
         req.body?.maxUses === '' ? null : (req.body?.maxUses ?? null), req.body?.startsAt || null, req.body?.endsAt || null,
-        typeof req.body?.active === 'boolean' ? req.body.active : null, id]
+        typeof req.body?.active === 'boolean' ? req.body.active : null, id,
+        Object.hasOwn(req.body || {}, 'maxUses'),
+        Object.hasOwn(req.body || {}, 'startsAt'),
+        Object.hasOwn(req.body || {}, 'endsAt')]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Cupón no encontrado' });
     await logAdminAction(req, 'update', 'coupon', id, req.body);

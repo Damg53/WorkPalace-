@@ -73,6 +73,14 @@ html[data-theme="dark"] body {
   color: #f0f0f0;
 }
 
+html[data-theme="dark"] .brand-logo-dark {
+  display: none !important;
+}
+
+html[data-theme="dark"] .brand-logo-light {
+  display: block !important;
+}
+
 html[data-theme="light"] {
   color-scheme: light;
 }
