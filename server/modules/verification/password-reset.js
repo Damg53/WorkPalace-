@@ -119,7 +119,9 @@ router.post('/api/forgot-password', forgotPasswordRateLimit, async (req, res) =>
     } catch (error) {
       await pool.query('DELETE FROM password_reset_tokens WHERE token_hash = $1', [tokenHash]);
       console.error('Error enviando el correo de restablecimiento con Resend:', error.message);
-      return res.json({ message: genericRequestMessage });
+      return res.status(502).json({
+        error: 'No se pudo enviar el correo de recuperación. Intenta de nuevo más tarde o contacta con soporte.',
+      });
     }
 
     await pool.query(

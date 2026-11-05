@@ -1,16 +1,61 @@
-import type { AdminPlace, AdminReservation, AdminUser } from './adminTypes'
+import { useEffect, useState } from 'react'
+import type { AdminCoupon, AdminPlace, AdminReservation, AdminUser } from './adminTypes'
 
 interface AdminOverviewSectionProps {
   users: AdminUser[]
   reservations: AdminReservation[]
   places: AdminPlace[]
+  coupons: AdminCoupon[]
 }
 
 function text(value: unknown, fallback: string) {
   return typeof value === 'string' && value.trim() ? value : fallback
 }
 
-export default function AdminOverviewSection({ users, reservations, places }: AdminOverviewSectionProps) {
+function countCreatedInRange<T extends { created_at?: string }>(items: T[], start: number, end: number) {
+  return items.filter((item) => {
+    if (!item.created_at) return false
+    const createdAt = new Date(item.created_at).getTime()
+    return Number.isFinite(createdAt) && createdAt >= start && createdAt < end
+  }).length
+}
+
+function reservationIncomeInRange(reservations: AdminReservation[], start: number, end: number) {
+  return reservations.reduce((total, reservation) => {
+    if (reservation.estado === 'cancelada') return total
+    const createdAt = typeof reservation.created_at === 'string' ? new Date(reservation.created_at).getTime() : Number.NaN
+    if (reservation.total_amount == null) return total
+    const amount = Number(reservation.total_amount)
+    if (!Number.isFinite(createdAt) || createdAt < start || createdAt >= end || !Number.isFinite(amount)) return total
+    return total + amount
+  }, 0)
+}
+
+export default function AdminOverviewSection({ users, reservations, places, coupons }: AdminOverviewSectionProps) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 15000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const currentPeriodStart = now - 30 * 24 * 60 * 60 * 1000
+  const previousPeriodStart = currentPeriodStart - 30 * 24 * 60 * 60 * 1000
+  const trends = [
+    { label: 'Usuarios registrados', current: countCreatedInRange(users, currentPeriodStart, now + 1), previous: countCreatedInRange(users, previousPeriodStart, currentPeriodStart) },
+    { label: 'Reservas creadas', current: countCreatedInRange(reservations, currentPeriodStart, now + 1), previous: countCreatedInRange(reservations, previousPeriodStart, currentPeriodStart) },
+    { label: 'Lugares publicados', current: countCreatedInRange(places, currentPeriodStart, now + 1), previous: countCreatedInRange(places, previousPeriodStart, currentPeriodStart) },
+  ]
+  const totalReservationIncome = reservationIncomeInRange(reservations, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY)
+  const currentPeriodIncome = reservationIncomeInRange(reservations, currentPeriodStart, now + 1)
+  const previousPeriodIncome = reservationIncomeInRange(reservations, previousPeriodStart, currentPeriodStart)
+  const incomeDifference = currentPeriodIncome - previousPeriodIncome
+  const incomeChange = previousPeriodIncome > 0
+    ? `${incomeDifference > 0 ? '+' : ''}${Math.round((incomeDifference / previousPeriodIncome) * 100)}% frente a los 30 días anteriores`
+    : currentPeriodIncome > 0 ? 'Sin ingresos en el período anterior' : 'Sin ingresos en este período'
+  const formatCop = (amount: number) => amount.toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  })
   const reservationStates = [
     { label: 'Pendientes', value: reservations.filter((item) => item.estado === 'pendiente').length, className: 'pending' },
     { label: 'Confirmadas', value: reservations.filter((item) => item.estado === 'confirmada').length, className: 'confirmed' },
@@ -26,6 +71,19 @@ export default function AdminOverviewSection({ users, reservations, places }: Ad
   const topCities = Object.entries(cityCounts).sort(([, first], [, second]) => second - first).slice(0, 5)
   const inactiveUsers = users.filter((user) => user.active === false).length
   const inactivePlaces = places.filter((place) => place.active === false).length
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const alertWindow = new Date(today)
+  alertWindow.setDate(alertWindow.getDate() + 7)
+  const couponsNeedingAttention = coupons.filter((coupon) => {
+    if (!coupon.active || !coupon.ends_at) return false
+    const endDate = new Date(`${coupon.ends_at.slice(0, 10)}T00:00:00`)
+    return endDate >= today && endDate <= alertWindow
+  }).length
+  const expiredActiveCoupons = coupons.filter((coupon) => {
+    if (!coupon.active || !coupon.ends_at) return false
+    return new Date(`${coupon.ends_at.slice(0, 10)}T00:00:00`) < today
+  }).length
   const recentUsers = users.slice(-4).reverse()
   const recentReservations = reservations.slice(-4).reverse()
   const recentPlaces = places.slice(-4).reverse()
@@ -38,6 +96,12 @@ export default function AdminOverviewSection({ users, reservations, places }: Ad
   const inactivePlacesMessage = inactivePlaces
     ? `${inactivePlaces} lugar${inactivePlaces === 1 ? '' : 'es'} desactivado${inactivePlaces === 1 ? '' : 's'}.`
     : 'Todos los lugares están publicados.'
+  const couponAlertMessage = expiredActiveCoupons
+    ? `${expiredActiveCoupons} cupón${expiredActiveCoupons === 1 ? '' : 'es'} activo${expiredActiveCoupons === 1 ? '' : 's'} ya vencido${expiredActiveCoupons === 1 ? '' : 's'}.`
+    : couponsNeedingAttention
+      ? `${couponsNeedingAttention} cupón${couponsNeedingAttention === 1 ? '' : 'es'} vence${couponsNeedingAttention === 1 ? '' : 'n'} en los próximos 7 días.`
+      : 'No hay cupones próximos a vencer.'
+  const couponAlertCount = expiredActiveCoupons + couponsNeedingAttention
 
   return (
     <section className="admin-overview">
@@ -62,13 +126,51 @@ export default function AdminOverviewSection({ users, reservations, places }: Ad
       </div>
 
       <article className="overview-card alerts-card">
-        <div className="overview-card-heading"><div><span className="overview-kicker">Atención</span><h2>Alertas importantes</h2></div><span className="alert-count">{reservationStates[0].value + inactiveUsers + inactivePlaces}</span></div>
+        <div className="overview-card-heading"><div><span className="overview-kicker">Atención</span><h2>Alertas importantes</h2></div><span className="alert-count">{reservationStates[0].value + inactiveUsers + inactivePlaces + couponAlertCount}</span></div>
         <div className="alert-list">
           <div className={`alert-item ${reservationStates[0].value ? 'has-alert' : 'ok'}`}><span className="alert-dot" /><span>{pendingMessage}</span></div>
           <div className={`alert-item ${inactiveUsers ? 'has-alert' : 'ok'}`}><span className="alert-dot" /><span>{inactiveUsersMessage}</span></div>
           <div className={`alert-item ${inactivePlaces ? 'has-alert' : 'ok'}`}><span className="alert-dot" /><span>{inactivePlacesMessage}</span></div>
+          <div className={`alert-item ${couponAlertCount ? 'has-alert' : 'ok'}`}><span className="alert-dot" /><span>{couponAlertMessage}</span></div>
         </div>
       </article>
+
+      <div className="admin-overview-grid">
+        <article className="overview-card">
+          <div className="overview-card-heading"><div><span className="overview-kicker">Últimos 30 días</span><h2>Tendencia de actividad</h2></div></div>
+          <div className="trend-list">
+            {trends.map((trend) => {
+              const difference = trend.current - trend.previous
+              const direction = difference > 0 ? 'up' : difference < 0 ? 'down' : 'steady'
+              const changeText = trend.previous === 0
+                ? (trend.current ? 'Sin actividad en el período anterior' : 'Sin cambios')
+                : `${difference > 0 ? '+' : ''}${Math.round((difference / trend.previous) * 100)}% frente a los 30 días anteriores`
+              return (
+                <div className="trend-row" key={trend.label}>
+                  <span>{trend.label}</span>
+                  <strong>{trend.current}</strong>
+                  <small className={`trend-change ${direction}`}>{changeText}</small>
+                </div>
+              )
+            })}
+          </div>
+          <p className="overview-note">La comparación usa la fecha de creación de cada registro.</p>
+        </article>
+
+        <article className="overview-card revenue-card">
+          <div className="overview-card-heading"><div><span className="overview-kicker">Reservas</span><h2>Ingresos registrados</h2></div></div>
+          <strong className="revenue-total">{formatCop(totalReservationIncome)}</strong>
+          <p className="overview-note">Suma de reservas no canceladas, incluidas las confirmadas y completadas.</p>
+          <div className="revenue-period">
+            <span>Últimos 30 días</span>
+            <strong>{formatCop(currentPeriodIncome)}</strong>
+            <small className={`trend-change ${incomeDifference > 0 ? 'up' : incomeDifference < 0 ? 'down' : 'steady'}`}>{incomeChange}</small>
+          </div>
+          {reservations.some((reservation) => reservation.total_amount_estimated === true && reservation.estado !== 'cancelada') && (
+            <p className="overview-note">Incluye una estimación con los precios actuales para reservas antiguas que no guardaron su monto original.</p>
+          )}
+        </article>
+      </div>
 
       <div className="admin-overview-grid activity-grid">
         <article className="overview-card activity-card activity-users"><div className="overview-card-heading"><div><span className="overview-kicker">Actividad reciente</span><h2>Nuevos usuarios</h2></div><span className="activity-count">{recentUsers.length}</span></div><div className="activity-list">{recentUsers.length ? recentUsers.map((user) => <div className="activity-item" key={user.id}><span className="activity-icon activity-user-icon"><i className="fa fa-user" aria-hidden="true" /></span><div><strong>{text(user.full_name, user.username)}</strong><span>@{user.username}</span></div></div>) : <p className="overview-empty">No hay usuarios recientes.</p>}</div></article>

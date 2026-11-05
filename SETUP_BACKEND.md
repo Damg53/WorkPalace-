@@ -52,6 +52,16 @@ TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 
 El celular se guarda en formato internacional colombiano (`+57` seguido de 10 dígitos). En desarrollo, si no se configuran las variables de Twilio, el código se muestra en la consola del servidor; en producción el envío falla de forma explícita hasta configurar Twilio.
 
+### Usar Neon
+
+El backend también puede conectarse a Neon con `DATABASE_URL`. Cuando esta variable está presente, tiene prioridad sobre `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD`; el servidor no intenta crear una base de datos porque Neon ya la provisiona. Si `DATABASE_URL` no está definida, se conserva la conexión local por Docker.
+
+Después de enlazar el proyecto y ejecutar `neon deploy`, Neon guarda en `.env` la conexión de PostgreSQL y las variables de los servicios declarados. `.env` está excluido de Git: no publiques ni compartas sus valores. Para Render, configura las variables requeridas en el panel privado del servicio; el `.env` local no se copia automáticamente al despliegue.
+
+Las fotos de perfil se guardan en el bucket privado `assets`, no en PostgreSQL. El backend necesita las variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3` y `AWS_REGION` que entrega Neon. Se aceptan imágenes JPEG, PNG y WebP de hasta 5 MB; el servidor entrega URLs firmadas de corta duración. No expongas las credenciales `AWS_*` en variables `VITE_*`.
+
+Neon Realtime entrega actualizaciones de disponibilidad en `/api/realtime/places`; el endpoint devuelve una consulta sellada y el secreto permanece en el backend. Configura `NEON_REALTIME_URL` y `NEON_REALTIME_SECRET` en Render para que funcione en producción. Neon Auth está provisionado, pero WorkPalace conserva su flujo de autenticación actual. Neon Functions también está provisionado; el backend de la aplicación continúa siendo Express en Render.
+
 ### Recuperación de contraseña con Resend
 
 Configura estas variables en el `.env` del backend. Usa una API key válida de Resend y un remitente permitido por tu cuenta. Para pruebas limitadas puedes usar el remitente de prueba de Resend; para entregar correos a cualquier destinatario necesitas un dominio verificado y un remitente de ese dominio:
@@ -84,11 +94,11 @@ El archivo `.env.example` contiene los nombres de variables y valores ilustrativ
 npm run server
 ```
 
-El servidor debería iniciarse en `http://localhost:3001`
+El servidor inicia en `http://localhost:3001`. PostgreSQL (por ejemplo, el contenedor Docker) es necesario para las operaciones de la API que usan la base de datos, pero no para consultar Swagger. Si la base de datos no está disponible al arrancar, esas operaciones responden con `503`; al encenderla, reinicia el backend para inicializar las tablas.
 
 ### 5. Documentación interactiva de la API (Swagger)
 
-Con el backend ejecutándose, abre Swagger UI en:
+Con el backend ejecutándose, incluso si PostgreSQL está apagado, abre Swagger UI en:
 
 ```text
 http://localhost:3001/api-docs

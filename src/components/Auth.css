@@ -230,6 +230,25 @@ html[data-theme="light"] .auth-visual {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+  animation: auth-eye-change 180ms ease-out;
+}
+
+@keyframes auth-eye-change {
+  from {
+    opacity: 0.4;
+    transform: scale(0.75) rotate(-12deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-password-toggle svg {
+    animation: none;
+  }
 }
 
 .auth-remember {

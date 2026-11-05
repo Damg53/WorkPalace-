@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AdminAuditLog, AdminBlock, AdminCoupon, AdminPlace, AdminReservation, AdminUser } from './adminTypes'
 
 const API = 'http://localhost:3001'
@@ -17,38 +17,47 @@ export function useAdminData(userId?: number) {
     'x-user-id': String(userId ?? ''),
   }), [userId])
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [usersResponse, reservationsResponse, placesResponse, couponsResponse, blocksResponse, auditResponse] = await Promise.all([
-          fetch(`${API}/api/users`, { headers: adminHeaders }),
-          fetch(`${API}/api/admin/reservations`, { headers: adminHeaders }),
-          fetch(`${API}/api/admin/places`, { headers: adminHeaders }),
-          fetch(`${API}/api/admin/coupons`, { headers: adminHeaders }),
-          fetch(`${API}/api/admin/blocks`, { headers: adminHeaders }),
-          fetch(`${API}/api/admin/audit`, { headers: adminHeaders }),
-        ])
-        const usersData = await usersResponse.json()
-        const reservationsData = await reservationsResponse.json()
-        const placesData = await placesResponse.json()
-        const couponsData = await couponsResponse.json()
-        const blocksData = await blocksResponse.json()
-        const auditData = await auditResponse.json()
-        if (!usersResponse.ok) throw new Error(usersData.error || 'No se pudieron cargar los usuarios')
-        if (!reservationsResponse.ok) throw new Error(reservationsData.error || 'No se pudieron cargar las reservas')
-        if (!placesResponse.ok) throw new Error(placesData.error || 'No se pudieron cargar los lugares')
-        setUsers(usersData.users || [])
-        setReservations(reservationsData.reservations || [])
-        setPlaces(placesData.places || [])
-        setCoupons(couponsData.coupons || [])
-        setBlocks(blocksData.blocks || [])
-        setAuditLogs(auditData.logs || [])
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar los datos')
-      }
+  const loadData = useCallback(async () => {
+    try {
+      const [usersResponse, reservationsResponse, placesResponse, couponsResponse, blocksResponse, auditResponse] = await Promise.all([
+        fetch(`${API}/api/users`, { headers: adminHeaders }),
+        fetch(`${API}/api/admin/reservations`, { headers: adminHeaders }),
+        fetch(`${API}/api/admin/places`, { headers: adminHeaders }),
+        fetch(`${API}/api/admin/coupons`, { headers: adminHeaders }),
+        fetch(`${API}/api/admin/blocks`, { headers: adminHeaders }),
+        fetch(`${API}/api/admin/audit`, { headers: adminHeaders }),
+      ])
+      const usersData = await usersResponse.json()
+      const reservationsData = await reservationsResponse.json()
+      const placesData = await placesResponse.json()
+      const couponsData = await couponsResponse.json()
+      const blocksData = await blocksResponse.json()
+      const auditData = await auditResponse.json()
+      if (!usersResponse.ok) throw new Error(usersData.error || 'No se pudieron cargar los usuarios')
+      if (!reservationsResponse.ok) throw new Error(reservationsData.error || 'No se pudieron cargar las reservas')
+      if (!placesResponse.ok) throw new Error(placesData.error || 'No se pudieron cargar los lugares')
+      setUsers(usersData.users || [])
+      setReservations(reservationsData.reservations || [])
+      setPlaces(placesData.places || [])
+      setCoupons(couponsData.coupons || [])
+      setBlocks(blocksData.blocks || [])
+      setAuditLogs(auditData.logs || [])
+      setError('')
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar los datos')
     }
-    loadData()
-  }, [adminHeaders, userId])
+  }, [adminHeaders])
+
+  useEffect(() => {
+    void loadData()
+    const refreshInterval = window.setInterval(() => void loadData(), 15000)
+    window.addEventListener('focus', loadData)
+
+    return () => {
+      window.clearInterval(refreshInterval)
+      window.removeEventListener('focus', loadData)
+    }
+  }, [loadData, userId])
 
   async function updateRole(id: number, role: string) {
     const response = await fetch(`${API}/api/users/${id}/role`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ role }) })

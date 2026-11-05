@@ -3,6 +3,7 @@ import PlacesList from './PlacesList'
 import PlacesFilter from './PlacesFilter'
 import Sidebar from './Sidebar'
 import { useNavigate } from 'react-router-dom'
+import { createRealtimeClient, type SealedLiveQuery } from '@neon/realtime/client'
 
 const API = 'http://localhost:3001'
 
@@ -23,6 +24,17 @@ interface Place {
   available_from?: string | null
 }
 
+type LivePlace = Omit<Place, 'available_from'> & { available_from: string | Date | null }
+
+interface PlaceFilters {
+  search: string
+  tipo?: string
+  ciudad: string
+  barrio: string
+  capacidad: string
+  modalidad: string
+}
+
 interface PlacesPageProps {
   user: { id?: number; username: string; role?: string; fullName?: string; email?: string }
   isDark: boolean
@@ -36,6 +48,13 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
   const [filtered, setFiltered] = useState<Place[]>([])
   const [loadingSpaces, setLoadingSpaces] = useState(true)
   const [spacesError, setSpacesError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<PlaceFilters>({
+    search: '',
+    ciudad: '',
+    barrio: '',
+    capacidad: '',
+    modalidad: '',
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -69,47 +88,100 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
     return () => { cancelled = true }
   }, [user?.id])
 
+  useEffect(() => {
+    let cancelled = false
+    let timer: number | undefined
+    let closeSubscription: (() => void) | undefined
+
+    async function refreshLivePlaces() {
+      try {
+        const response = await fetch(`${API}/api/realtime/places`, {
+          headers: { 'x-user-id': String(user.id) },
+        })
+        const data = await response.json() as {
+          url: string
+          query: SealedLiveQuery<LivePlace>
+          error?: string
+        }
+        if (!response.ok) {
+          throw new Error(data.error || 'No se pudo conectar con la disponibilidad en tiempo real.')
+        }
+        if (cancelled) return
+
+        closeSubscription?.()
+        const client = createRealtimeClient({ url: data.url })
+        const subscription = client.subscribe(data.query)
+        closeSubscription = () => {
+          subscription.unsubscribe()
+          client.close()
+        }
+        subscription.onChange((snapshot) => {
+          if (cancelled || !snapshot.data) return
+          const nextPlaces = snapshot.data.map((place) => ({
+            ...place,
+            available_from: place.available_from instanceof Date
+              ? place.available_from.toISOString()
+              : place.available_from,
+          }))
+          setPlaces(nextPlaces)
+          setLoadingSpaces(false)
+          setSpacesError(null)
+        })
+      } catch (error) {
+        if (!cancelled) {
+          setSpacesError(error instanceof Error
+            ? error.message
+            : 'No se pudo conectar con la disponibilidad en tiempo real.')
+        }
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(refreshLivePlaces, 45_000)
+        }
+      }
+    }
+
+    if (user?.id) void refreshLivePlaces()
+    return () => {
+      cancelled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+      closeSubscription?.()
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    let result = places
+    if (filters.search.trim()) {
+      const search = filters.search.trim().toLowerCase()
+      result = result.filter((place) =>
+        place.name.toLowerCase().includes(search) ||
+        place.tipo?.toLowerCase().includes(search) ||
+        place.caracteristicas?.toLowerCase().includes(search)
+      )
+    }
+    if (filters.tipo) result = result.filter((place) => place.tipo === filters.tipo)
+    if (filters.ciudad) result = result.filter((place) => place.ciudad === filters.ciudad)
+    if (filters.barrio) result = result.filter((place) => place.barrio === filters.barrio)
+    if (filters.modalidad) result = result.filter((place) => place.modalidad === filters.modalidad)
+    if (filters.capacidad) {
+      const exact = Number.parseInt(filters.capacidad, 10)
+      if (!Number.isNaN(exact)) {
+        result = result.filter((place) => {
+          const match = place.capacidad?.match(/\d+/)
+            return match !== null && match !== undefined && Number.parseInt(match[0], 10) === exact
+        })
+      }
+    }
+    setFiltered(result)
+  }, [places, filters])
+
   // Filtros únicos para selects
   const tipos = Array.from(new Set(places.map(p => p.tipo).filter((x): x is string => !!x)))
   const ciudades = Array.from(new Set(places.map(p => p.ciudad).filter((x): x is string => !!x)))
   const barrios = Array.from(new Set(places.map(p => p.barrio).filter((x): x is string => !!x)))
   const modalidades = Array.from(new Set(places.map(p => p.modalidad).filter((x): x is string => !!x)))
 
-  function handleFilter(filters: {
-    search: string
-    tipo?: string
-    ciudad: string
-    barrio: string
-    capacidad: string
-    modalidad: string
-  }) {
-    let result = places
-    if (filters.search && filters.search.trim() !== "") {
-      const s = filters.search.trim().toLowerCase();
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(s) ||
-        (p.tipo && p.tipo.toLowerCase().includes(s)) ||
-        (p.caracteristicas && p.caracteristicas.toLowerCase().includes(s))
-      );
-    }
-    if (filters.tipo) result = result.filter(p => p.tipo === filters.tipo)
-    if (filters.ciudad) result = result.filter(p => p.ciudad === filters.ciudad)
-    if (filters.barrio) result = result.filter(p => p.barrio === filters.barrio)
-    if (filters.modalidad) result = result.filter(p => p.modalidad === filters.modalidad)
-    if (filters.capacidad) {
-      const exact = parseInt(filters.capacidad)
-      if (!isNaN(exact)) {
-        result = result.filter(p => {
-          if (!p.capacidad) return false;
-          // Extraer el primer número de la cadena de capacidad
-          const match = p.capacidad.match(/\d+/);
-          if (!match) return false;
-          const n = parseInt(match[0]);
-          return !isNaN(n) && n === exact;
-        });
-      }
-    }
-    setFiltered(result)
+  function handleFilter(nextFilters: PlaceFilters) {
+    setFilters(nextFilters)
   }
 
   function handleReserve(placeId: number) {

@@ -59,10 +59,12 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
           <div className="stat-card"><h3>Total de Usuarios</h3><div className="number">{users.length}</div></div>
           <div className="stat-card"><h3>Administradores</h3><div className="number">{users.filter((item) => item.role === 'admin').length}</div></div>
           <div className="stat-card"><h3>Usuarios Regulares</h3><div className="number">{users.filter((item) => item.role === 'user').length}</div></div>
+          <div className="stat-card"><h3>Usuarios activos</h3><div className="number">{users.filter((item) => item.active !== false).length}</div></div>
           <div className="stat-card"><h3>Reservas totales</h3><div className="number">{reservations.length}</div></div>
-          <div className="stat-card"><h3>Lugares publicados</h3><div className="number">{places.length}</div></div>
+          <div className="stat-card"><h3>Reservas pendientes</h3><div className="number">{reservations.filter((item) => item.estado === 'pendiente').length}</div></div>
+          <div className="stat-card"><h3>Lugares activos</h3><div className="number">{places.filter((item) => item.active !== false).length}</div></div>
         </div>}
-        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} />}
+        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} coupons={data.coupons} />}
         {error && <div className="error-banner">⚠️ {error}</div>}
         {activeSection === 'users' && <AdminUsersSection users={users} updateRole={data.updateRole} toggleUserActive={data.toggleUserActive} deleteUser={data.deleteUser} />}
         {activeSection === 'reservations' && <AdminReservationsSection reservations={reservations} updateReservation={data.updateReservation} deleteReservation={data.deleteReservation} />}
