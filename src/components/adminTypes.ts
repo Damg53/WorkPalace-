@@ -3,6 +3,7 @@ export interface AdminPlace {
   created_at?: string
   name: string
   tipo: string
+  direccion: string | null
   barrio: string | null
   ciudad: string | null
   capacidad: string | null
@@ -63,6 +64,7 @@ export interface AdminAuditLog {
 export interface NewPlaceForm {
   name: string
   tipo: string
+  direccion: string
   barrio: string
   ciudad: string
   capacidad: string

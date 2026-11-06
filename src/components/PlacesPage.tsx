@@ -11,6 +11,7 @@ interface Place {
   id: number
   name: string
   tipo: string
+  direccion: string | null
   barrio: string | null
   ciudad: string | null
   capacidad: string | null

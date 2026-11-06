@@ -5,6 +5,7 @@ interface Place {
   id: number
   name: string
   tipo: string
+  direccion: string | null
   barrio: string | null
   ciudad: string | null
   capacidad: string | null
@@ -280,6 +281,22 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
             )}
 
             <dl className="place-detail-list">
+              <div>
+                <dt>Dirección</dt>
+                <dd>
+                  {selectedPlace.direccion ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        [selectedPlace.direccion, selectedPlace.barrio, selectedPlace.ciudad].filter(Boolean).join(', '),
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {selectedPlace.direccion}
+                    </a>
+                  ) : 'No especificada'}
+                </dd>
+              </div>
               <div>
                 <dt>Ubicación</dt>
                 <dd>{[selectedPlace.barrio, selectedPlace.ciudad].filter(Boolean).join(', ') || 'No especificada'}</dd>
