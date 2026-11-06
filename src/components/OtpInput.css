@@ -128,28 +128,6 @@
   line-height: 1.5;
 }
 
-.otp-sub strong {
-  color: var(--otp-text);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.otp-dev-code {
-  width: fit-content;
-  margin: 0.9rem auto 0;
-  padding: 0.45rem 0.75rem;
-  border: 1px dashed var(--otp-mango);
-  border-radius: 0.55rem;
-  color: var(--otp-muted);
-  font-size: 0.85rem;
-}
-
-.otp-dev-code strong {
-  color: var(--otp-text);
-  font-family: 'Unbounded', system-ui, sans-serif;
-  letter-spacing: 0.08em;
-}
-
 .otp-cancel {
   margin-top: 0.9rem;
   padding: 0;
@@ -430,63 +408,9 @@ html[data-theme='dark'] .otp .otp-btn:disabled {
   opacity: 0.9;
 }
 
-.otp-btn:focus-visible,
-.otp-link:focus-visible {
+.otp-btn:focus-visible {
   outline: 3px solid var(--otp-mango);
   outline-offset: 3px;
-}
-
-.otp-resend {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.otp-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  border: 0;
-  border-radius: 0.6rem;
-  background: none;
-  color: var(--otp-text);
-  font: 500 0.9rem 'DM Sans', system-ui, sans-serif;
-  text-decoration: underline var(--otp-mango);
-  text-underline-offset: 4px;
-  cursor: pointer;
-}
-
-.otp-link:disabled {
-  color: var(--otp-muted);
-  text-decoration: none;
-  cursor: default;
-}
-
-.otp-link:not(:disabled) .otp-ring {
-  display: none;
-}
-
-.otp-ring {
-  width: 1.1rem;
-  height: 1.1rem;
-  transform: rotate(-90deg);
-}
-
-.otp-ring circle {
-  fill: none;
-  stroke-width: 2.5;
-}
-
-.otp-ring-bg {
-  stroke: var(--otp-line);
-}
-
-.otp-ring-fg {
-  stroke: var(--otp-mango);
-  stroke-dasharray: 50.27; /* 2π · 8 */
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1s linear;
 }
 
 /* ── Explosión de confeti al verificar ──────────────── */

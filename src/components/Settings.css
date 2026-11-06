@@ -448,6 +448,60 @@
   font-size: 0.94rem;
 }
 
+.settings-two-factor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  border-radius: 10px;
+  background: rgba(102, 126, 234, 0.06);
+}
+
+.settings-two-factor p {
+  margin: 0;
+  color: #b8bfd5;
+  font-size: 0.9rem;
+}
+
+.settings-two-factor .profile-form-title {
+  margin: 0;
+}
+
+.settings-totp-setup {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-totp-qr {
+  width: 220px;
+  max-width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.settings-totp-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.settings-totp-manual code {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #f3f5ff;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
 .settings-toggle input {
   width: 18px;
   height: 18px;
@@ -455,6 +509,19 @@
 
 [data-theme="light"] .settings-toggle {
   color: #4b5563;
+}
+
+[data-theme="light"] .settings-two-factor {
+  background: #f2f4ff;
+}
+
+[data-theme="light"] .settings-two-factor p {
+  color: #59627a;
+}
+
+[data-theme="light"] .settings-totp-manual code {
+  background: #e4e8f8;
+  color: #252b3d;
 }
 
 .settings-actions {

@@ -211,7 +211,7 @@ router.get('/api/users/:id/profile', async (req, res) => {
 router.put('/api/users/:id/profile', async (req, res) => {
   try {
     const { id } = req.params;
-    const { full_name, email, username, profile_image_url, phone, two_factor_enabled } = req.body;
+    const { full_name, email, username, profile_image_url, phone } = req.body;
 
     const userId = parseInt(id, 10);
     if (isNaN(userId)) {
@@ -243,9 +243,6 @@ router.put('/api/users/:id/profile', async (req, res) => {
       }
     }
     const newPhone = phone !== undefined ? normalizeColombianPhone(phone) : existing.phone;
-    const newTwoFactor = typeof two_factor_enabled === 'boolean'
-      ? two_factor_enabled
-      : existing.two_factor_enabled;
     if (phone !== undefined && phone !== '' && !newPhone) {
       return res.status(400).json({ error: 'Ingresa un celular colombiano válido de 10 dígitos' });
     }
@@ -279,11 +276,10 @@ router.put('/api/users/:id/profile', async (req, res) => {
         email = COALESCE($2, email),
         username = COALESCE($3, username),
         profile_image_url = COALESCE($4, profile_image_url),
-        phone = $5,
-        two_factor_enabled = $6
-      WHERE id = $7
+        phone = $5
+      WHERE id = $6
        RETURNING id, username, full_name, email, role, profile_image_url, phone, two_factor_enabled`,
-      [newFullName || null, newEmail || null, newUsername || null, newProfileImage, newPhone || null, newTwoFactor, userId]
+      [newFullName || null, newEmail || null, newUsername || null, newProfileImage, newPhone || null, userId]
     );
 
     const updatedUser = update.rows[0];
