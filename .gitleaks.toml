@@ -1,0 +1,10 @@
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Ignore the known example placeholder in the historical env sample commit"
+  condition = "AND"
+  commits = ["cdf0c9e6576d62b3e09c157e7900b8c2bf31fac4"]
+  paths = ['''^\.env\.example$''']
+  regexTarget = "line"
+  regexes = ['''^TOTP_ENCRYPTION_KEY=replace_with_64_hex_characters$''']
