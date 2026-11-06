@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS places (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   tipo VARCHAR(100) NOT NULL,
+  direccion TEXT,
   barrio VARCHAR(255),
   ciudad VARCHAR(255),
   capacidad VARCHAR(255),
@@ -123,6 +124,7 @@ ALTER TABLE places ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
 -- Agregar columna image_url si no existe (para migración)
 ALTER TABLE places ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS direccion TEXT;
 
 -- Bloqueos manuales de disponibilidad por espacio
 CREATE TABLE IF NOT EXISTS place_blocks (

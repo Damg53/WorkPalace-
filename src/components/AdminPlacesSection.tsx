@@ -15,8 +15,8 @@ const CIUDADES = ['Medellín', 'Bello', 'Envigado', 'Sabaneta', 'Itagüí', 'Bog
 const MODALIDADES = ['Por hora', 'Media jornada (4 horas)', 'Jornada completa (8 horas)', 'Por día', 'Por noche', 'Por semana', 'Por 15 días', 'Por mes', 'Solo por cita', 'Flexible (acordar con el propietario)']
 const RUIDO = ['Silencioso (ideal para concentración)', 'Moderado (conversación normal)', 'Alto (actividad intensa)', 'Muy alto (industrial / eventos)', 'Aislado acústicamente', 'No aplica']
 const BARRIOS: Record<string, string[]> = {
-  Medellín: ['El Poblado', 'Laureles - Estadio', 'Belén', 'Robledo', 'Buenos Aires', 'La América', 'San Javier', 'Aranjuez', 'Manrique', 'Castilla', 'Centro', 'Otro / No aplica'],
-  Bello: ['Centro', 'Niquía', 'Zamora', 'Santa Ana', 'Otro / No aplica'],
+  Medellín: ['El Poblado', 'Laureles - Estadio', 'Belén', 'Robledo', 'Buenos Aires', 'La América', 'San Javier', 'Aranjuez', 'Manrique', 'Castilla', 'Guayabal', 'La Candelaria', 'Centro', 'Otro / No aplica'],
+  Bello: ['Centro', 'Niquía', 'Zamora', 'Santa Ana', 'San Félix', 'Otro / No aplica'],
   Envigado: ['Centro', 'El Dorado', 'San Marcos', 'La Magnolia', 'Otro / No aplica'],
   Sabaneta: ['Centro', 'San Joaquín', 'Aliadas', 'Otro / No aplica'],
   Itagüí: ['Centro', 'Ditaires', 'San Pío', 'Santa María', 'Otro / No aplica'],
@@ -31,7 +31,7 @@ const BARRIOS: Record<string, string[]> = {
   'Cúcuta': ['Centro', 'La Libertad', 'San Mateo', 'Guayabal', 'Otro / No aplica'],
   Otra: ['Otro / No aplica'],
 }
-const EMPTY: NewPlaceForm = { name: '', tipo: '', barrio: '', ciudad: '', capacidad: '', precio_hora: '', modalidad: '', caracteristicas: '', nivel_ruido: '', image_url: '' }
+const EMPTY: NewPlaceForm = { name: '', tipo: '', direccion: '', barrio: '', ciudad: '', capacidad: '', precio_hora: '', modalidad: '', caracteristicas: '', nivel_ruido: '', image_url: '' }
 
 interface PlaceImagePickerProps {
   id: string
@@ -181,63 +181,8 @@ const getSuggestedPrice = (tipo: string, ciudad: string, barrioActual: string, c
     Otra: 30000,
   }
 
-  const barrioPriceFactor: Record<string, number> = {
-    'El Poblado': 1.35,
-    'Laureles - Estadio': 1.2,
-    Belén: 1.15,
-    'Centro': 1.08,
-    'Robledo': 0.96,
-    'Buenos Aires': 0.95,
-    'La América': 1.02,
-    'San Javier': 0.94,
-    'Manrique': 0.93,
-    'Castilla': 0.92,
-    'Niquía': 1.1,
-    'Zamora': 0.98,
-    'Santa Ana': 1,
-    'El Dorado': 1.08,
-    'San Marcos': 1.04,
-    'La Magnolia': 1.02,
-    'San Joaquín': 1.08,
-    'Aliadas': 1.03,
-    'Ditaires': 0.96,
-    'San Pío': 0.98,
-    'Santa María': 0.94,
-    'Chapinero': 1.22,
-    'Usaquén': 1.18,
-    'Teusaquillo': 1.14,
-    'Suba': 1.06,
-    'Kennedy': 1,
-    'San Fernando': 1.1,
-    'El Peñón': 1.08,
-    'Cristóbal Colón': 1.04,
-    'La Flora': 1,
-    'El Prado': 1.08,
-    'Villa Santos': 0.98,
-    'Norte-Centro': 1.05,
-    'El Laguito': 1.2,
-    'Getsemaní': 1.15,
-    'Castillo Grande': 1.14,
-    'La Boquilla': 0.97,
-    'Girón': 1.12,
-    'Cabecera': 1.04,
-    'El Socorro': 0.94,
-    'San Jorge': 1.02,
-    'La Florida': 0.96,
-    'La Nubia': 0.96,
-    'Villamil': 0.92,
-    'Chipre': 0.94,
-    'Rodadero': 1.16,
-    'Taganga': 1.12,
-    'Gaira': 1.08,
-    'La Libertad': 0.96,
-    'San Mateo': 0.93,
-    'Guayabal': 0.9,
-    'Otro / No aplica': 0.88,
-  }
-
   const capacidadNum = Number(capacidad) || 1
-  const capacityFactor = capacidadNum <= 2 ? 0.8 : capacidadNum <= 4 ? 0.95 : capacidadNum <= 8 ? 1.08 : capacidadNum <= 12 ? 1.2 : capacidadNum <= 20 ? 1.5 
+  const capacityFactor = capacidadNum <= 2 ? 0.8 : capacidadNum <= 4 ? 0.95 : capacidadNum <= 8 ? 1.08 : capacidadNum <= 12 ? 1.2 : capacidadNum <= 20 ? 1.5
   : capacidadNum <= 30 ? 1.65 : capacidadNum <= 50 ? 1.8 : capacidadNum <= 100 ? 3 : 3.3
 
   const modalityFactor: Record<string, number> = {
@@ -255,6 +200,60 @@ const getSuggestedPrice = (tipo: string, ciudad: string, barrioActual: string, c
 
   const base = baseByType[tipo] || 80000
   const cityBase = cityBasePrice[ciudad] || 35000
+  const barrioPriceFactor: Record<string, number> = {
+    'El Poblado': 1.35,
+    'Laureles - Estadio': 1.2,
+    Belén: 1.15,
+    Centro: 1.08,
+    Robledo: 0.96,
+    'Buenos Aires': 0.95,
+    'La América': 1.02,
+    'San Javier': 0.94,
+    Manrique: 0.93,
+    Castilla: 0.92,
+    Niquía: 1.1,
+    Zamora: 0.98,
+    'Santa Ana': 1,
+    'El Dorado': 1.08,
+    'San Marcos': 1.04,
+    'La Magnolia': 1.02,
+    'San Joaquín': 1.08,
+    Aliadas: 1.03,
+    Ditaires: 0.96,
+    'San Pío': 0.98,
+    'Santa María': 0.94,
+    Chapinero: 1.22,
+    Usaquén: 1.18,
+    Teusaquillo: 1.14,
+    Suba: 1.06,
+    Kennedy: 1,
+    'San Fernando': 1.1,
+    'El Peñón': 1.08,
+    'Cristóbal Colón': 1.04,
+    'La Flora': 1,
+    'El Prado': 1.08,
+    'Villa Santos': 0.98,
+    'Norte-Centro': 1.05,
+    'El Laguito': 1.2,
+    Getsemaní: 1.15,
+    'Castillo Grande': 1.14,
+    'La Boquilla': 0.97,
+    Girón: 1.12,
+    Cabecera: 1.04,
+    'El Socorro': 0.94,
+    'San Jorge': 1.02,
+    'La Florida': 0.96,
+    'La Nubia': 0.96,
+    Villamil: 0.92,
+    Chipre: 0.94,
+    Rodadero: 1.16,
+    Taganga: 1.12,
+    Gaira: 1.08,
+    'La Libertad': 0.96,
+    'San Mateo': 0.93,
+    Guayabal: 0.9,
+    'Otro / No aplica': 0.88,
+  }
   const barrioFactor = barrioPriceFactor[barrioActual] || 1
   const modalityValue = modalityFactor[modalidad] || 1
 
@@ -284,6 +283,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const [form, setForm] = useState(EMPTY)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingAddress, setEditingAddress] = useState('')
   const [editingUrl, setEditingUrl] = useState('')
   const setField = (field: keyof NewPlaceForm, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const stopWheel = (event: React.WheelEvent<HTMLInputElement>) => event.currentTarget.blur()
@@ -295,7 +295,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
     if (!form.name || !form.tipo) return
     const finalPrice = Number(form.precio_hora || suggestedPrice)
     try {
-      await createPlace({ ...form, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: Number.isFinite(finalPrice) ? finalPrice : null, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
+      await createPlace({ ...form, direccion: form.direccion.trim() || null, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: Number.isFinite(finalPrice) ? finalPrice : null, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
       setForm(EMPTY)
       setShowForm(false)
     } catch {
@@ -310,6 +310,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       <select className="form-create-place-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)} required><option value="">Tipo *</option>{TIPOS.map((item) => <option key={item}>{item}</option>)}</select>
       <select className="form-create-place-input" value={form.ciudad} onChange={(e) => setField('ciudad', e.target.value)}><option value="">Ciudad</option>{CIUDADES.map((item) => <option key={item}>{item}</option>)}</select>
       <select className="form-create-place-input" value={form.barrio} onChange={(e) => setField('barrio', e.target.value)} disabled={!form.ciudad}><option value="">Barrio</option>{(BARRIOS[form.ciudad] || []).map((item) => <option key={item}>{item}</option>)}</select>
+      <input className="form-create-place-input" placeholder="Dirección" value={form.direccion} onChange={(e) => setField('direccion', e.target.value)} autoComplete="street-address" />
       <input className="form-create-place-input" placeholder="Capacidad" value={form.capacidad} onChange={(e) => setField('capacidad', e.target.value)} />
       <input
         className="form-create-place-input"
@@ -332,14 +333,49 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       </div>
     </div><button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
     {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper"><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
-      {places.map((place) => <tr key={place.id}><td>#{place.id}</td><td><input className="table-input" defaultValue={place.name}
-       onBlur={(e) => updatePlace(place.id, { name: e.target.value })} 
-       /></td><td><select className="table-select" defaultValue={place.tipo || ''} onChange={(e) => updatePlace(place.id, { tipo: e.target.value })}>{TIPOS.map((item) => 
-       <option key={item}>{item}</option>)}</select></td><td><select className="table-select" defaultValue={place.barrio || ''} onChange={(e) => updatePlace(place.id, { barrio: e.target.value })}>{(BARRIOS[place.ciudad || 'Medellín'] || []).map((item) => 
-       <option key={item}>{item}</option>)}</select></td><td><select className="table-select" defaultValue={place.ciudad || ''} onChange={(e) => updatePlace(place.id, { ciudad: e.target.value })}>{CIUDADES.map((item) => 
-       <option key={item}>{item}</option>)}</select></td><td><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td><td><div style={{ fontWeight: 600, color: '#374151' }}>{formatPriceForModality(place.precio_hora, place.modalidad)}
-       </div></td><td><select className="table-select" defaultValue={place.modalidad || ''} onChange={(e) => updatePlace(place.id, { modalidad: e.target.value })}>{MODALIDADES.map((item) => <option key={item}>{item}</option>)}</select></td><td><input type="checkbox" checked={place.active !== false} onChange={(e) => togglePlaceActive(place.id, e.target.checked)} 
-       /></td><td><button className="btn btn-secondary" onClick={() => { setEditingId(place.id); setEditingUrl(place.image_url || '') }}>Imagen</button> <button className="user-delete-button" onClick={() => deletePlace(place.id)}>Eliminar</button></td></tr>)}
+      {places.map((place) => (
+        <tr key={place.id}>
+          <td>#{place.id}</td>
+          <td>
+            <input
+              className="table-input"
+              defaultValue={place.name}
+              onBlur={(event) => updatePlace(place.id, { name: event.target.value })}
+            />
+          </td>
+          <td>
+            <select className="table-select" defaultValue={place.tipo || ''} onChange={(event) => updatePlace(place.id, { tipo: event.target.value })}>
+              {TIPOS.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </td>
+          <td>
+            <select className="table-select" defaultValue={place.barrio || ''} onChange={(event) => updatePlace(place.id, { barrio: event.target.value })}>
+              {(BARRIOS[place.ciudad || 'Medellín'] || []).map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </td>
+          <td>
+            <select
+              className="table-select"
+              defaultValue={place.ciudad || ''}
+              onChange={(event) => updatePlace(place.id, { ciudad: event.target.value })}
+            >
+              {CIUDADES.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </td>
+          <td><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td>
+          <td><div style={{ fontWeight: 600, color: '#374151' }}>{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
+          <td>
+            <select className="table-select" defaultValue={place.modalidad || ''} onChange={(event) => updatePlace(place.id, { modalidad: event.target.value })}>
+              {MODALIDADES.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </td>
+          <td><input type="checkbox" checked={place.active !== false} onChange={(event) => togglePlaceActive(place.id, event.target.checked)} /></td>
+          <td>
+            <button className="btn btn-secondary" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }}>Editar</button>{' '}
+            <button className="user-delete-button" onClick={() => deletePlace(place.id)}>Eliminar</button>
+          </td>
+        </tr>
+      ))}
     </tbody></table></div>}
     {editingId !== null && (
       <div
@@ -349,17 +385,28 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
           if (event.target === event.currentTarget) setEditingId(null)
         }}
       >
-        <section className="admin-image-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-place-image-title">
+        <section className="admin-image-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-place-title">
           <div className="admin-image-dialog__heading">
             <div>
               <span className="admin-image-dialog__eyebrow">Lugares publicados</span>
-              <h3 id="edit-place-image-title">Actualizar imagen</h3>
-              <p>Usa un enlace público o elige una imagen de tu dispositivo.</p>
+              <h3 id="edit-place-title">Editar lugar</h3>
+              <p>Actualiza la dirección y la imagen del espacio.</p>
             </div>
             <button type="button" className="admin-image-dialog__close" onClick={() => setEditingId(null)} aria-label="Cerrar">
               <i className="fa fa-times" aria-hidden="true" />
             </button>
           </div>
+          <label className="place-image-picker__url-field" htmlFor="edit-place-address">
+            <span>Dirección</span>
+            <input
+              id="edit-place-address"
+              className="form-create-place-input"
+              type="text"
+              autoComplete="street-address"
+              value={editingAddress}
+              onChange={(event) => setEditingAddress(event.target.value)}
+            />
+          </label>
           <PlaceImagePicker id="edit-place-image" value={editingUrl} onChange={setEditingUrl} />
           <div className="admin-image-dialog__actions">
             <button className="btn btn-secondary" type="button" onClick={() => setEditingId(null)}>Cancelar</button>
@@ -367,11 +414,11 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               className="btn btn-primary"
               type="button"
               onClick={async () => {
-                await updatePlace(editingId, { image_url: editingUrl })
+                await updatePlace(editingId, { direccion: editingAddress.trim() || null, image_url: editingUrl })
                 setEditingId(null)
               }}
             >
-              Guardar imagen
+              Guardar cambios
             </button>
           </div>
         </section>

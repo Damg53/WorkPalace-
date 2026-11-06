@@ -76,7 +76,15 @@ async function sendPasswordResetEmail(email, token) {
   });
 
   if (!response.ok) {
-    throw new Error(`Resend respondió ${response.status}.`);
+    const errorData = await response.json().catch(() => null);
+    const resendMessage = typeof errorData?.message === 'string'
+      ? errorData.message
+      : typeof errorData?.error?.message === 'string'
+        ? errorData.error.message
+        : null;
+    throw new Error(resendMessage
+      ? `Resend respondió ${response.status}: ${resendMessage}`
+      : `Resend respondió ${response.status}.`);
   }
 }
 

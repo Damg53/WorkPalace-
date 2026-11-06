@@ -7,7 +7,7 @@ const router = Router();
 router.get('/api/admin/places', requireAdmin, async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, active, created_at
+      `SELECT id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active, created_at
        FROM places
        ORDER BY id ASC`
     );
@@ -20,17 +20,17 @@ router.get('/api/admin/places', requireAdmin, async (_req, res) => {
 
 router.post('/api/admin/places', requireAdmin, async (req, res) => {
   try {
-    const { name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url } = req.body;
+    const { name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url } = req.body;
 
     if (!name || !tipo) {
       return res.status(400).json({ error: 'Nombre y tipo son requeridos' });
     }
 
     const result = await pool.query(
-      `INSERT INTO places (name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
-       RETURNING id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active`,
-      [name, tipo, barrio || null, ciudad || null, capacidad || null, precio_hora || null, modalidad || null, caracteristicas || null, nivel_ruido || null, image_url || null]
+      `INSERT INTO places (name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE)
+       RETURNING id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active`,
+      [name, tipo, direccion?.trim() || null, typeof barrio === 'string' ? barrio.trim() || null : null, ciudad || null, capacidad || null, precio_hora || null, modalidad || null, caracteristicas || null, nivel_ruido || null, image_url || null]
     );
 
     res.status(201).json({ place: result.rows[0] });
@@ -43,7 +43,7 @@ router.post('/api/admin/places', requireAdmin, async (req, res) => {
 router.put('/api/admin/places/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, image_url, active } = req.body || {};
+    const { name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, image_url, active } = req.body || {};
     const pid = parseInt(id, 10);
     if (isNaN(pid)) {
       return res.status(400).json({ error: 'ID de lugar inválido' });
@@ -60,9 +60,10 @@ router.put('/api/admin/places/:id', requireAdmin, async (req, res) => {
          modalidad = COALESCE($7, modalidad),
          caracteristicas = COALESCE($8, caracteristicas),
          image_url = COALESCE($9, image_url),
-         active = COALESCE($10, active)
-       WHERE id = $11
-       RETURNING id, name, tipo, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active`,
+         active = COALESCE($10, active),
+         direccion = CASE WHEN $12 THEN $11 ELSE direccion END
+       WHERE id = $13
+       RETURNING id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active`,
       [
         name || null,
         tipo || null,
@@ -74,6 +75,8 @@ router.put('/api/admin/places/:id', requireAdmin, async (req, res) => {
         caracteristicas || null,
         image_url || null,
         active === undefined ? null : !!active,
+        typeof direccion === 'string' ? direccion.trim() || null : null,
+        direccion !== undefined,
         pid,
       ]
     );

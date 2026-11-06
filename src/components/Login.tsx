@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './Auth.css';
 import OtpInput from './OtpInput';
 import { API_BASE_URL } from '../services/api';
 
 import { useNavigate } from 'react-router-dom';
+import { AuthMessage, AuthShell, PasswordField } from './AuthUI';
 
 type LoginUser = { id?: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string };
 const REMEMBERED_USERNAME_KEY = 'workpalace-remembered-username';
@@ -18,7 +18,6 @@ export default function Login({ onLogin }: LoginProps) {
   const location = useLocation();
   const [username, setUsername] = useState(() => localStorage.getItem(REMEMBERED_USERNAME_KEY) || '');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem(REMEMBERED_USERNAME_KEY) !== null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -144,13 +143,7 @@ export default function Login({ onLogin }: LoginProps) {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-visual">
-        <img src="/workpalace-logo-dark.png" alt="WorkPalace" className="auth-visual-logo brand-logo-dark" />
-        <img src="/workpalace-logo-light.png" alt="WorkPalace" className="auth-visual-logo brand-logo-light" />
-        <p>Espacios especializados<br />para trabajar de forma flexible</p>
-      </div>
-      <div className="auth-panel">
+    <AuthShell wide={Boolean(otpChallenge)}>
         {otpChallenge ? (
           <OtpInput
             description="Abre Microsoft Authenticator e escribe el código temporal de WorkPalace."
@@ -158,73 +151,48 @@ export default function Login({ onLogin }: LoginProps) {
             onSuccess={() => window.setTimeout(finishOtpLogin, 1100)}
             onCancel={() => setOtpChallenge(null)}
           />
-        ) : <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
-          <Link to="/" className="auth-back-link">← Volver al Inicio</Link>
-          <h2 className="auth-title">Iniciar sesión</h2>
+        ) : <form onSubmit={handleSubmit} className="wp-auth__form" autoComplete="on">
+          <Link to="/" className="wp-auth__back">← Volver al inicio</Link>
+          <h2 className="wp-auth__heading">Qué bueno verte de nuevo</h2>
+          <p className="wp-auth__subtitle">Inicia sesión para continuar en WorkPalace.</p>
           {typeof location.state?.message === 'string' && (
-            <p className="auth-message auth-success" role="status">{location.state.message}</p>
+            <AuthMessage tone="success">{location.state.message}</AuthMessage>
           )}
 
           {serverConnected === false && (
-            <div className="auth-status-alert">
-              ⚠️ Servidor no disponible. Ejecuta: <code>npm run server</code>
-            </div>
+            <AuthMessage tone="error">El servidor no está disponible. Ejecuta: npm run server</AuthMessage>
           )}
 
-          <div className="auth-field">
-            <label htmlFor="username">Usuario o Email</label>
+          <div className="wp-auth__field">
+            <label htmlFor="username">Correo o nombre de usuario</label>
             <input
               id="username"
               name="username"
               type="text"
               autoComplete="username"
-              placeholder="Escribe tu usuario o email"
+              placeholder="tu@correo.com o tu usuario"
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value);
                 if (rememberMe) updateRememberedUsername(e.target.value, true);
               }}
               disabled={loading}
+              required
             />
           </div>
-          <div className="auth-field">
-            <label htmlFor="password">Contraseña</label>
-            <div className="auth-password-control">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-              <button
-                className="auth-password-toggle"
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                aria-pressed={showPassword}
-                aria-controls="password"
-                disabled={loading}
-              >
-                {showPassword ? (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8" />
-                    <path d="M9.9 5.2A10.8 10.8 0 0112 5c5 0 8.5 4.2 9.5 7-.4 1.1-1.3 2.4-2.5 3.5M6.2 6.2C4.2 7.5 3 9.4 2.5 12c1 2.8 4.5 7 9.5 7 1.2 0 2.3-.2 3.3-.7" />
-                  </svg>
-                ) : (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-          <div className="auth-field auth-remember">
-            <label>
+          <PasswordField
+            id="password"
+            name="password"
+            label="Contraseña"
+            autoComplete="current-password"
+            placeholder="Ingresa tu contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
+          <div className="wp-auth__row">
+            <label className="wp-auth__checkbox">
               <input
                 type="checkbox"
                 name="remember"
@@ -234,25 +202,22 @@ export default function Login({ onLogin }: LoginProps) {
               />{' '}
               Recuérdame
             </label>
+            <Link to="/forgot-password" className="wp-auth__text-link">¿Olvidaste tu contraseña?</Link>
           </div>
-          {error && <p className="auth-message auth-error" role="alert">{error}</p>}
+          {error && <AuthMessage tone="error">{error}</AuthMessage>}
           <button
             type="submit"
-            className="auth-button"
-            disabled={loading || serverConnected === false}
+            className="wp-auth__submit"
+            disabled={loading || serverConnected !== true}
             aria-busy={loading}
           >
-            {loading ? 'Iniciando sesión...' : 'Entrar'}
+            {loading ? 'Iniciando sesión...' : serverConnected === null ? 'Conectando...' : 'Iniciar sesión'}
           </button>
-          <p className="auth-footer">
-            <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
-          </p>
-          <p className="auth-footer">
-            ¿No tienes cuenta? <Link to="/signup">Regístrate</Link>
+          <p className="wp-auth__footer">
+            ¿Aún no tienes cuenta? <Link to="/signup" className="wp-auth__text-link">Crear una cuenta</Link>
           </p>
         </form>}
-      </div>
-    </div>
+    </AuthShell>
   );
 }
     

@@ -3,7 +3,7 @@ import { createRealtime, rawSql } from '@neon/realtime/server';
 import pool from '../../db.js';
 
 const router = Router();
-const placesAvailabilityQuery = `SELECT p.id, p.name, p.tipo, p.barrio, p.ciudad, p.capacidad, p.precio_hora, p.modalidad, p.caracteristicas, p.nivel_ruido, p.image_url,
+const placesAvailabilityQuery = `SELECT p.id, p.name, p.tipo, p.direccion, p.barrio, p.ciudad, p.capacidad, p.precio_hora, p.modalidad, p.caracteristicas, p.nivel_ruido, p.image_url,
               p.active AND block.id IS NULL AND reservation.id IS NULL AS active,
               COALESCE(block.reason, CASE WHEN reservation.id IS NOT NULL THEN 'Reserva confirmada' END) AS unavailable_reason,
               COALESCE(block.ends_at + INTERVAL '1 day', reservation.check_out + INTERVAL '1 day') AS available_from
