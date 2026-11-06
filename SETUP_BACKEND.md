@@ -60,6 +60,25 @@ Después de enlazar el proyecto y ejecutar `neon deploy`, Neon guarda en `.env` 
 
 Las fotos de perfil se guardan en el bucket privado `assets`, no en PostgreSQL. El backend necesita las variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3` y `AWS_REGION` que entrega Neon. Se aceptan imágenes JPEG, PNG y WebP de hasta 5 MB; el servidor entrega URLs firmadas de corta duración. No expongas las credenciales `AWS_*` en variables `VITE_*`.
 
+### Desplegar el backend en Render
+
+El archivo `render.yaml` define un servicio web de Node.js con `npm ci`, `npm run server` y el health check `/api/health`. En Render, crea un Blueprint desde este repositorio y selecciona ese archivo. Si creas el servicio manualmente, usa la raíz del repositorio como **Root Directory**, `npm ci` como **Build Command** y `npm run server` como **Start Command**. Render asigna `PORT`; no lo configures manualmente.
+
+Completa las variables privadas solicitadas por el Blueprint en Render:
+
+| Variable | Configuración |
+| --- | --- |
+| `DATABASE_URL` | URL pooled (`-pooler`) de Neon para producción; no uses la conexión local de Docker. |
+| `FRONTEND_URL` | URL HTTPS pública de la aplicación web. También se usa como origen CORS y para construir los enlaces de recuperación. |
+| `RESEND_API_KEY` | API key de Resend para habilitar la recuperación por correo. |
+| `RESEND_FROM_EMAIL` | Remitente permitido/verificado en Resend. |
+| `NODE_ENV` | El Blueprint fija `production`. |
+| `PASSWORD_RESET_TEST_MODE` | El Blueprint fija `false`; no lo cambies a `true` en producción. |
+
+Si necesitas permitir más de un origen web, añade `CORS_ORIGIN` con una lista separada por comas en Render. Para habilitar TOTP, agrega `TOTP_ENCRYPTION_KEY` con una clave hexadecimal persistente de 64 caracteres. Para fotos de perfil, agrega las cuatro variables `AWS_*` indicadas arriba; para Neon Realtime, agrega `NEON_REALTIME_URL` y `NEON_REALTIME_SECRET`. Estos valores son privados y no deben llevar prefijo `VITE_`.
+
+Después del primer despliegue, comprueba `https://<servicio>.onrender.com/api/health`: debe responder `{"status":"ok","database":"connected"}`. Si responde 503, revisa `DATABASE_URL` y los registros de Render; el health check no considera listo el servicio mientras la base de datos se inicializa. Configura la URL del backend en el despliegue del frontend mediante `VITE_API_URL` (no en el backend). Las solicitudes desde el frontend solo reciben CORS cuando su origen coincide con `FRONTEND_URL` o `CORS_ORIGIN`.
+
 ### Autenticación de dos pasos con Microsoft Authenticator
 
 WorkPalace usa TOTP estándar (códigos de seis dígitos que cambian cada 30 segundos). Microsoft Authenticator acepta este formato mediante un QR `otpauth://`; no se necesita una API, cuenta ni credencial de Microsoft. El mismo QR también funciona con otras aplicaciones compatibles con TOTP.
