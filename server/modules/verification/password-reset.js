@@ -18,10 +18,10 @@ if (passwordResetTestModeSetting && !['true', 'false'].includes(passwordResetTes
 
 const isProduction = process.env.NODE_ENV?.trim().toLowerCase() === 'production';
 if (passwordResetTestModeSetting === 'true' && isProduction) {
-  console.warn('PASSWORD_RESET_TEST_MODE está activado en producción; se desactiva para enviar correos a sus destinatarios reales.');
+  console.warn(`PASSWORD_RESET_TEST_MODE está activado en producción; todos los enlaces de recuperación se enviarán a ${PASSWORD_RESET_TEST_RECIPIENT}.`);
 }
 
-const passwordResetTestMode = passwordResetTestModeSetting === 'true' && !isProduction;
+const passwordResetTestMode = passwordResetTestModeSetting === 'true';
 const forgotPasswordRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

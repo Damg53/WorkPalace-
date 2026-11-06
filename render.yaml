@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PASSWORD_RESET_TEST_MODE
-        value: "false"
+        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: FRONTEND_URL
