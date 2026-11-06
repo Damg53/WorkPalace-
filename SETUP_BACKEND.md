@@ -73,7 +73,7 @@ Completa las variables privadas solicitadas por el Blueprint en Render:
 | `RESEND_API_KEY` | API key de Resend para habilitar la recuperación por correo. |
 | `RESEND_FROM_EMAIL` | Remitente permitido/verificado en Resend. |
 | `NODE_ENV` | El Blueprint fija `production`. |
-| `PASSWORD_RESET_TEST_MODE` | El Blueprint fija `false`; no lo cambies a `true` en producción. |
+| `PASSWORD_RESET_TEST_MODE` | El Blueprint fija `true` para enviar todos los enlaces de recuperación a `diego.moralesg@comunidad.iush.edu.co`. |
 
 Si necesitas permitir más de un origen web, añade `CORS_ORIGIN` con una lista separada por comas en Render. Para habilitar TOTP, agrega `TOTP_ENCRYPTION_KEY` con una clave hexadecimal persistente de 64 caracteres. Para fotos de perfil, agrega las cuatro variables `AWS_*` indicadas arriba; para Neon Realtime, agrega `NEON_REALTIME_URL` y `NEON_REALTIME_SECRET`. Estos valores son privados y no deben llevar prefijo `VITE_`.
 
@@ -110,7 +110,7 @@ FRONTEND_URL=http://localhost:5173
 PASSWORD_RESET_TEST_MODE=true
 ```
 
-Con `PASSWORD_RESET_TEST_MODE=true`, el sistema envía todos los enlaces al correo autorizado de pruebas `diego.moralesg@comunidad.iush.edu.co`. El token sigue asociado en PostgreSQL al `id` de la cuenta que solicitó el cambio; el destinatario del correo no determina qué contraseña se actualiza. Este modo está pensado solo para desarrollo y el backend se niega a iniciar si `NODE_ENV=production` y el modo está activado. Para el envío normal configura `PASSWORD_RESET_TEST_MODE=false` (o no la definas).
+Con `PASSWORD_RESET_TEST_MODE=true`, el sistema envía todos los enlaces al correo autorizado de pruebas `diego.moralesg@comunidad.iush.edu.co`, incluso en producción. El token sigue asociado en PostgreSQL al `id` de la cuenta que solicitó el cambio; el destinatario del correo no determina qué contraseña se actualiza. **Quien tenga acceso a ese buzón puede restablecer las contraseñas de cualquier cuenta**, así que usa este modo solo mientras sea necesario para las pruebas. Para enviar cada enlace al correo de la cuenta solicitante, configura `PASSWORD_RESET_TEST_MODE=false` (o no la definas).
 
 Para enviar a los correos reales, verifica un dominio en Resend y configura `RESEND_FROM_EMAIL` con una dirección de ese dominio. En producción, `FRONTEND_URL` debe ser el origen HTTPS de la aplicación web. Si el frontend usa un backend remoto, configura también `VITE_API_URL` en el entorno de compilación del frontend con la URL del backend. No uses una variable `VITE_` para la API key: las variables con ese prefijo se envían al navegador. No publiques ni incluyas la clave en Git.
 
