@@ -4,8 +4,9 @@ import PlacesFilter from './PlacesFilter'
 import Sidebar from './Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { createRealtimeClient, type SealedLiveQuery } from '@neon/realtime/client'
+import { API_BASE_URL } from '../services/api'
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 
 interface Place {
   id: number

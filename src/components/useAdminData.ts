@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AdminAuditLog, AdminBlock, AdminCoupon, AdminPlace, AdminReservation, AdminUser } from './adminTypes'
+import { API_BASE_URL } from '../services/api'
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 
 interface PendingConfirmation {
   title: string

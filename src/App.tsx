@@ -15,6 +15,7 @@ import Checkout from './components/Checkout'
 import PlacesPage from './components/PlacesPage'
 import ContactDock from './components/ContactDock'
 import { cacheProfileImageFromUrl, loadCachedProfileImage } from './services/profileImageCache'
+import { API_BASE_URL } from './services/api'
 
 function Landing({
   isDark,
@@ -254,7 +255,7 @@ function App() {
 
   useEffect(() => {
     if (!user?.id) return
-    fetch(`http://localhost:3001/api/users/${user.id}/profile`)
+    fetch(`${API_BASE_URL}/api/users/${user.id}/profile`)
       .then((response) => {
         if (response.status === 403 || response.status === 404) {
           setUser(null)

@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import './Sidebar.css'
+import { API_BASE_URL } from '../services/api'
 
 interface SidebarProps {
   user: { id?: number; username: string; role?: string; fullName?: string; profileImage?: string }
@@ -44,7 +45,7 @@ export default function Sidebar({ user, isDark, setIsDark, onLogout }: SidebarPr
       if (requestInProgress) return
       requestInProgress = true
       try {
-        const response = await fetch(`http://localhost:3001/api/users/${user.id}/notifications`, {
+        const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/notifications`, {
           headers: { 'x-user-id': String(user.id) },
         })
         if (!response.ok) throw new Error('No se pudo consultar el contador de notificaciones.')
