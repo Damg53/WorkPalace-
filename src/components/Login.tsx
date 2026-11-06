@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Auth.css';
 import OtpInput from './OtpInput';
+import { API_BASE_URL } from '../services/api';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -22,7 +23,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [serverConnected, setServerConnected] = useState<boolean | null>(null);
-  const [otpChallenge, setOtpChallenge] = useState<{ id: string; email: string; devCode: string } | null>(null);
+  const [otpChallenge, setOtpChallenge] = useState<{ id: string } | null>(null);
   const otpUserRef = useRef<LoginUser | null>(null);
 
   function updateRememberedUsername(value: string, enabled: boolean) {
@@ -37,7 +38,7 @@ export default function Login({ onLogin }: LoginProps) {
   useEffect(() => {
     const checkServer = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/health', {
+        const response = await fetch(`${API_BASE_URL}/api/health`, {
           method: 'GET',
         });
         setServerConnected(response.ok);
@@ -68,7 +69,7 @@ export default function Login({ onLogin }: LoginProps) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/login', {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       if (data.requiresOtp) {
-        setOtpChallenge({ id: data.challengeId, email: data.email, devCode: data.devCode });
+        setOtpChallenge({ id: data.challengeId });
         return;
       }
 
@@ -114,7 +115,7 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   async function verifyOtp(code: string) {
-    const response = await fetch('http://localhost:3001/api/login/otp/verify', {
+    const response = await fetch(`${API_BASE_URL}/api/login/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challengeId: otpChallenge?.id, code }),
@@ -142,19 +143,6 @@ export default function Login({ onLogin }: LoginProps) {
     navigate(params.get('redirect') || '/');
   }
 
-  async function resendOtp() {
-    if (!otpChallenge) return;
-    const response = await fetch('http://localhost:3001/api/login/otp/resend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challengeId: otpChallenge.id }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      setOtpChallenge((current) => current ? { ...current, devCode: data.devCode } : current);
-    }
-  }
-
   return (
     <div className="auth-page">
       <div className="auth-visual">
@@ -165,11 +153,9 @@ export default function Login({ onLogin }: LoginProps) {
       <div className="auth-panel">
         {otpChallenge ? (
           <OtpInput
-            email={otpChallenge.email}
-            devCode={otpChallenge.devCode}
+            description="Abre Microsoft Authenticator e escribe el código temporal de WorkPalace."
             verify={verifyOtp}
             onSuccess={() => window.setTimeout(finishOtpLogin, 1100)}
-            onResend={resendOtp}
             onCancel={() => setOtpChallenge(null)}
           />
         ) : <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">

@@ -12,38 +12,29 @@ import {
 import './OtpInput.css';
 
 type Status = 'idle' | 'verifying' | 'success' | 'error';
-type Tone = '' | 'ok' | 'error' | 'info';
+type Tone = '' | 'ok' | 'error';
 
 export interface OtpInputProps {
   /** Cantidad de dígitos (default 6) */
   length?: number;
-  /** Correo ya enmascarado, se muestra en el subtítulo */
-  email?: string;
-  /** Código visible durante el desarrollo */
-  devCode?: string;
-  /** Segundos antes de poder reenviar (default 30) */
-  resendSeconds?: number;
+  /** Texto explicativo opcional para códigos de autenticador */
+  description?: string;
   autoFocus?: boolean;
   /** Devuelve true si el código es correcto */
   verify: (code: string) => Promise<boolean>;
   onSuccess?: (code: string) => void;
-  onResend?: () => void;
   onCancel?: () => void;
 }
 
-const RING = 2 * Math.PI * 8;
 const BURST = Array.from({ length: 14 }, (_, k) => (k * 360) / 14);
 const REEL = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // -1 = celda en blanco
 
 export default function OtpInput({
   length = 6,
-  email = 'tu correo',
-  devCode,
-  resendSeconds = 30,
+  description = 'Escribe el código temporal de seis dígitos de tu aplicación Authenticator.',
   autoFocus = true,
   verify,
   onSuccess,
-  onResend,
   onCancel,
 }: OtpInputProps) {
   const empty = () => Array<string>(length).fill('');
@@ -51,7 +42,6 @@ export default function OtpInput({
   const [delays, setDelays] = useState<number[]>(() => Array(length).fill(0));
   const [status, setStatus] = useState<Status>('idle');
   const [msg, setMsg] = useState<{ text: string; tone: Tone }>({ text: '', tone: '' });
-  const [left, setLeft] = useState(resendSeconds);
 
   const vals = useRef<string[]>(values);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -71,13 +61,6 @@ export default function OtpInput({
     const timers = pending.current;
     return () => timers.forEach((id) => clearTimeout(id));
   }, []);
-
-  // cuenta regresiva del reenvío
-  useEffect(() => {
-    if (left <= 0 || status === 'success') return;
-    const id = setTimeout(() => setLeft((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [left, status]);
 
   const say = (text = '', tone: Tone = '') => setMsg({ text, tone });
   const focusAt = (i: number) => inputs.current[i]?.focus();
@@ -118,7 +101,9 @@ export default function OtpInput({
       focusAt(0);
     }, 900);
   }
-  submitRef.current = submit;
+  useEffect(() => {
+    submitRef.current = submit;
+  });
 
   function fill(start: number, raw: string) {
     if (busy.current) return;
@@ -140,16 +125,6 @@ export default function OtpInput({
     commit(next, d);
     focusAt(Math.min(start + chars.length, length - 1));
     if (next.every((v) => v !== '')) later(() => submitRef.current(), 500 + chars.length * 55);
-  }
-
-  function resend() {
-    if (left > 0 || busy.current) return;
-    commit(empty(), stagger());
-    setStatus('idle');
-    say('Te enviamos un código nuevo.', 'info');
-    setLeft(resendSeconds);
-    onResend?.();
-    focusAt(0);
   }
 
   function onChange(i: number, e: ChangeEvent<HTMLInputElement>) {
@@ -197,7 +172,6 @@ export default function OtpInput({
 
   const mid = length % 2 === 0 && length >= 4 ? length / 2 : -1;
   const filled = values.filter((v) => v !== '').length;
-  const clock = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   const label =
     status === 'verifying' ? 'Verificando…' : status === 'success' ? 'Verificado' : 'Verificar código';
 
@@ -222,14 +196,7 @@ export default function OtpInput({
       </div>
 
       <h2 className="otp-title">Verifica tu código</h2>
-      <p className="otp-sub">
-        Enviamos un código de {length} dígitos al correo <strong>{email}</strong>
-      </p>
-      {devCode && (
-        <p className="otp-dev-code" role="note">
-          Código de prueba: <strong>{devCode}</strong>
-        </p>
-      )}
+      <p className="otp-sub">{description}</p>
 
       <div className="otp-reels" role="group" aria-label="Código de verificación">
         {values.map((v, i) => (
@@ -284,22 +251,6 @@ export default function OtpInput({
         {label}
       </button>
 
-      <div className="otp-resend">
-        <button className="otp-link" type="button" disabled={left > 0 || status === 'success'} onClick={resend}>
-          <svg className="otp-ring" viewBox="0 0 20 20" aria-hidden="true">
-            <circle className="otp-ring-bg" cx="10" cy="10" r="8" />
-            <circle
-              className="otp-ring-fg"
-              cx="10"
-              cy="10"
-              r="8"
-              style={{ strokeDashoffset: RING * (1 - left / resendSeconds) }}
-            />
-          </svg>
-          <span>{left > 0 ? `Reenviar código en ${clock}` : 'Reenviar código'}</span>
-        </button>
-      </div>
-
       {onCancel && (
         <button className="otp-cancel" type="button" onClick={onCancel}>
           Volver al inicio de sesión
@@ -308,12 +259,3 @@ export default function OtpInput({
     </section>
   );
 }
-
-/* Uso:
- *
- * <OtpInput
- *   verify={async (code) => (await fetch('/api/otp/verify', { method: 'POST', body: JSON.stringify({ code }) })).ok}
- *   onSuccess={() => navigate('/home')}
- *   onResend={() => fetch('/api/otp/send', { method: 'POST' })}
- * />
- */

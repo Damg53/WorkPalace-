@@ -60,6 +60,24 @@ Después de enlazar el proyecto y ejecutar `neon deploy`, Neon guarda en `.env` 
 
 Las fotos de perfil se guardan en el bucket privado `assets`, no en PostgreSQL. El backend necesita las variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3` y `AWS_REGION` que entrega Neon. Se aceptan imágenes JPEG, PNG y WebP de hasta 5 MB; el servidor entrega URLs firmadas de corta duración. No expongas las credenciales `AWS_*` en variables `VITE_*`.
 
+### Autenticación de dos pasos con Microsoft Authenticator
+
+WorkPalace usa TOTP estándar (códigos de seis dígitos que cambian cada 30 segundos). Microsoft Authenticator acepta este formato mediante un QR `otpauth://`; no se necesita una API, cuenta ni credencial de Microsoft. El mismo QR también funciona con otras aplicaciones compatibles con TOTP.
+
+Configura `TOTP_ENCRYPTION_KEY` en el entorno privado del backend como una clave hexadecimal de 64 caracteres (32 bytes). Puedes generar una con:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Usa una clave persistente y distinta por entorno. Si se pierde o se cambia, los secretos TOTP cifrados ya guardados no podrán descifrarse y esas cuentas necesitarán recuperar acceso. No la pongas en una variable `VITE_*`, ni la publiques o compartas.
+
+En “Mi perfil”, la persona confirma su contraseña, escanea el QR con Microsoft Authenticator y escribe el primer código para verificar y activar la función. A partir de entonces, el inicio de sesión exige el código actual. La desactivación también requiere la contraseña y un código válido. Los secretos se cifran en PostgreSQL; los códigos no se envían a Microsoft ni se imprimen en los registros. Las cuentas antiguas que tenían activado el OTP simulado se migran como desactivadas, porque ese flujo no tenía una clave de Authenticator asociada.
+
+WorkPalace aún no genera códigos de recuperación. Si se pierde el acceso a la aplicación, será necesaria asistencia administrativa para recuperar la cuenta.
+
+Las rutas para integrar este flujo son `POST /api/users/{id}/totp/setup`, `POST /api/users/{id}/totp/verify-setup` y `POST /api/users/{id}/totp/disable`; el inicio de sesión verifica mediante `POST /api/login/otp/verify`. El backend genera y valida los códigos localmente, sin API externa.
+
 Neon Realtime entrega actualizaciones de disponibilidad en `/api/realtime/places`; el endpoint devuelve una consulta sellada y el secreto permanece en el backend. Configura `NEON_REALTIME_URL` y `NEON_REALTIME_SECRET` en Render para que funcione en producción. Neon Auth está provisionado, pero WorkPalace conserva su flujo de autenticación actual. Neon Functions también está provisionado; el backend de la aplicación continúa siendo Express en Render.
 
 ### Recuperación de contraseña con Resend

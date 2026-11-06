@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import './Settings.css'
 import { cacheProfileImageFromUrl, loadCachedProfileImage, saveCachedProfileImage } from '../services/profileImageCache'
+import { API_BASE_URL } from '../services/api'
 
 export interface UserProfile {
   id: number
@@ -26,7 +27,7 @@ interface SettingsProps {
   setIsDark: (value: boolean) => void
 }
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 const PREFERENCES_KEY = 'workpalace-user-preferences'
 
 function loadPreferencesFromStorage() {
@@ -59,6 +60,11 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
   const [preferences, setPreferences] = useState(() => loadPreferencesFromStorage().preferences)
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => loadPreferencesFromStorage().notificationsEnabled)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [totpSetup, setTotpSetup] = useState<{ secret: string; qrCode: string } | null>(null)
+  const [totpPassword, setTotpPassword] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [totpSetupCode, setTotpSetupCode] = useState('')
+  const [totpBusy, setTotpBusy] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Sincronizar con props cuando cambien (ej. al restaurar sesión)
@@ -151,6 +157,84 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
     reader.readAsDataURL(file)
   }
 
+  const startTotpSetup = async () => {
+    setMessage(null)
+    setTotpBusy(true)
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/totp/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: totpPassword }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage({ type: 'error', text: data.error || 'No se pudo iniciar la configuración.' })
+        return
+      }
+      const QRCode = await import('qrcode')
+      const qrCode = await QRCode.toDataURL(data.otpauthUrl, { width: 220, margin: 1 })
+      setTotpSetup({ secret: data.secret, qrCode })
+      setTotpSetupCode('')
+    } catch {
+      setMessage({ type: 'error', text: 'No se pudo generar el código QR. Inténtalo de nuevo.' })
+    } finally {
+      setTotpBusy(false)
+    }
+  }
+
+  const confirmTotpSetup = async () => {
+    setMessage(null)
+    setTotpBusy(true)
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/totp/verify-setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: totpSetupCode }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage({ type: 'error', text: data.error || 'No se pudo confirmar la configuración.' })
+        return
+      }
+      setTwoFactorEnabled(true)
+      setTotpSetup(null)
+      setTotpPassword('')
+      setTotpSetupCode('')
+      onProfileUpdate({ ...user, twoFactorEnabled: true })
+      setMessage({ type: 'success', text: 'Microsoft Authenticator quedó configurado correctamente.' })
+    } catch {
+      setMessage({ type: 'error', text: 'Error de conexión al confirmar la configuración.' })
+    } finally {
+      setTotpBusy(false)
+    }
+  }
+
+  const disableTotp = async () => {
+    setMessage(null)
+    setTotpBusy(true)
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/totp/disable`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: totpPassword, code: totpCode }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage({ type: 'error', text: data.error || 'No se pudo desactivar la verificación.' })
+        return
+      }
+      setTwoFactorEnabled(false)
+      setTotpPassword('')
+      setTotpCode('')
+      onProfileUpdate({ ...user, twoFactorEnabled: false })
+      setMessage({ type: 'success', text: 'La autenticación de dos pasos fue desactivada.' })
+    } catch {
+      setMessage({ type: 'error', text: 'Error de conexión al desactivar la verificación.' })
+    } finally {
+      setTotpBusy(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
@@ -165,7 +249,6 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
           username: username.trim() || undefined,
           profile_image_url: profileImage || undefined,
           phone,
-          two_factor_enabled: twoFactorEnabled,
         }),
       })
       const data = await res.json()
@@ -333,14 +416,91 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
               <span>Recibir notificaciones y recordatorios por correo</span>
             </label>
 
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={twoFactorEnabled}
-                onChange={(e) => setTwoFactorEnabled(e.target.checked)}
-              />
-              <span>Activar autenticación de dos pasos al iniciar sesión</span>
-            </label>
+            <section className="settings-two-factor" aria-labelledby="settings-two-factor-title">
+              <h2 id="settings-two-factor-title" className="profile-form-title">Autenticación de dos pasos</h2>
+              <p>
+                Estado: <strong>{twoFactorEnabled ? 'Activada' : 'Desactivada'}</strong>
+              </p>
+              {!twoFactorEnabled && !totpSetup && (
+                <>
+                  <p>Configúrala con Microsoft Authenticator u otra aplicación compatible con códigos TOTP.</p>
+                  <p>Conserva acceso a tu aplicación: actualmente no hay códigos de recuperación automáticos.</p>
+                  <div className="settings-field">
+                    <label htmlFor="settings-totp-password">Confirma tu contraseña</label>
+                    <input
+                      id="settings-totp-password"
+                      type="password"
+                      autoComplete="current-password"
+                      value={totpPassword}
+                      onChange={(event) => setTotpPassword(event.target.value)}
+                    />
+                  </div>
+                  <button type="button" className="btn btn-primary" disabled={totpBusy || !totpPassword} onClick={() => void startTotpSetup()}>
+                    {totpBusy ? 'Preparando...' : 'Configurar Microsoft Authenticator'}
+                  </button>
+                </>
+              )}
+              {totpSetup && (
+                <div className="settings-totp-setup">
+                  <p>Escanea este código QR con Microsoft Authenticator y luego introduce el código que aparece en la aplicación.</p>
+                  <img className="settings-totp-qr" src={totpSetup.qrCode} alt="Código QR de configuración de Microsoft Authenticator" />
+                  <p className="settings-totp-manual">
+                    Si no puedes escanearlo, agrega una cuenta manualmente con esta clave:
+                    <code>{totpSetup.secret}</code>
+                  </p>
+                  <div className="settings-field">
+                    <label htmlFor="settings-totp-setup-code">Código de verificación</label>
+                    <input
+                      id="settings-totp-setup-code"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={totpSetupCode}
+                      onChange={(event) => setTotpSetupCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    />
+                  </div>
+                  <div className="settings-actions">
+                    <button type="button" className="btn btn-primary" disabled={totpBusy || totpSetupCode.length !== 6} onClick={() => void confirmTotpSetup()}>
+                      {totpBusy ? 'Verificando...' : 'Verificar y activar'}
+                    </button>
+                    <button type="button" className="btn btn-secondary" disabled={totpBusy} onClick={() => { setTotpSetup(null); setTotpPassword('') }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+              {twoFactorEnabled && (
+                <>
+                  <p>Al iniciar sesión necesitarás tu contraseña y el código temporal de la aplicación.</p>
+                  <div className="settings-field">
+                    <label htmlFor="settings-totp-disable-password">Confirma tu contraseña para desactivar</label>
+                    <input
+                      id="settings-totp-disable-password"
+                      type="password"
+                      autoComplete="current-password"
+                      value={totpPassword}
+                      onChange={(event) => setTotpPassword(event.target.value)}
+                    />
+                  </div>
+                  <div className="settings-field">
+                    <label htmlFor="settings-totp-disable-code">Código actual de Authenticator</label>
+                    <input
+                      id="settings-totp-disable-code"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={totpCode}
+                      onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    />
+                  </div>
+                  <button type="button" className="btn btn-secondary" disabled={totpBusy || !totpPassword || totpCode.length !== 6} onClick={() => void disableTotp()}>
+                    {totpBusy ? 'Desactivando...' : 'Desactivar autenticación de dos pasos'}
+                  </button>
+                </>
+              )}
+            </section>
 
             {message && (
               <div className={`settings-message settings-message--${message.type}`}>

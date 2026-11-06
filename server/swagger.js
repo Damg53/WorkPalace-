@@ -108,9 +108,16 @@ const bodySchemas = {
     challengeId: stringField('Identificador del desafío OTP.'),
     code: stringField('Código de verificación de seis dígitos.'),
   }, ['challengeId', 'code']),
-  otpResend: objectBody({
-    challengeId: stringField('Identificador del desafío OTP.'),
-  }, ['challengeId']),
+  totpSetup: objectBody({
+    password: stringField('Contraseña actual para confirmar la identidad.'),
+  }, ['password']),
+  totpSetupVerify: objectBody({
+    code: stringField('Código de seis dígitos de Microsoft Authenticator.'),
+  }, ['code']),
+  totpDisable: objectBody({
+    password: stringField('Contraseña actual.'),
+    code: stringField('Código vigente de seis dígitos de Microsoft Authenticator.'),
+  }, ['password', 'code']),
   role: objectBody({
     role: { type: 'string', enum: ['admin', 'user'], description: 'Nuevo rol.' },
   }, ['role']),
@@ -123,7 +130,6 @@ const bodySchemas = {
     username: stringField('Nombre de usuario.'),
     profile_image_url: stringField('URL de la imagen de perfil.'),
     phone: stringField('Número celular colombiano.'),
-    two_factor_enabled: booleanField('Activa o desactiva la verificación en dos pasos.'),
   }),
   favorite: objectBody({
     placeId: integerField('ID del espacio.'),
@@ -209,8 +215,10 @@ const endpoints = [
   ['post', '/api/login', 'Iniciar sesión', 'Autenticación', { body: true, bodySchema: bodySchemas.login }],
   ['post', '/api/forgot-password', 'Solicitar restablecimiento de contraseña', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordResetRequest }],
   ['post', '/api/reset-password', 'Restablecer contraseña con un token', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordReset }],
-  ['post', '/api/login/otp/verify', 'Verificar el código OTP', 'Autenticación', { body: true, bodySchema: bodySchemas.otpVerify }],
-  ['post', '/api/login/otp/resend', 'Reenviar el código OTP', 'Autenticación', { body: true, bodySchema: bodySchemas.otpResend }],
+  ['post', '/api/login/otp/verify', 'Verificar código de Microsoft Authenticator', 'Autenticación', { body: true, bodySchema: bodySchemas.otpVerify }],
+  ['post', '/api/users/:id/totp/setup', 'Iniciar configuración de Microsoft Authenticator', 'Usuarios', { body: true, bodySchema: bodySchemas.totpSetup, conflict: true }],
+  ['post', '/api/users/:id/totp/verify-setup', 'Confirmar configuración de Microsoft Authenticator', 'Usuarios', { body: true, bodySchema: bodySchemas.totpSetupVerify, conflict: true }],
+  ['post', '/api/users/:id/totp/disable', 'Desactivar autenticación de dos pasos', 'Usuarios', { body: true, bodySchema: bodySchemas.totpDisable, conflict: true }],
   ['post', '/api/coupons/validate', 'Validar un cupón', 'Cupones', { auth: 'user', body: true, bodySchema: bodySchemas.couponValidation }],
   ['get', '/api/users', 'Listar usuarios', 'Usuarios', { auth: 'admin' }],
   ['put', '/api/users/:id/role', 'Cambiar el rol de un usuario', 'Usuarios', { auth: 'admin', body: true, bodySchema: bodySchemas.role, notFound: true }],

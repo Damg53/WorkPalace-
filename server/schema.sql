@@ -22,6 +22,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN DEFAULT FALSE NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret_encrypted TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_pending_secret_encrypted TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_pending_expires_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step BIGINT;
+UPDATE users SET two_factor_enabled = FALSE
+WHERE two_factor_enabled = TRUE AND totp_secret_encrypted IS NULL;
 
 -- Crear índices para mejor performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

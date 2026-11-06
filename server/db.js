@@ -141,6 +141,20 @@ async function createTablesIfNotExist() {
     console.log('✅ Columna two_factor_enabled verificada/creada en users');
 
     await pool.query(`
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS totp_secret_encrypted TEXT,
+        ADD COLUMN IF NOT EXISTS totp_pending_secret_encrypted TEXT,
+        ADD COLUMN IF NOT EXISTS totp_pending_expires_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS totp_last_step BIGINT;
+    `);
+    await pool.query(`
+      UPDATE users
+      SET two_factor_enabled = FALSE
+      WHERE two_factor_enabled = TRUE AND totp_secret_encrypted IS NULL;
+    `);
+    console.log('✅ Columnas TOTP verificadas/creadas en users');
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id BIGSERIAL PRIMARY KEY,
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
