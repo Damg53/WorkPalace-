@@ -69,7 +69,7 @@ Completa las variables privadas solicitadas por el Blueprint en Render:
 | Variable | Configuración |
 | --- | --- |
 | `DATABASE_URL` | URL pooled (`-pooler`) de Neon para producción; no uses la conexión local de Docker. |
-| `FRONTEND_URL` | URL HTTPS pública de la aplicación web. También se usa como origen CORS y para construir los enlaces de recuperación. |
+| `FRONTEND_URL` | El Blueprint ya usa `https://work-palace.vercel.app`. También se usa como origen CORS y para construir los enlaces de recuperación. |
 | `RESEND_API_KEY` | API key de Resend para habilitar la recuperación por correo. |
 | `RESEND_FROM_EMAIL` | Remitente permitido/verificado en Resend. |
 | `NODE_ENV` | El Blueprint fija `production`. |
