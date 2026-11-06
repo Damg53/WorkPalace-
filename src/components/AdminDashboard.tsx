@@ -59,10 +59,12 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
           <div className="stat-card"><h3>Total de Usuarios</h3><div className="number">{users.length}</div></div>
           <div className="stat-card"><h3>Administradores</h3><div className="number">{users.filter((item) => item.role === 'admin').length}</div></div>
           <div className="stat-card"><h3>Usuarios Regulares</h3><div className="number">{users.filter((item) => item.role === 'user').length}</div></div>
+          <div className="stat-card"><h3>Usuarios activos</h3><div className="number">{users.filter((item) => item.active !== false).length}</div></div>
           <div className="stat-card"><h3>Reservas totales</h3><div className="number">{reservations.length}</div></div>
-          <div className="stat-card"><h3>Lugares publicados</h3><div className="number">{places.length}</div></div>
+          <div className="stat-card"><h3>Reservas pendientes</h3><div className="number">{reservations.filter((item) => item.estado === 'pendiente').length}</div></div>
+          <div className="stat-card"><h3>Lugares activos</h3><div className="number">{places.filter((item) => item.active !== false).length}</div></div>
         </div>}
-        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} />}
+        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} coupons={data.coupons} />}
         {error && <div className="error-banner">⚠️ {error}</div>}
         {activeSection === 'users' && <AdminUsersSection users={users} updateRole={data.updateRole} toggleUserActive={data.toggleUserActive} deleteUser={data.deleteUser} />}
         {activeSection === 'reservations' && <AdminReservationsSection reservations={reservations} updateReservation={data.updateReservation} deleteReservation={data.deleteReservation} />}
@@ -70,6 +72,47 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
         {activeSection === 'operations' && <AdminOperationsSection coupons={data.coupons} blocks={data.blocks} auditLogs={data.auditLogs} places={places} createCoupon={data.createCoupon} toggleCoupon={data.toggleCoupon} deleteCoupon={data.deleteCoupon} createBlock={data.createBlock} deleteBlock={data.deleteBlock} />}
         <div className="admin-footer"><p>&copy; 2026 WorkPalace. Acceso restringido a administradores.</p></div>
       </div>
+      {data.confirmation && (
+        <div
+          className="admin-cancel-dialog-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !data.confirmingAction) data.setConfirmation(null)
+          }}
+        >
+          <section
+            className="admin-cancel-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="admin-confirm-title"
+            aria-describedby="admin-confirm-message"
+          >
+            <div className="admin-cancel-dialog__icon" aria-hidden="true">
+              <i className="fa fa-trash-o" />
+            </div>
+            <h3 id="admin-confirm-title">{data.confirmation.title}</h3>
+            <p id="admin-confirm-message">{data.confirmation.message}</p>
+            {error && <p className="admin-cancel-dialog__error" role="alert">{error}</p>}
+            <div className="admin-cancel-dialog__actions">
+              <button
+                type="button"
+                onClick={() => data.setConfirmation(null)}
+                disabled={data.confirmingAction}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-cancel-dialog__confirm"
+                onClick={() => void data.confirmPendingAction()}
+                disabled={data.confirmingAction}
+              >
+                {data.confirmingAction ? 'Procesando...' : data.confirmation.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

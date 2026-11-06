@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import './Settings.css'
+import { cacheProfileImageFromUrl, loadCachedProfileImage, saveCachedProfileImage } from '../services/profileImageCache'
 
 export interface UserProfile {
   id: number
@@ -93,26 +94,46 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
           setFullName(u.full_name ?? '')
           setEmail(u.email ?? '')
           setUsername(u.username ?? '')
-          setProfileImage(u.profile_image_url ?? '')
-          setPhone(u.phone ?? '')
+          const cachedImage = await loadCachedProfileImage(user.id)
+          const image = cachedImage || (u.profile_image_url
+            ? await cacheProfileImageFromUrl(user.id, u.profile_image_url)
+            : '')
+          setProfileImage(image || u.profile_image_url || '')
+          if (u.phone) setPhone(u.phone)
           setTwoFactorEnabled(Boolean(u.two_factor_enabled))
+          onProfileUpdate({
+            id: u.id,
+            username: u.username,
+            fullName: u.full_name ?? '',
+            email: u.email ?? '',
+            role: u.role,
+            profileImage: image || u.profile_image_url || '',
+            twoFactorEnabled: Boolean(u.two_factor_enabled),
+          })
+        } else {
+          setMessage({ type: 'error', text: data.error || 'No se pudo cargar el perfil.' })
         }
       } catch {
-        // Si falla, ya tenemos los valores de props
+        if (!cancelled) setMessage({ type: 'error', text: 'Error de conexión al cargar el perfil.' })
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     loadProfile()
     return () => { cancelled = true }
-  }, [user.id])
+  }, [user.id, onProfileUpdate])
 
   const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Selecciona una imagen válida.' })
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage({ type: 'error', text: 'Selecciona una imagen JPEG, PNG o WebP.' })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'La imagen no puede superar los 5 MB.' })
       return
     }
 
@@ -122,6 +143,10 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
       setProfileImage(result)
       setProfileImageName(file.name)
       setMessage({ type: 'success', text: 'Foto de perfil lista para guardar.' })
+      void saveCachedProfileImage(user.id, file).catch((error: unknown) => {
+        console.error('No se pudo guardar la copia local de la foto de perfil:', error)
+        setMessage({ type: 'error', text: 'La foto se cargó, pero no se pudo guardar una copia local para usarla sin conexión.' })
+      })
     }
     reader.readAsDataURL(file)
   }
@@ -160,7 +185,9 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
         preferences,
         notificationsEnabled,
         twoFactorEnabled: Boolean(updated.two_factor_enabled),
-        profileImage: updated.profile_image_url || profileImage,
+        profileImage: profileImage.startsWith('data:image/')
+          ? profileImage
+          : updated.profile_image_url || profileImage,
       })
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ phone, city, preferences, notificationsEnabled }))
       setMessage({ type: 'success', text: 'Datos guardados correctamente' })
@@ -208,14 +235,20 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
               </span>
 
               <label className="settings-upload-box" htmlFor="settings-profile-image">
-                <span className="settings-upload-button">Seleccionar archivo</span>
-                <span className="settings-upload-name">{profileImageName || 'Ningún archivo seleccionado'}</span>
+                <span className="settings-upload-copy">
+                  <strong>Cambia tu foto de perfil</strong>
+                  <span>JPG, PNG o WebP · Máximo 5 MB</span>
+                </span>
+                <span className="settings-upload-actions">
+                  <span className="settings-upload-button"><i className="fa fa-upload" aria-hidden="true" /> Elegir imagen</span>
+                  <span className="settings-upload-name">{profileImageName || 'Ningún archivo seleccionado'}</span>
+                </span>
               </label>
 
               <input
                 id="settings-profile-image"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={handleProfileImageChange}
                 className="settings-upload-input"
               />

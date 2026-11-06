@@ -10,12 +10,22 @@
   --otp-err-text: #c81f44;
   --otp-ok-text: #0b7a50;
 
-  /* los reels son tambores oscuros en ambos temas */
-  --otp-reel: #1b1444;
-  --otp-reel-ink: #f3f0ff;
+  --otp-reel: #e7ebf2;
+  --otp-reel-ink: #252d42;
+  --otp-badge: #1b1444;
   --otp-mango: #ffb627;
   --otp-mint: #3ddc97;
   --otp-cherry: #ff4d6d;
+}
+
+:root[data-theme='light'] {
+  --otp-bg: #f3f4f6;
+  --otp-panel: #f8f9fb;
+  --otp-line: #d9dfe9;
+  --otp-text: #252d42;
+  --otp-muted: #596579;
+  --otp-reel: #e7ebf2;
+  --otp-reel-ink: #252d42;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +38,8 @@
     --otp-err-text: #ff7a93;
     --otp-ok-text: #3ddc97;
     --otp-reel: #0c0925;
+    --otp-reel-ink: #f3f0ff;
+    --otp-badge: #0c0925;
   }
 }
 
@@ -40,6 +52,8 @@
   --otp-err-text: #ff7a93;
   --otp-ok-text: #3ddc97;
   --otp-reel: #0c0925;
+  --otp-reel-ink: #f3f0ff;
+  --otp-badge: #0c0925;
 }
 
 /* ── Panel ──────────────────────────────────────────── */
@@ -54,6 +68,7 @@
   width: min(100%, 26.5rem);
   margin-inline: auto;
   padding: 2rem clamp(1rem, 5vw, 1.5rem) 1.5rem;
+  box-shadow: 0 8px 24px rgba(37, 45, 66, 0.06);
   background: var(--otp-panel);
   border: 1px solid var(--otp-line);
   border-radius: 1.75rem;
@@ -64,7 +79,7 @@
 
 /* ── Candado: el cerrojo se cierra a medida que escribes ── */
 .otp-badge {
-  --badge-bg: var(--otp-reel);
+  --badge-bg: var(--otp-badge);
   position: relative;
   display: grid;
   place-items: center;
@@ -208,12 +223,12 @@
   border-radius: inherit;
   background: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.55) 0%,
-    rgba(0, 0, 0, 0) 30%,
-    rgba(0, 0, 0, 0) 70%,
-    rgba(0, 0, 0, 0.55) 100%
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0) 28%,
+    rgba(0, 0, 0, 0) 72%,
+    rgba(0, 0, 0, 0.08) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 /* cursor parpadeante en el reel activo y vacío */
@@ -409,6 +424,10 @@
   background: var(--otp-mint);
   opacity: 1;
   cursor: default;
+}
+
+html[data-theme='dark'] .otp .otp-btn:disabled {
+  opacity: 0.9;
 }
 
 .otp-btn:focus-visible,

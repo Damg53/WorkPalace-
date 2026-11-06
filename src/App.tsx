@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 
 
@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './components/Login.tsx'
 import Signup from './components/Signup.tsx'
 import ForgotPassword from './components/ForgotPassword.tsx'
+import ResetPassword from './components/ResetPassword.tsx'
 import Navbar from './components/Navbar'
 import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
@@ -13,6 +14,7 @@ import Settings from './components/Settings'
 import Checkout from './components/Checkout'
 import PlacesPage from './components/PlacesPage'
 import ContactDock from './components/ContactDock'
+import { cacheProfileImageFromUrl, loadCachedProfileImage } from './services/profileImageCache'
 
 function Landing({
   isDark,
@@ -52,34 +54,64 @@ function Landing({
         <div className="features-container">
           <h2 className="section-title">Cómo funciona WorkPalace</h2>
           <div className="features-grid">
-            <div className="feature-card">
-              <h3>Búsqueda filtrada de espacios</h3>
-              <p>Encuentra el espacio ideal filtrando por tipo de lugar, ubicación en Colombia y equipamiento disponible. Estudios, cocinas, talleres y más, al alcance de tu mano.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">01</span>
+                <div>
+                  <p className="feature-group-kicker">Empieza aquí</p>
+                  <h3>Descubre tu espacio</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Búsqueda filtrada de espacios</h4>
+                  <p>Encuentra el espacio ideal filtrando por tipo de lugar, ubicación en Colombia y equipamiento disponible.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Disponibilidad en tiempo real</h4>
+                  <p>Consulta qué horarios están libres antes de decidir y evita perder tiempo con opciones ocupadas.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="feature-card">
-              <h3>Reservas flexibles</h3>
-              <p>Reserva por horas, media jornada o jornada completa según lo que necesites. Sin contratos largos ni grandes inversiones, solo el tiempo que realmente usas.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">02</span>
+                <div>
+                  <p className="feature-group-kicker">A tu medida</p>
+                  <h3>Reserva con libertad</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Reservas flexibles</h4>
+                  <p>Reserva por horas, media jornada o jornada completa, sin contratos largos ni grandes inversiones.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Pagos y seguridad integrados</h4>
+                  <p>Disfruta pagos integrados y verificación de identidad para que cada transacción sea confiable.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="feature-card">
-              <h3>Disponibilidad en tiempo real</h3>
-              <p>Consulta la disponibilidad de cualquier espacio en tiempo real y confirma tu reserva al instante o solicita aprobación del propietario según el tipo de espacio.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Pagos y seguridad integrados</h3>
-              <p>Sistema de pago integrado y verificación de identidad para arrendadores y arrendatarios. Confianza y trazabilidad en cada transacción.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Comunicación directa</h3>
-              <p>Chat interno para coordinar todos los detalles con el dueño del espacio antes y durante tu reserva. Sin intermediarios innecesarios.</p>
-            </div>
-
-            <div className="feature-card">
-              <h3>Reseñas y calificaciones</h3>
-              <p>Sistema de reseñas bidireccional entre arrendadores y arrendatarios para construir una comunidad confiable y transparente en Colombia.</p>
+            <div className="feature-group">
+              <div className="feature-group-heading">
+                <span className="feature-group-number">03</span>
+                <div>
+                  <p className="feature-group-kicker">Después de reservar</p>
+                  <h3>Trabaja en comunidad</h3>
+                </div>
+              </div>
+              <div className="feature-group-cards">
+                <div className="feature-card">
+                  <h4>Comunicación directa</h4>
+                  <p>Coordina todos los detalles con el dueño del espacio antes y durante tu reserva.</p>
+                </div>
+                <div className="feature-card">
+                  <h4>Reseñas y calificaciones</h4>
+                  <p>Construye una comunidad confiable y transparente compartiendo tu experiencia.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -145,6 +177,7 @@ function loadStoredUser(): { id: number; username: string; role?: string; fullNa
 
 function saveUser(user: { id?: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean } | null) {
   if (!user) {
+    localStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(STORAGE_KEY)
     return
   }
@@ -155,7 +188,9 @@ function saveUser(user: { id?: number; username: string; role?: string; fullName
     role: user.role,
     fullName: user.fullName,
     email: user.email,
-    profileImage: user.profileImage || '',
+    profileImage: user.profileImage?.startsWith('data:image/') || user.profileImage?.startsWith('blob:')
+      ? ''
+      : user.profileImage || '',
     twoFactorEnabled: user.twoFactorEnabled || false,
   }
 
@@ -173,10 +208,48 @@ function App() {
     return saved ? saved === 'dark' : false
   })
 
+  useEffect(() => {
+    if (user?.id == null) return
+    const profileUserId = user.id
+    const profileImageSource = user.profileImage
+    if (profileImageSource?.startsWith('data:image/')) return
+    let cancelled = false
+
+    async function restoreProfileImage() {
+      try {
+        const cachedImage = await loadCachedProfileImage(profileUserId)
+        const image = cachedImage || (profileImageSource
+          ? await cacheProfileImageFromUrl(profileUserId, profileImageSource)
+          : null)
+        if (!cancelled && image) {
+          setUser((current) => {
+            if (!current || current.id !== profileUserId) return current
+            const next = { ...current, profileImage: image }
+            saveUser(next)
+            return next
+          })
+        }
+      } catch (error) {
+        console.error('No se pudo restaurar la copia local de la foto de perfil:', error)
+      }
+    }
+
+    restoreProfileImage()
+    return () => { cancelled = true }
+  }, [user?.id, user?.profileImage])
+
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEY)
+  }, [])
+
   // Aplicar tema al documento
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
+    const favicon = document.querySelector<HTMLLinkElement>('#page-favicon')
+    if (favicon) {
+      favicon.href = isDark ? '/favicon.svg?v=3' : '/favicon-light.svg?v=1'
+    }
   }, [isDark])
 
   useEffect(() => {
@@ -186,6 +259,7 @@ function App() {
         if (response.status === 403 || response.status === 404) {
           setUser(null)
           setIsAdmin(false)
+          localStorage.removeItem(STORAGE_KEY)
           sessionStorage.removeItem(STORAGE_KEY)
         }
       })
@@ -200,19 +274,20 @@ function App() {
   }
 
   function handleLogout() {
+    localStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem('workpalace-user-preferences')
     setUser(null)
     setIsAdmin(false)
   }
 
-  function handleProfileUpdate(updated: { id: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean }) {
+  const handleProfileUpdate = useCallback((updated: { id: number; username: string; role?: string; fullName?: string; email?: string; profileImage?: string; twoFactorEnabled?: boolean }) => {
     setUser(prev => {
       const next = prev ? { ...prev, ...updated } : null
       if (next) saveUser(next)
       return next
     })
-  }
+  }, [])
 
   return (
     <BrowserRouter>
@@ -249,6 +324,14 @@ function App() {
           element={
             <div className="auth-layout">
               <ForgotPassword />
+            </div>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <div className="auth-layout">
+              <ResetPassword />
             </div>
           }
         />

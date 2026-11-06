@@ -97,6 +97,13 @@ const bodySchemas = {
     username: stringField('Nombre de usuario o correo electrónico.'),
     password: stringField('Contraseña.'),
   }, ['username', 'password']),
+  passwordResetRequest: objectBody({
+    email: stringField('Correo de la cuenta que desea recuperar.'),
+  }, ['email']),
+  passwordReset: objectBody({
+    token: stringField('Token de un solo uso enviado por correo.'),
+    password: stringField('Nueva contraseña (6 a 128 caracteres).'),
+  }, ['token', 'password']),
   otpVerify: objectBody({
     challengeId: stringField('Identificador del desafío OTP.'),
     code: stringField('Código de verificación de seis dígitos.'),
@@ -200,6 +207,8 @@ const endpoints = [
   ['get', '/api/health', 'Comprobar el estado del servidor', 'Sistema'],
   ['post', '/api/signup', 'Registrar un usuario', 'Autenticación', { body: true, bodySchema: bodySchemas.signup, successStatus: 201 }],
   ['post', '/api/login', 'Iniciar sesión', 'Autenticación', { body: true, bodySchema: bodySchemas.login }],
+  ['post', '/api/forgot-password', 'Solicitar restablecimiento de contraseña', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordResetRequest }],
+  ['post', '/api/reset-password', 'Restablecer contraseña con un token', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordReset }],
   ['post', '/api/login/otp/verify', 'Verificar el código OTP', 'Autenticación', { body: true, bodySchema: bodySchemas.otpVerify }],
   ['post', '/api/login/otp/resend', 'Reenviar el código OTP', 'Autenticación', { body: true, bodySchema: bodySchemas.otpResend }],
   ['post', '/api/coupons/validate', 'Validar un cupón', 'Cupones', { auth: 'user', body: true, bodySchema: bodySchemas.couponValidation }],

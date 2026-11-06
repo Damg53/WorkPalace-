@@ -1,86 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../services/api';
 import './Auth.css';
 
 export default function ForgotPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
+  const [requestAccepted, setRequestAccepted] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
-  // Verificar si el servidor está disponible
   useEffect(() => {
-    const checkServer = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/health', {
-          method: 'GET',
-        });
-        setServerConnected(response.ok);
-      } catch (error) {
-        setServerConnected(false);
-        console.error('❌ No se puede conectar al servidor:', error);
-      }
-    };
+    if (!requestAccepted) return;
 
-    checkServer();
-  }, []);
+    if (countdown > 0) {
+      const timer = window.setTimeout(() => setCountdown((seconds) => seconds - 1), 1000);
+      return () => window.clearTimeout(timer);
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    navigate('/login', { replace: true });
+  }, [countdown, navigate, requestAccepted]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError('');
-    setSuccess('');
 
-    // Validar campo
-    if (!email.trim()) {
-      setError('Por favor ingresa tu correo electrónico');
-      return;
-    }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError('Por favor ingresa un correo electrónico válido');
-      return;
-    }
-
-    if (!serverConnected) {
-      setError('El servidor no está disponible. Asegúrate de ejecutar: npm run server');
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError('Ingresa un correo electrónico válido.');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📤 Enviando solicitud de recuperación a:', 'http://localhost:3001/api/forgot-password');
-
-      const response = await fetch('http://localhost:3001/api/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
       });
-
-      console.log('📊 Response status:', response.status);
-
       const data = await response.json();
-      console.log('📄 Response data:', data);
 
       if (!response.ok) {
-        setError(data.error || 'Error al procesar la solicitud');
+        setError(data.error || 'No se pudo procesar la solicitud.');
         return;
       }
 
-      // Éxito
-      console.log('✅ Solicitud enviada');
-      setSuccess(data.message);
-      setEmail('');
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
-      console.error('❌ Error:', errorMsg);
-      setError('Error de conexión. Asegúrate de que el servidor esté ejecutándose: npm run server');
+      setRequestAccepted(true);
+    } catch {
+      setError('No se pudo conectar con el servidor para enviar el correo. Intenta de nuevo más tarde.');
     } finally {
       setLoading(false);
     }
@@ -88,49 +56,65 @@ export default function ForgotPassword() {
 
   return (
     <div className="auth-page">
-      <div className="auth-visual" />
+      <div className="auth-visual">
+        <img src="/workpalace-logo-dark.png" alt="WorkPalace" className="auth-visual-logo brand-logo-dark" />
+        <img src="/workpalace-logo-light.png" alt="WorkPalace" className="auth-visual-logo brand-logo-light" />
+        <p>Espacios especializados<br />para trabajar de forma flexible</p>
+      </div>
       <div className="auth-panel">
-        <form onSubmit={handleSubmit} className="auth-form">
-          <Link to="/" className="auth-back-link">← Volver al Inicio</Link>
-          <h2 className="auth-title">Recuperar Contraseña</h2>
-          <p className="auth-subtitle">Ingresa tu correo electrónico y te enviaremos un enlace para resetear tu contraseña.</p>
-
-          {serverConnected === false && (
-            <div className="auth-status-alert">
-              ⚠️ Servidor no disponible. Ejecuta: <code>npm run server</code>
-            </div>
-          )}
-
-          <div className="auth-field">
-            <label htmlFor="email">Correo Electrónico</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="tu@ejemplo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-            />
+        {requestAccepted ? (
+          <div className="auth-form" role="status">
+            <h2 className="auth-title">Solicitud recibida</h2>
+            <p className="auth-subtitle">
+              Si el correo está asociado a una cuenta, recibirás un enlace para restablecer la contraseña.
+              Revisa también la carpeta de correo no deseado.
+            </p>
+            <p className="auth-subtitle">
+              Volverás al inicio de sesión en {countdown} segundo{countdown === 1 ? '' : 's'}.
+            </p>
+            <button
+              type="button"
+              className="auth-button"
+              onClick={() => navigate('/login', { replace: true })}
+            >
+              Volver al inicio de sesión
+            </button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="auth-form">
+            <Link to="/" className="auth-back-link">← Volver al Inicio</Link>
+            <h2 className="auth-title">Recuperar contraseña</h2>
+            <p className="auth-subtitle">Ingresa el correo de tu cuenta y te enviaremos un enlace para restablecerla.</p>
 
-          {error && <p className="auth-message auth-error">{error}</p>}
-          {success && <p className="auth-message auth-success">{success}</p>}
+            <div className="auth-field">
+              <label htmlFor="recovery-email">Correo electrónico</label>
+              <input
+                id="recovery-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="tu@ejemplo.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            className="auth-button"
-            disabled={loading || serverConnected === false}
-          >
-            {loading ? 'Enviando...' : 'Enviar Enlace de Recuperación'}
-          </button>
+            {error && <p className="auth-message auth-error" role="alert">{error}</p>}
 
-          <p className="auth-footer">
-            ¿Recuerdas tu contraseña? <Link to="/login">Inicia sesión</Link>
-          </p>
-          <p className="auth-footer">
-            ¿No tienes cuenta? <Link to="/signup">Regístrate</Link>
-          </p>
-        </form>
+            <button type="submit" className="auth-button" disabled={loading}>
+              {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+            </button>
+
+            <p className="auth-footer">
+              ¿Recuerdas tu contraseña? <Link to="/login">Inicia sesión</Link>
+            </p>
+            <p className="auth-footer">
+              ¿No tienes cuenta? <Link to="/signup">Regístrate</Link>
+            </p>
+          </form>
+        )}
       </div>
     </div>
   );

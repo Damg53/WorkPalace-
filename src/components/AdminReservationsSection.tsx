@@ -1,15 +1,80 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AdminReservation } from './adminTypes'
 
 interface AdminReservationsSectionProps {
   reservations: AdminReservation[]
-  updateReservation: (id: number, payload: Partial<AdminReservation>) => void
+  updateReservation: (id: number, payload: Partial<AdminReservation>) => Promise<boolean>
   deleteReservation: (id: number) => void
 }
+
+const cancellationReasons = [
+  'El espacio no está disponible en las fechas solicitadas',
+  'No fue posible confirmar la reserva',
+  'Problema con el pago',
+  'La información de la reserva está incompleta o es incorrecta',
+  'Incumplimiento de las políticas del espacio',
+  'Otro motivo',
+]
 
 export default function AdminReservationsSection({ reservations, updateReservation, deleteReservation }: AdminReservationsSectionProps) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
+  const [reservationToCancel, setReservationToCancel] = useState<AdminReservation | null>(null)
+  const [cancellationReason, setCancellationReason] = useState('')
+  const [customCancellationReason, setCustomCancellationReason] = useState('')
+  const [savingCancellation, setSavingCancellation] = useState(false)
+  const [cancellationError, setCancellationError] = useState('')
+
+  useEffect(() => {
+    if (!reservationToCancel || savingCancellation) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReservationToCancel(null)
+        setCancellationReason('')
+        setCustomCancellationReason('')
+        setCancellationError('')
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [reservationToCancel, savingCancellation])
+
+  const closeCancellationDialog = () => {
+    if (savingCancellation) return
+    setReservationToCancel(null)
+    setCancellationReason('')
+    setCustomCancellationReason('')
+    setCancellationError('')
+  }
+
+  const confirmCancellation = async () => {
+    if (!reservationToCancel || !cancellationReason) {
+      setCancellationError('Selecciona el motivo de la cancelación.')
+      return
+    }
+
+    const reason = cancellationReason === 'Otro motivo'
+      ? customCancellationReason.trim()
+      : cancellationReason
+    if (!reason) {
+      setCancellationError('Escribe el motivo de la cancelación.')
+      return
+    }
+
+    setSavingCancellation(true)
+    setCancellationError('')
+    const updated = await updateReservation(reservationToCancel.id, {
+      estado: 'cancelada',
+      active: true,
+      cancellationReason: reason,
+    })
+    setSavingCancellation(false)
+    if (updated) closeCancellationDialog()
+    else setCancellationError('No se pudo cancelar la reserva. Revisa el error del panel e inténtalo de nuevo.')
+  }
+
   const filteredReservations = reservations.filter((reservation) => {
     const haystack = `${reservation.username ?? ''} ${reservation.email ?? ''} ${reservation.hotel ?? ''} ${reservation.ubicacion ?? ''}`.toLowerCase()
     return haystack.includes(query.toLowerCase()) && (status === 'all' || reservation.estado === status)
@@ -42,7 +107,18 @@ export default function AdminReservationsSection({ reservations, updateReservati
                     <input type="number" min={1} value={typeof reservation.huespedes === 'number' ? reservation.huespedes : 1} onChange={(event) => updateReservation(reservation.id, { huespedes: Number(event.target.value) || 1 })} className="table-input" style={{ width: '4rem' }} />
                   </td>
                   <td>
-                    <select value={typeof reservation.estado === 'string' ? reservation.estado : ''} onChange={(event) => { const nextStatus = event.target.value; updateReservation(reservation.id, { estado: nextStatus, ...(nextStatus === 'completada' || nextStatus === 'cancelada' ? { active: true } : {}) }) }} className="table-select">
+                    <select value={typeof reservation.estado === 'string' ? reservation.estado : ''} onChange={(event) => {
+                      const nextStatus = event.target.value
+                      if (nextStatus === 'cancelada' && reservation.estado !== 'cancelada') {
+                        setReservationToCancel(reservation)
+                        setCancellationError('')
+                        return
+                      }
+                      void updateReservation(reservation.id, {
+                        estado: nextStatus,
+                        ...(nextStatus === 'completada' ? { active: true } : {}),
+                      })
+                    }} className="table-select">
                       <option value="pendiente">Pendiente</option><option value="confirmada">Confirmada</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option>
                     </select>
                   </td>
@@ -56,6 +132,70 @@ export default function AdminReservationsSection({ reservations, updateReservati
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {reservationToCancel && (
+        <div
+          className="admin-cancel-dialog-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeCancellationDialog()
+          }}
+        >
+          <section
+            className="admin-cancel-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-cancel-title"
+          >
+            <div className="admin-cancel-dialog__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M16 3v4M8 3v4M3 10h18M9 14l6 5M15 14l-6 5" />
+              </svg>
+            </div>
+            <h3 id="admin-cancel-title">Cancelar reserva #{reservationToCancel.id}</h3>
+            <p>Selecciona el motivo. El usuario lo verá en la notificación de cancelación.</p>
+            <label htmlFor="admin-cancel-reason">Motivo de cancelación</label>
+            <select
+              id="admin-cancel-reason"
+              value={cancellationReason}
+              onChange={(event) => {
+                setCancellationReason(event.target.value)
+                setCancellationError('')
+              }}
+              disabled={savingCancellation}
+            >
+              <option value="">Selecciona un motivo</option>
+              {cancellationReasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+            </select>
+            {cancellationReason === 'Otro motivo' && (
+              <textarea
+                value={customCancellationReason}
+                onChange={(event) => {
+                  setCustomCancellationReason(event.target.value)
+                  setCancellationError('')
+                }}
+                maxLength={500}
+                placeholder="Escribe el motivo para el usuario"
+                aria-label="Escribe el motivo de cancelación"
+                disabled={savingCancellation}
+              />
+            )}
+            {cancellationError && <p className="admin-cancel-dialog__error" role="alert">{cancellationError}</p>}
+            <div className="admin-cancel-dialog__actions">
+              <button type="button" onClick={closeCancellationDialog} disabled={savingCancellation}>Volver</button>
+              <button
+                type="button"
+                className="admin-cancel-dialog__confirm"
+                onClick={() => void confirmCancellation()}
+                disabled={savingCancellation}
+              >
+                {savingCancellation ? 'Cancelando...' : 'Confirmar cancelación'}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>

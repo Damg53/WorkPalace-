@@ -5,26 +5,33 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const { Pool } = pg;
+const databaseUrl = process.env.DATABASE_URL?.trim();
 
 // Pool para conectarse a la BD de sistema (para crear DB)
-const adminPool = new Pool({
+const adminPool = databaseUrl ? null : new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT) || 5432,
   database: 'postgres',
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  connectionTimeoutMillis: 2000,
 });
 
 // Pool principal
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  ...(databaseUrl ? {
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10000,
+  } : {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectionTimeoutMillis: 2000,
+  }),
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
 });
 
 pool.on('error', (err) => {
@@ -37,6 +44,11 @@ pool.on('connect', () => {
 
 // Función para crear la base de datos si no existe
 async function createDatabaseIfNotExists() {
+  if (databaseUrl) {
+    console.log('✅ Base de datos provisionada por Neon; usando DATABASE_URL');
+    return;
+  }
+
   const client = await adminPool.connect();
   try {
     console.log('🔍 Verificando si la base de datos existe...');
@@ -109,6 +121,12 @@ async function createTablesIfNotExist() {
     `);
     console.log('✅ Columna phone verificada/creada en users');
 
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+    console.log('✅ Columna updated_at verificada/creada en users');
+
     // columna active para desactivar usuarios sin borrarlos
     await pool.query(`
       ALTER TABLE users
@@ -121,6 +139,20 @@ async function createTablesIfNotExist() {
       ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE;
     `);
     console.log('✅ Columna two_factor_enabled verificada/creada en users');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash CHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expiry ON password_reset_tokens(expires_at);');
+    console.log('✅ Tabla password_reset_tokens verificada/creada');
 
     // Crear tabla de espacios antes de crear la referencia desde reservations
     await pool.query(`
@@ -155,12 +187,16 @@ async function createTablesIfNotExist() {
         check_out DATE NOT NULL,
         huespedes INT NOT NULL DEFAULT 1,
         estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+        cancellation_reason TEXT,
         coupon_code VARCHAR(50),
+        total_amount BIGINT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;');
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
@@ -246,6 +282,7 @@ async function createTablesIfNotExist() {
       CREATE TABLE IF NOT EXISTS user_notifications (
         id SERIAL PRIMARY KEY,
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reservation_id INT,
         title VARCHAR(255) NOT NULL,
         detail TEXT NOT NULL,
         tone VARCHAR(20) NOT NULL DEFAULT 'info',
@@ -253,6 +290,7 @@ async function createTablesIfNotExist() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS reservation_id INT;');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id, created_at DESC);');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_audit_logs (
@@ -303,7 +341,7 @@ export const initializationReady = (async () => {
     await createTablesIfNotExist();
   } catch (err) {
     console.error('❌ Error al inicializar la base de datos:', err.message);
-    process.exit(1);
+    throw err;
   }
 })();
 

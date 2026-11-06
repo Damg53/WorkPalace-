@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import './PlacesList.css'
 
 interface Place {
   id: number
@@ -18,11 +19,21 @@ interface Place {
 }
 
 interface PlacesListProps {
+  userId?: number
   places: Place[]
   loading: boolean
   error: string | null
   onReserve: (placeId: number) => void
 }
+
+interface Favorite {
+  id: number
+  place_id: number
+  place_name: string
+  place_city: string | null
+}
+
+const API = 'http://localhost:3001'
 
 const getPriceByModality = (precioHora: number | null, modalidad: string | null) => {
   if (precioHora == null) return 'A convenir'
@@ -45,109 +56,182 @@ const availabilityDate = (value: string | null | undefined) => value
   ? new Date(value).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
   : null
 
-const PlacesList: React.FC<PlacesListProps> = ({ places, loading, error, onReserve }) => {
-  const [openDetailId, setOpenDetailId] = useState<number | null>(null);
+const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error, onReserve }) => {
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
+  const [favorites, setFavorites] = useState<Favorite[]>([])
+  const [loadingFavorites, setLoadingFavorites] = useState(true)
+  const [pendingFavoriteId, setPendingFavoriteId] = useState<number | null>(null)
+  const [favoriteError, setFavoriteError] = useState<string | null>(null)
 
-  const toggleDetails = (id: number) => {
-    setOpenDetailId(prev => (prev === id ? null : id));
-  };
+  useEffect(() => {
+    if (!selectedPlace) return
 
-  const columns = Array.from({ length: 3 }, (_, columnIndex) =>
-    places.filter((_, index) => index % 3 === columnIndex)
-  );
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedPlace(null)
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [selectedPlace])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchFavorites() {
+      if (userId == null) {
+        setFavorites([])
+        setLoadingFavorites(false)
+        return
+      }
+
+      setLoadingFavorites(true)
+      try {
+        const response = await fetch(`${API}/api/users/${userId}/favorites`, {
+          headers: { 'x-user-id': String(userId) },
+        })
+        const data = await response.json() as { favorites?: Favorite[]; error?: string }
+        if (!response.ok) {
+          throw new Error(data.error || 'No se pudieron cargar los favoritos.')
+        }
+        if (!cancelled) {
+          setFavorites(data.favorites || [])
+          setFavoriteError(null)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFavoriteError(error instanceof Error ? error.message : 'No se pudieron cargar los favoritos.')
+        }
+      } finally {
+        if (!cancelled) setLoadingFavorites(false)
+      }
+    }
+
+    void fetchFavorites()
+    return () => { cancelled = true }
+  }, [userId])
+
+  const toggleFavorite = async (place: Place) => {
+    if (userId == null || pendingFavoriteId != null) return
+
+    const isFavorite = favorites.some((favorite) => favorite.place_id === place.id)
+    setPendingFavoriteId(place.id)
+    setFavoriteError(null)
+
+    try {
+      const response = await fetch(
+        isFavorite
+          ? `${API}/api/users/${userId}/favorites/${place.id}`
+          : `${API}/api/users/${userId}/favorites`,
+        {
+          method: isFavorite ? 'DELETE' : 'POST',
+          headers: {
+            'x-user-id': String(userId),
+            ...(isFavorite ? {} : { 'Content-Type': 'application/json' }),
+          },
+          ...(!isFavorite && {
+            body: JSON.stringify({
+              placeId: place.id,
+              placeName: place.name,
+              placeCity: place.ciudad || '',
+            }),
+          }),
+        },
+      )
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null) as { error?: string } | null
+        throw new Error(data?.error || 'No se pudo actualizar el favorito.')
+      }
+
+      if (isFavorite) {
+        setFavorites((current) => current.filter((favorite) => favorite.place_id !== place.id))
+      } else {
+        const data = await response.json() as { favorite: Favorite }
+        setFavorites((current) => [
+          {
+            id: data.favorite.id,
+            place_id: data.favorite.place_id ?? place.id,
+            place_name: data.favorite.place_name ?? place.name,
+            place_city: data.favorite.place_city ?? place.ciudad,
+          },
+          ...current.filter((favorite) => favorite.place_id !== place.id),
+        ])
+      }
+    } catch (error) {
+      setFavoriteError(error instanceof Error ? error.message : 'No se pudo actualizar el favorito.')
+    } finally {
+      setPendingFavoriteId(null)
+    }
+  }
 
   const renderPlaceCard = (place: Place) => {
-    const isOpen = openDetailId === place.id;
+    const isFavorite = favorites.some((favorite) => favorite.place_id === place.id)
 
     return (
       <div
         key={place.id}
-        className="feature-card"
-        style={{
-          minHeight: isOpen ? 'auto' : '220px',
-          transition: 'min-height 0.2s ease, transform 0.22s cubic-bezier(.4,1.6,.6,1)',
-        }}
+        className="feature-card place-card"
       >
         {place.image_url && (
-          <div style={{ marginBottom: '0.9rem', borderRadius: '12px', overflow: 'hidden', maxHeight: '210px', boxShadow: '0 4px 18px rgba(102,126,234,0.10)' }}>
-            <img src={place.image_url} alt={place.name} style={{ width: '100%', height: '210px', objectFit: 'cover', transition: 'transform 0.3s', borderRadius: '12px' }} />
+          <div className="place-image-wrapper">
+            <img src={place.image_url} alt={place.name} className="place-image" />
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+        {userId != null && (
+          <button
+            type="button"
+            className={`place-favorite-button${isFavorite ? ' is-favorite' : ''}`}
+            onClick={() => void toggleFavorite(place)}
+            disabled={loadingFavorites || pendingFavoriteId != null}
+            aria-pressed={isFavorite}
+            aria-label={pendingFavoriteId === place.id
+              ? 'Guardando favorito'
+              : isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          >
+            <i
+              className={`fa ${pendingFavoriteId === place.id ? 'fa-spinner fa-spin' : isFavorite ? 'fa-heart' : 'fa-heart-o'}`}
+              aria-hidden="true"
+            />
+            <span className="place-favorite-tooltip" aria-hidden="true">
+              {pendingFavoriteId === place.id
+                ? 'Guardando...'
+                : isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            </span>
+          </button>
+        )}
+        <div className="place-card-heading">
           <h3 style={{
             margin: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '230px',
             fontSize: '1.35rem',
             fontWeight: 700
           }}>{place.tipo}</h3>
-          <span style={{
-            padding: '0.25rem 0.75rem',
-            borderRadius: '4px',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            backgroundColor: place.active ? '#4CAF50' : '#f44336',
-            color: 'white',
-            minWidth: '90px',
-            textAlign: 'center',
-            marginLeft: '0.25rem'
-          }}>
+          <span className={`place-availability${place.active ? '' : ' is-unavailable'}`}>
             {place.active ? 'Disponible' : 'No disponible'}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <div className="place-card-actions">
           <button
             type="button"
             className="btn btn-secondary"
             style={{ padding: '0.5rem 1.1rem', fontSize: '0.95rem', border: '1px solid #667eea', background: '#fff', color: '#333', borderRadius: '7px', fontWeight: 500, cursor: 'pointer' }}
-            onClick={() => toggleDetails(place.id)}
+            onClick={() => setSelectedPlace(place)}
           >
-            {isOpen ? 'Ocultar detalles' : 'Detalles'}
+            Detalles
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className={`btn btn-primary place-reserve-button${place.active ? '' : ' is-unavailable'}`}
             onClick={() => onReserve(place.id)}
             disabled={!place.active}
           >
-            {place.active ? 'Reserva ya' : 'No disponible'}
+            {place.active ? 'Reserva ya' : 'Ocupado'}
           </button>
         </div>
-        {isOpen && (
-          <div style={{ marginBottom: '0.5rem', animation: 'fadeIn 0.3s' }}>
-            <p style={{ marginBottom: '0.35rem' }}>
-              {[place.barrio, place.ciudad].filter(Boolean).join(', ')}
-            </p>
-            <p style={{ marginBottom: '0.35rem' }}>
-              <strong>Capacidad:</strong> {place.capacidad ?? 'Sin especificar'}
-            </p>
-            <p style={{ marginBottom: '0.35rem' }}>
-              <strong>Modalidad:</strong> {place.modalidad ?? 'Consultar disponibilidad'}
-            </p>
-            <p style={{ marginBottom: '0.75rem' }}>
-              <strong>Precio:</strong>{' '}
-              {getPriceByModality(place.precio_hora, place.modalidad)}
-            </p>
-            {!place.active && (
-              <p style={{ marginBottom: '0.75rem', color: '#f0a36b' }}>
-                <strong>Motivo:</strong> {place.unavailable_reason || 'No disponible temporalmente'}.
-                {availabilityDate(place.available_from) && ` Disponible nuevamente el ${availabilityDate(place.available_from)}.`}
-              </p>
-            )}
-            {place.caracteristicas && (
-              <p style={{ marginBottom: '0.75rem' }}>
-                <strong>Características:</strong> {place.caracteristicas}
-              </p>
-            )}
-            {place.nivel_ruido && (
-              <p style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.85 }}>
-                Nivel de ruido: {place.nivel_ruido}
-              </p>
-            )}
-          </div>
-        )}
         <span style={{ fontSize: '0.85rem', color: '#888' }}>
           Confirma los datos y simula tu pago para reservar.
         </span>
@@ -158,20 +242,106 @@ const PlacesList: React.FC<PlacesListProps> = ({ places, loading, error, onReser
   return (
     <>
       {error && <p className="reservations-error">{error}</p>}
+      {favoriteError && <p className="place-favorite-error" role="alert">{favoriteError}</p>}
+      {selectedPlace && (
+        <div
+          className="place-detail-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedPlace(null)
+          }}
+        >
+          <section
+            className="place-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="place-detail-title"
+          >
+            <header className="place-detail-modal__header">
+              <div>
+                <span className={`place-availability${selectedPlace.active ? '' : ' is-unavailable'}`}>
+                  {selectedPlace.active ? 'Disponible' : 'No disponible'}
+                </span>
+                <h2 id="place-detail-title">{selectedPlace.name || selectedPlace.tipo}</h2>
+                <p>{selectedPlace.tipo}</p>
+              </div>
+              <button
+                type="button"
+                className="place-detail-modal__close"
+                onClick={() => setSelectedPlace(null)}
+                aria-label="Cerrar detalles"
+              >
+                ×
+              </button>
+            </header>
+
+            {selectedPlace.image_url && (
+              <img className="place-detail-modal__image" src={selectedPlace.image_url} alt={selectedPlace.name} />
+            )}
+
+            <dl className="place-detail-list">
+              <div>
+                <dt>Ubicación</dt>
+                <dd>{[selectedPlace.barrio, selectedPlace.ciudad].filter(Boolean).join(', ') || 'No especificada'}</dd>
+              </div>
+              <div>
+                <dt>Capacidad</dt>
+                <dd>{selectedPlace.capacidad || 'Sin especificar'}</dd>
+              </div>
+              <div>
+                <dt>Modalidad</dt>
+                <dd>{selectedPlace.modalidad || 'Consultar disponibilidad'}</dd>
+              </div>
+              <div>
+                <dt>Precio</dt>
+                <dd>{getPriceByModality(selectedPlace.precio_hora, selectedPlace.modalidad)}</dd>
+              </div>
+              {selectedPlace.nivel_ruido && (
+                <div>
+                  <dt>Nivel de ruido</dt>
+                  <dd>{selectedPlace.nivel_ruido}</dd>
+                </div>
+              )}
+            </dl>
+
+            {!selectedPlace.active && (
+              <p className="place-detail-modal__unavailable">
+                <strong>Motivo:</strong> {selectedPlace.unavailable_reason || 'No disponible temporalmente'}.
+                {availabilityDate(selectedPlace.available_from) && ` Disponible nuevamente el ${availabilityDate(selectedPlace.available_from)}.`}
+              </p>
+            )}
+            {selectedPlace.caracteristicas && (
+              <p className="place-detail-modal__features">
+                <strong>Características:</strong> {selectedPlace.caracteristicas}
+              </p>
+            )}
+
+            <footer className="place-detail-modal__footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedPlace(null)}>
+                Cerrar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onReserve(selectedPlace.id)}
+                disabled={!selectedPlace.active}
+              >
+                {selectedPlace.active ? 'Reservar espacio' : 'No disponible'}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
       {loading ? (
         <p className="settings-loading">Cargando espacios disponibles...</p>
       ) : (
-        <div className="features-grid">
+        <div className="features-grid places-grid">
           {places.length === 0 ? (
             <p style={{ padding: '1.5rem 0', color: '#666' }}>
               No hay espacios registrados aún en la base de datos.
             </p>
           ) : (
-            columns.map((columnPlaces, columnIndex) => (
-              <div key={`column-${columnIndex}`} className="places-column">
-                {columnPlaces.map(place => renderPlaceCard(place))}
-              </div>
-            ))
+            places.map((place) => renderPlaceCard(place))
           )}
         </div>
       )}

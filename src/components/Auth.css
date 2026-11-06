@@ -46,10 +46,39 @@ html[data-theme="dark"] body {
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+html[data-theme="light"] .auth-page {
+  background: #f8f9fb;
+}
+
 .auth-visual {
   flex: 1.2;
-  background: url('../img/bckgrnd.jpeg') center/cover no-repeat;
-  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1.5rem;
+  background: radial-gradient(ellipse at center, #174c91 0%, #0d2f5c 58%, #091d3a 100%);
+  color: #fff;
+  text-align: center;
+}
+
+html[data-theme="light"] .auth-visual {
+  background: radial-gradient(ellipse at center, #ffffff 0%, #edf1f7 72%, #e2e8f0 100%);
+  color: #172554;
+}
+
+.auth-visual-logo {
+  display: block;
+  width: min(100%, 440px);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.auth-visual p {
+  margin: -2rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  line-height: 1.45;
 }
 
 .auth-panel {
@@ -58,7 +87,7 @@ html[data-theme="dark"] body {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(245, 247, 250, 0.92);
   overflow: auto;
 }
 
@@ -140,6 +169,86 @@ html[data-theme="dark"] body {
 
 .auth-field input::placeholder {
   color: rgba(0, 0, 0, 0.45);
+}
+
+.auth-password-control {
+  position: relative;
+  width: 100%;
+}
+
+.auth-password-control input {
+  padding-right: 3.2rem;
+}
+
+.auth-password-control--text-toggle input {
+  padding-right: 4.7rem;
+}
+
+.auth-password-control--text-toggle .auth-password-toggle {
+  width: auto;
+  min-width: 3.6rem;
+  padding: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #53617a;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.auth-password-toggle:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 1px;
+}
+
+.auth-password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.auth-password-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  animation: auth-eye-change 180ms ease-out;
+}
+
+@keyframes auth-eye-change {
+  from {
+    opacity: 0.4;
+    transform: scale(0.75) rotate(-12deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-password-toggle svg {
+    animation: none;
+  }
 }
 
 .auth-remember {
@@ -294,7 +403,19 @@ html[data-theme="dark"] body {
   }
 
   .auth-visual {
-    display: none;
+    flex: none;
+    min-height: 180px;
+    padding: 0.5rem;
+    gap: 0;
+  }
+
+  .auth-visual-logo {
+    width: min(100%, 210px);
+  }
+
+  .auth-visual p {
+    margin-top: -1rem;
+    font-size: 0.95rem;
   }
 
   .auth-panel {
@@ -346,6 +467,14 @@ html[data-theme="dark"] .auth-field input:focus {
 
 html[data-theme="dark"] .auth-field input::placeholder {
   color: rgba(255, 255, 255, 0.4);
+}
+
+html[data-theme="dark"] .auth-password-toggle {
+  color: #c4cbea;
+}
+
+html[data-theme="dark"] .auth-password-toggle:hover:not(:disabled) {
+  background: rgba(139, 155, 219, 0.16);
 }
 
 html[data-theme="dark"] .auth-remember label {
