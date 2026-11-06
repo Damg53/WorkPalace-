@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './PlacesList.css'
+import { API_BASE_URL } from '../services/api'
 
 interface Place {
   id: number
@@ -34,7 +35,7 @@ interface Favorite {
   place_city: string | null
 }
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 
 const getPriceByModality = (precioHora: number | null, modalidad: string | null) => {
   if (precioHora == null) return 'A convenir'

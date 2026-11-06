@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './Checkout.css'
+import { API_BASE_URL } from '../services/api'
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 
 type Mode = 'hour' | 'halfDay' | 'fullDay' | 'day' | 'night' | 'week' | 'fortnight' | 'month' | 'appointment' | 'flexible'
 type Pay = 'card' | 'pse' | 'nequi'
@@ -702,4 +703,3 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
     </main>
   )
 }
-

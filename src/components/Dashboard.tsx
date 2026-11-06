@@ -3,7 +3,7 @@ import '../App.css'
 import './Dashboard.css'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { cancelReservation } from '../services/api'
+import { API_BASE_URL, cancelReservation } from '../services/api'
 
 interface DashboardProps {
   user: { id?: number; username: string; role?: string; fullName?: string; email?: string }
@@ -49,7 +49,7 @@ interface NotificationItem {
   is_read: boolean
 }
 
-const API = 'http://localhost:3001'
+const API = API_BASE_URL
 const PREFERENCES_KEY = 'workpalace-user-preferences'
 
 function loadUserPreferences() {

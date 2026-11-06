@@ -1,5 +1,9 @@
 // API Configuration
-export const API_BASE_URL = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL || 'http://localhost:3001';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+export const API_BASE_URL = (
+  configuredApiUrl
+  || (import.meta.env.PROD ? 'https://workpalace.onrender.com' : 'http://localhost:3001')
+).replace(/\/+$/, '')
 
 // Signup API call
 export const signupUser = async (userData: {

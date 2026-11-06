@@ -77,7 +77,7 @@ Completa las variables privadas solicitadas por el Blueprint en Render:
 
 Si necesitas permitir más de un origen web, añade `CORS_ORIGIN` con una lista separada por comas en Render. Para habilitar TOTP, agrega `TOTP_ENCRYPTION_KEY` con una clave hexadecimal persistente de 64 caracteres. Para fotos de perfil, agrega las cuatro variables `AWS_*` indicadas arriba; para Neon Realtime, agrega `NEON_REALTIME_URL` y `NEON_REALTIME_SECRET`. Estos valores son privados y no deben llevar prefijo `VITE_`.
 
-Después del primer despliegue, comprueba `https://<servicio>.onrender.com/api/health`: debe responder `{"status":"ok","database":"connected"}`. Si responde 503, revisa `DATABASE_URL` y los registros de Render; el health check no considera listo el servicio mientras la base de datos se inicializa. Configura la URL del backend en el despliegue del frontend mediante `VITE_API_URL` (no en el backend). Las solicitudes desde el frontend solo reciben CORS cuando su origen coincide con `FRONTEND_URL` o `CORS_ORIGIN`.
+Después del primer despliegue, comprueba `https://<servicio>.onrender.com/api/health`: debe responder `{"status":"ok","database":"connected"}`. Si responde 503, revisa `DATABASE_URL` y los registros de Render; el health check no considera listo el servicio mientras la base de datos se inicializa. En Vercel, configura `VITE_API_URL=https://workpalace.onrender.com` y redepliega el frontend; el proyecto también usa esa URL automáticamente como respaldo en producción. No configures `VITE_API_URL` en Render. Las solicitudes desde el frontend solo reciben CORS cuando su origen coincide con `FRONTEND_URL` o `CORS_ORIGIN`.
 
 ### Autenticación de dos pasos con Microsoft Authenticator
 
