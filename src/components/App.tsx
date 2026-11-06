@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
-import './App.css'
+import '../App.css'
 
 
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
-import Login from './components/Login.tsx'
-import Signup from './components/Signup.tsx'
-import ForgotPassword from './components/ForgotPassword.tsx'
-import ResetPassword from './components/ResetPassword.tsx'
-import Navbar from './components/Navbar'
-import Dashboard from './components/Dashboard'
-import AdminDashboard from './components/AdminDashboard'
-import Settings from './components/Settings'
-import Checkout from './components/Checkout'
-import PlacesPage from './components/PlacesPage'
-import ContactDock from './components/ContactDock'
-import { cacheProfileImageFromUrl, loadCachedProfileImage } from './services/profileImageCache'
+import Login from './Login.tsx'
+import Signup from './Signup.tsx'
+import ForgotPassword from './ForgotPassword.tsx'
+import ResetPassword from './ResetPassword.tsx'
+import Navbar from './Navbar'
+import Dashboard from './Dashboard'
+import AdminDashboard from './AdminDashboard'
+import Settings from './Settings'
+import Checkout from './Checkout'
+import PlacesPage from './PlacesPage'
+import ContactDock from './ContactDock'
+import { cacheProfileImageFromUrl, loadCachedProfileImage } from '../services/profileImageCache'
 
 function Landing({
   isDark,
