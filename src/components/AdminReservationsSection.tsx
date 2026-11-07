@@ -88,7 +88,7 @@ export default function AdminReservationsSection({ reservations, updateReservati
       {reservations.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>No hay reservas registradas.</p>
       ) : (
-        <div className="users-table-wrapper">
+        <div className="users-table-wrapper" role="region" aria-label="Tabla de reservas" tabIndex={0}>
           <table className="users-table">
             <thead>
               <tr><th>ID</th><th>Usuario</th><th>Email</th><th>Alojamiento</th><th>Ubicación</th><th>Check-in</th><th>Check-out</th><th>Huéspedes</th><th>Estado</th><th>Activo</th><th>Acciones</th></tr>
@@ -96,17 +96,17 @@ export default function AdminReservationsSection({ reservations, updateReservati
             <tbody>
               {filteredReservations.map((reservation) => (
                 <tr key={reservation.id}>
-                  <td>#{reservation.id}</td>
-                  <td>{String(reservation.username ?? `Usuario #${reservation.user_id ?? ''}`)}</td>
-                  <td>{String(reservation.email ?? 'N/A')}</td>
-                  <td>{String(reservation.hotel ?? '')}</td>
-                  <td>{String(reservation.ubicacion ?? '')}</td>
-                  <td>{String(reservation.check_in ?? '')}</td>
-                  <td>{String(reservation.check_out ?? '')}</td>
-                  <td>
+                  <td data-label="ID">#{reservation.id}</td>
+                  <td data-label="Usuario">{String(reservation.username ?? `Usuario #${reservation.user_id ?? ''}`)}</td>
+                  <td data-label="Email">{String(reservation.email ?? 'N/A')}</td>
+                  <td data-label="Espacio">{String(reservation.hotel ?? '')}</td>
+                  <td data-label="Ubicación">{String(reservation.ubicacion ?? '')}</td>
+                  <td data-label="Check-in">{String(reservation.check_in ?? '')}</td>
+                  <td data-label="Check-out">{String(reservation.check_out ?? '')}</td>
+                  <td data-label="Huéspedes">
                     <input type="number" min={1} value={typeof reservation.huespedes === 'number' ? reservation.huespedes : 1} onChange={(event) => updateReservation(reservation.id, { huespedes: Number(event.target.value) || 1 })} className="table-input" style={{ width: '4rem' }} />
                   </td>
-                  <td>
+                  <td data-label="Estado">
                     <select value={typeof reservation.estado === 'string' ? reservation.estado : ''} onChange={(event) => {
                       const nextStatus = event.target.value
                       if (nextStatus === 'cancelada' && reservation.estado !== 'cancelada') {
@@ -122,10 +122,10 @@ export default function AdminReservationsSection({ reservations, updateReservati
                       <option value="pendiente">Pendiente</option><option value="confirmada">Confirmada</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option>
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Activo">
                     <input type="checkbox" checked={reservation.active !== false} disabled={reservation.estado === 'completada' || reservation.estado === 'cancelada'} onChange={(event) => updateReservation(reservation.id, { active: event.target.checked })} />
                   </td>
-                  <td>
+                  <td data-label="Acciones">
                     <button className="user-delete-button" onClick={() => deleteReservation(reservation.id)}>Eliminar</button>
                   </td>
                 </tr>

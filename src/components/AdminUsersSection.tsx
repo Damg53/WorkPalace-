@@ -25,7 +25,7 @@ export default function AdminUsersSection({ users, updateRole, toggleUserActive,
       {users.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>Cargando usuarios...</p>
       ) : (
-        <div className="users-table-wrapper">
+        <div className="users-table-wrapper" role="region" aria-label="Tabla de usuarios" tabIndex={0}>
           <table className="users-table">
             <thead>
               <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Usuario</th><th>Rol</th><th>Activo</th><th>Acciones</th></tr>
@@ -33,20 +33,20 @@ export default function AdminUsersSection({ users, updateRole, toggleUserActive,
             <tbody>
               {filteredUsers.map((user) => (
                 <tr key={user.id}>
-                  <td className="user-id">#{user.id}</td>
-                  <td className="user-name">{String(user.full_name ?? '')}</td>
-                  <td className="user-email">{String(user.email ?? '')}</td>
-                  <td className="user-username">@{user.username}</td>
-                  <td>
+                  <td className="user-id" data-label="ID">#{user.id}</td>
+                  <td className="user-name" data-label="Nombre">{String(user.full_name ?? '')}</td>
+                  <td className="user-email" data-label="Email">{String(user.email ?? '')}</td>
+                  <td className="user-username" data-label="Usuario">@{user.username}</td>
+                  <td data-label="Rol">
                     <select className="role-select" value={user.role} onChange={(event) => updateRole(user.id, event.target.value)}>
                       <option value="user">Usuario</option>
                       <option value="admin">Administrador</option>
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Activo">
                     <input type="checkbox" checked={user.active !== false} onChange={(event) => toggleUserActive(user.id, event.target.checked)} />
                   </td>
-                  <td>
+                  <td data-label="Acciones">
                     <button className="user-delete-button" onClick={() => deleteUser(user.id)}>Eliminar</button>
                   </td>
                 </tr>

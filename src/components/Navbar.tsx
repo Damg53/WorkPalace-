@@ -29,7 +29,7 @@ export default function Navbar({ isDark, setIsDark, user, onLogout }: NavbarProp
   }, []);
 
   return (
-    <header className={`landing-header ${visible ? '' : 'hidden'}`}> 
+    <header className={`landing-header${user ? '' : ' landing-header--home'} ${visible ? '' : 'hidden'}`}>
       <nav>
         <Link to="/" className="logo" aria-label="WorkPalace, página de inicio">
           <img className="logo-image brand-logo-dark" src="/workpalace-logo-dark.png" alt="" aria-hidden="true" />

@@ -42,11 +42,17 @@ function Landing({
         <>
           {/* Hero Section */}
           <section className="hero">
+            <span className="hero-eyebrow">Espacios productivos en Colombia</span>
             <h1>Bienvenido a WorkPalace</h1>
             <p>Encuentra espacios productivos en Colombia y resérvalos solo por el tiempo que necesitas.</p>
             <div className="hero-buttons">
               <Link to="/signup" className="btn btn-primary">Crear cuenta gratis</Link>
               <Link to="/login" className="btn btn-secondary">Iniciar sesión</Link>
+            </div>
+            <div className="hero-highlights" aria-label="Beneficios">
+              <span>Por horas o días</span>
+              <span>Reserva flexible</span>
+              <span>Espacios verificados</span>
             </div>
           </section>
 

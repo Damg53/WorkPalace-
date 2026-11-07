@@ -304,7 +304,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   }
 
   return <section className="users-section" id="places" style={{ marginTop: '3rem' }}>
-    <div className="admin-section-heading"><h2>Lugares publicados</h2><button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancelar' : '+ Crear nuevo lugar'}</button></div>
+    <div className="admin-section-heading admin-places-heading"><h2>Lugares publicados</h2><button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancelar' : '+ Crear nuevo lugar'}</button></div>
     {showForm && <form onSubmit={handleCreate} className="form-create-place"><h3>Crear Nuevo Lugar</h3><div className="form-create-place-grid">
       <input className="form-create-place-input" placeholder="Nombre *" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
       <select className="form-create-place-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)} required><option value="">Tipo *</option>{TIPOS.map((item) => <option key={item}>{item}</option>)}</select>
@@ -332,28 +332,28 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
         <PlaceImagePicker id="create-place-image" value={form.image_url} onChange={(value) => setField('image_url', value)} />
       </div>
     </div><button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
-    {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper"><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
+    {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper" role="region" aria-label="Tabla de espacios" tabIndex={0}><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
       {places.map((place) => (
         <tr key={place.id}>
-          <td>#{place.id}</td>
-          <td>
+          <td data-label="ID">#{place.id}</td>
+          <td data-label="Nombre">
             <input
               className="table-input"
               defaultValue={place.name}
               onBlur={(event) => updatePlace(place.id, { name: event.target.value })}
             />
           </td>
-          <td>
+          <td data-label="Tipo">
             <select className="table-select" defaultValue={place.tipo || ''} onChange={(event) => updatePlace(place.id, { tipo: event.target.value })}>
               {TIPOS.map((item) => <option key={item}>{item}</option>)}
             </select>
           </td>
-          <td>
+          <td data-label="Barrio">
             <select className="table-select" defaultValue={place.barrio || ''} onChange={(event) => updatePlace(place.id, { barrio: event.target.value })}>
               {(BARRIOS[place.ciudad || 'Medellín'] || []).map((item) => <option key={item}>{item}</option>)}
             </select>
           </td>
-          <td>
+          <td data-label="Ciudad">
             <select
               className="table-select"
               defaultValue={place.ciudad || ''}
@@ -362,15 +362,15 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               {CIUDADES.map((item) => <option key={item}>{item}</option>)}
             </select>
           </td>
-          <td><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td>
-          <td><div style={{ fontWeight: 600, color: '#374151' }}>{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
-          <td>
+          <td data-label="Capacidad"><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td>
+          <td data-label="Precio base"><div style={{ fontWeight: 600, color: '#374151' }}>{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
+          <td data-label="Modalidad">
             <select className="table-select" defaultValue={place.modalidad || ''} onChange={(event) => updatePlace(place.id, { modalidad: event.target.value })}>
               {MODALIDADES.map((item) => <option key={item}>{item}</option>)}
             </select>
           </td>
-          <td><input type="checkbox" checked={place.active !== false} onChange={(event) => togglePlaceActive(place.id, event.target.checked)} /></td>
-          <td>
+          <td data-label="Activo"><input type="checkbox" checked={place.active !== false} onChange={(event) => togglePlaceActive(place.id, event.target.checked)} /></td>
+          <td data-label="Acciones">
             <button className="btn btn-secondary" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }}>Editar</button>{' '}
             <button className="user-delete-button" onClick={() => deletePlace(place.id)}>Eliminar</button>
           </td>

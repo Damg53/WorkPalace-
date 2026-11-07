@@ -32,11 +32,9 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target
-    setFilters(prev => {
-      const updated = { ...prev, [name]: value }
-      onFilter(updated)
-      return updated
-    })
+    const updated = { ...filters, [name]: value }
+    setFilters(updated)
+    onFilter(updated)
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -50,10 +48,14 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
     onFilter(empty)
   }
 
+  const activeFilterCount = [filters.ciudad, filters.barrio, filters.capacidad, filters.modalidad]
+    .filter(Boolean).length
+  const hasActiveFilters = Boolean(filters.search || activeFilterCount)
+
   return (
-    <form className="places-filter-form" onSubmit={handleSubmit} style={{ flexDirection: 'column', gap: '0.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-        <div className="google-search-bar" style={{ flex: 1 }}>
+    <form className="places-filter-form" onSubmit={handleSubmit}>
+      <div className="places-filter-controls">
+        <div className="google-search-bar">
           <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="11" cy="11" r="5.5" />
             <path d="M16 16L21 21" />
@@ -67,19 +69,28 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
             autoComplete="off"
           />
         </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ marginLeft: '1rem', minWidth: 100 }}
-          onClick={() => setShowAdvanced(v => !v)}
-        >
-          {showAdvanced ? 'Ocultar filtros' : 'Filtros'}
-        </button>
-        <button type="submit" className="btn btn-primary" style={{ marginLeft: '1rem', minWidth: 100 }}>Buscar</button>
-        <button type="button" className="btn btn-secondary" style={{ marginLeft: '1rem', minWidth: 100 }} onClick={clearFilters}>Limpiar</button>
+        <div className="places-filter-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            aria-expanded={showAdvanced}
+            aria-controls="places-advanced-filters"
+            onClick={() => setShowAdvanced(v => !v)}
+          >
+            {showAdvanced ? 'Ocultar filtros' : 'Filtros'}
+            {activeFilterCount > 0 && <span className="places-filter-count">{activeFilterCount}</span>}
+          </button>
+          <button type="submit" className="btn btn-primary places-filter-search">Buscar espacios</button>
+          <button type="button" className="btn btn-secondary places-filter-clear-desktop" onClick={clearFilters}>Limpiar</button>
+        </div>
       </div>
+      {hasActiveFilters && (
+        <button type="button" className="places-filter-clear-mobile" onClick={clearFilters}>
+          Limpiar búsqueda
+        </button>
+      )}
       {showAdvanced && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '0.5rem', width: '100%' }}>
+        <div id="places-advanced-filters" className="advanced-filters">
           <select name="ciudad" value={filters.ciudad} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
             <option value="">Ciudad</option>
             {ciudades.map(c => <option key={c} value={c}>{c}</option>)}
