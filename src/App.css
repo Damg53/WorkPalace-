@@ -34,6 +34,7 @@ body {
 .with-sidebar {
   min-height: 100vh;
   margin-left: 60px;
+  background-color: var(--color-bg, #fff);
 }
 
 .with-sidebar .landing-header {
@@ -906,6 +907,14 @@ html[data-theme="light"] {
   --color-text: #333333;
   --color-text-secondary: #666666;
   --color-border: #e0e0e0;
+}
+
+html[data-theme="light"] .with-sidebar {
+  background-color: #f3f4f6;
+}
+
+html[data-theme="dark"] .with-sidebar {
+  background-color: #1a1a1a;
 }
 
 html[data-theme="light"] body {
