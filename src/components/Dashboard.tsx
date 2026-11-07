@@ -548,21 +548,21 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
               ) : (
                 rows.map((r) => (
                   <tr key={r.id}>
-                    <td>
+                    <td data-label="Espacio">
                       <span className="reservation-hotel">{r.hotel}</span>
                       <div className="reservation-type">{r.tipo}</div>
                     </td>
-                    <td>{r.ubicacion}</td>
-                    <td>{r.checkIn}</td>
-                    <td>{r.checkOut}</td>
-                    <td>{r.huespedes}</td>
-                    <td>
+                    <td data-label="Ubicación">{r.ubicacion}</td>
+                    <td data-label="Check-in">{r.checkIn}</td>
+                    <td data-label="Check-out">{r.checkOut}</td>
+                    <td data-label="Huéspedes">{r.huespedes}</td>
+                    <td data-label="Estado">
                       <span className={`reservation-badge ${r.estado}`}>
                         {r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}
                       </span>
                     </td>
                     {showActions && (
-                      <td>
+                      <td data-label="Acciones">
                         {(r.estado === 'pendiente' || r.estado === 'confirmada') ? (
                           <button
                             className="cancel-btn"
