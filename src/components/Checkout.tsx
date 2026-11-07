@@ -277,8 +277,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const cardOk = pay !== 'card' || (card.replace(/\s/g, '').length === 16 && expiryOk && cvc.length >= 3)
   const canPay = name.trim().length > 2 && emailOk && phone.replace(/\D/g, '').length >= 10 && cardOk && terms
 
-  async function handlePay(e: React.FormEvent) {
-    e.preventDefault()
+  async function handlePay() {
     if (!place || !user.id) return
     if (!date) {
       setError('Debes seleccionar una fecha válida.')
@@ -699,6 +698,20 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
             </button>
           </div>
         </aside>
+      </div>
+      <div className="ck-mobile-cta">
+        <div className="ck-mobile-cta__total">
+          <span>Total a pagar</span>
+          <strong>{cop(total)}</strong>
+        </div>
+        <button
+          type="button"
+          className="ck-btn"
+          disabled={!canPay || status === 'paying'}
+          onClick={handlePay}
+        >
+          {status === 'paying' ? 'Procesando…' : canPay ? 'Confirmar reserva' : 'Completa tus datos'}
+        </button>
       </div>
     </main>
   )

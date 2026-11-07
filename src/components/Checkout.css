@@ -646,6 +646,10 @@
   cursor: not-allowed;
 }
 
+.ck-mobile-cta {
+  display: none;
+}
+
 .ck--dark .ck-btn:disabled {
   background: #35456f;
   box-shadow: 0 6px 0 #202d4d;
@@ -728,9 +732,237 @@
 }
 
 @media (max-width: 520px) {
+  .ck {
+    min-height: 100vh;
+    padding: 16px 14px calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ck-head {
+    margin-bottom: 16px;
+  }
+
+  .ck-head h1 {
+    font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  .ck-grid {
+    gap: 14px;
+  }
+
+  .ck-steps {
+    gap: 14px;
+  }
+
+  .ck-card {
+    gap: 14px;
+    padding: 17px;
+    border-radius: 18px;
+  }
+
   .ck-seg,
   .ck-pays {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ck-seg button,
+  .ck-pays button {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .ck-seg button strong,
+  .ck-pays button strong {
+    font-size: 0.95rem;
+  }
+
+  .ck-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .ck-ticket {
+    order: 1;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 12px 18px rgba(20, 27, 65, 0.16));
+  }
+
+  .ck-ticket__top,
+  .ck-ticket__bottom {
+    padding: 20px;
+  }
+
+  .ck-ticket__top h2 {
+    font-size: 1.3rem;
+  }
+
+  .ck-slot strong {
+    font-size: 1.2rem;
+  }
+
+  .ck-total {
+    margin: 16px 0 12px;
+  }
+
+  .ck-total strong {
+    font-size: 1.5rem;
+  }
+
+  .ck-ticket__bottom > .ck-btn:not(.ck-btn--secondary) {
+    display: none;
+  }
+
+  .ck-mobile-cta {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 -8px 24px rgba(20, 27, 65, 0.12);
+  }
+
+  .ck-mobile-cta__total {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .ck-mobile-cta__total span {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .ck-mobile-cta__total strong {
+    overflow: hidden;
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', 'Figtree', sans-serif;
+    font-size: clamp(1rem, 4vw, 1.3rem);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ck-mobile-cta .ck-btn {
+    min-width: 0;
+    height: 50px;
+    padding: 0 10px;
+    border-radius: 12px;
+    box-shadow: 0 4px 0 #2523b8;
+    font-size: 0.95rem;
+    line-height: 1.1;
+  }
+
+  .ck--dark .ck-mobile-cta {
+    border-top-color: rgba(148, 163, 184, 0.2);
+    background: #101d2e;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (min-width: 521px) and (max-width: 900px) {
+  .ck {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ck-head {
+    margin-bottom: 20px;
+  }
+
+  .ck-grid {
+    gap: 18px;
+  }
+
+  .ck-steps {
+    gap: 16px;
+  }
+
+  .ck-card {
+    padding: clamp(18px, 3vw, 24px);
+  }
+
+  .ck-seg button,
+  .ck-pays button {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .ck-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ck-ticket__top,
+  .ck-ticket__bottom {
+    padding: 22px;
+  }
+
+  .ck-ticket__bottom > .ck-btn:not(.ck-btn--secondary) {
+    display: none;
+  }
+
+  .ck-mobile-cta {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 16px;
+    padding: 12px clamp(20px, 4vw, 40px) calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 -8px 24px rgba(20, 27, 65, 0.12);
+  }
+
+  .ck-mobile-cta__total {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .ck-mobile-cta__total span {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .ck-mobile-cta__total strong {
+    overflow: hidden;
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', 'Figtree', sans-serif;
+    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ck-mobile-cta .ck-btn {
+    min-width: 0;
+    height: 52px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 1rem;
+  }
+
+  .ck--dark .ck-mobile-cta {
+    border-top-color: rgba(148, 163, 184, 0.2);
+    background: #101d2e;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .ck-mobile-cta {
+    left: 60px;
   }
 }
 

@@ -850,6 +850,15 @@
 }
 
 @media (max-width: 768px) {
+  .user-two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reservation-card__meta,
+  .reservation-card__dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   #available-reservations .reservations-table th,
   #available-reservations .reservations-table td,
   #stats .reservations-table th,
@@ -1012,6 +1021,29 @@
 
   .reservation-detail-modal__footer > * {
     flex: 1 1 100%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .reservation-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .reservation-summary__item {
+    min-width: 0;
+  }
+
+  .reservation-card__meta,
+  .reservation-card__dates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #available-reservations .reservations-table th,
+  #available-reservations .reservations-table td,
+  #stats .reservations-table th,
+  #stats .reservations-table td {
+    padding: 0.85rem 0.75rem;
   }
 }
 
