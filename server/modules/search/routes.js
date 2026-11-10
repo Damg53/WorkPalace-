@@ -4,10 +4,19 @@ import pool from '../../db.js';
 
 const router = Router();
 const placesAvailabilityQuery = `SELECT p.id, p.name, p.tipo, p.direccion, p.barrio, p.ciudad, p.capacidad, p.precio_hora, p.modalidad, p.caracteristicas, p.nivel_ruido, p.image_url,
+              COALESCE(NULLIF(split_part(owner.full_name, ' ', 1), ''), owner.username) AS owner_name,
+              COALESCE(review_stats.average_rating, 0) AS average_rating,
+              COALESCE(review_stats.review_count, 0) AS review_count,
               p.active AND block.id IS NULL AND reservation.id IS NULL AS active,
               COALESCE(block.reason, CASE WHEN reservation.id IS NOT NULL THEN 'Reserva confirmada' END) AS unavailable_reason,
               COALESCE(block.ends_at + INTERVAL '1 day', reservation.check_out + INTERVAL '1 day') AS available_from
        FROM places p
+       LEFT JOIN users owner ON owner.id = p.owner_id
+       LEFT JOIN LATERAL (
+         SELECT ROUND(AVG(rating)::numeric, 1) AS average_rating, COUNT(*)::int AS review_count
+         FROM place_reviews
+         WHERE place_id = p.id
+       ) review_stats ON TRUE
        LEFT JOIN LATERAL (
          SELECT id, reason, ends_at
          FROM place_blocks

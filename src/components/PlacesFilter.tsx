@@ -3,11 +3,14 @@ import '../places-filter.css'
 
 interface Filters {
   search: string
-  tipo?: string
+  tipo: string
   ciudad: string
   barrio: string
   capacidad: string
   modalidad: string
+  precioMin: string
+  precioMax: string
+  orden: string
 }
 
 interface PlacesFilterProps {
@@ -19,14 +22,17 @@ interface PlacesFilterProps {
 }
 
 
-const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudades, barrios, modalidades }) => {
+const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciudades, barrios, modalidades }) => {
   const [filters, setFilters] = useState<Filters>({
     search: '',
-    // tipo: '',
+    tipo: '',
     ciudad: '',
     barrio: '',
     capacidad: '',
     modalidad: '',
+    precioMin: '',
+    precioMax: '',
+    orden: 'recomendados',
   })
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -43,12 +49,12 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
   }
 
   function clearFilters() {
-    const empty: Filters = { search: '', ciudad: '', barrio: '', capacidad: '', modalidad: '' }
+    const empty: Filters = { search: '', tipo: '', ciudad: '', barrio: '', capacidad: '', modalidad: '', precioMin: '', precioMax: '', orden: 'recomendados' }
     setFilters(empty)
     onFilter(empty)
   }
 
-  const activeFilterCount = [filters.ciudad, filters.barrio, filters.capacidad, filters.modalidad]
+  const activeFilterCount = [filters.tipo, filters.ciudad, filters.barrio, filters.capacidad, filters.modalidad, filters.precioMin, filters.precioMax]
     .filter(Boolean).length
   const hasActiveFilters = Boolean(filters.search || activeFilterCount)
 
@@ -91,6 +97,10 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
       )}
       {showAdvanced && (
         <div id="places-advanced-filters" className="advanced-filters">
+          <select name="tipo" value={filters.tipo} onChange={handleChange}>
+            <option value="">Tipo de espacio</option>
+            {tipos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+          </select>
           <select name="ciudad" value={filters.ciudad} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
             <option value="">Ciudad</option>
             {ciudades.map(c => <option key={c} value={c}>{c}</option>)}
@@ -111,6 +121,14 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, /*tipos,*/ ciudad
           <select name="modalidad" value={filters.modalidad} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
             <option value="">Modalidad</option>
             {modalidades.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <input type="number" name="precioMin" min={0} placeholder="Precio mínimo" value={filters.precioMin} onChange={handleChange} />
+          <input type="number" name="precioMax" min={0} placeholder="Precio máximo" value={filters.precioMax} onChange={handleChange} />
+          <select name="orden" value={filters.orden} onChange={handleChange} aria-label="Ordenar espacios">
+            <option value="recomendados">Orden recomendado</option>
+            <option value="precio-asc">Menor precio</option>
+            <option value="precio-desc">Mayor precio</option>
+            <option value="calificacion">Mejor calificados</option>
           </select>
         </div>
       )}

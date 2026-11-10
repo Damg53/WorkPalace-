@@ -16,6 +16,13 @@ const userItems = [
   { label: 'Mi perfil', icon: 'fa-user', to: '/settings' },
 ]
 
+const ownerItems = [
+  { label: 'Buscar espacios', icon: 'fa-search', to: '/places' },
+  { label: 'Mis reservas', icon: 'fa-calendar', to: '/dashboard' },
+  { label: 'Panel propietario', icon: 'fa-home', to: '/owner' },
+  { label: 'Mi perfil', icon: 'fa-user', to: '/settings' },
+]
+
 const adminItems = [
   { label: 'Panel general', icon: 'fa-dashboard', to: '/admin', section: 'dashboard' },
   { label: 'Usuarios', icon: 'fa-users', to: '/admin#users', section: 'users' },
@@ -27,7 +34,7 @@ const adminItems = [
 
 export default function Sidebar({ user, isDark, setIsDark, onLogout }: SidebarProps) {
   const isAdmin = user.role === 'admin'
-  const items = isAdmin ? adminItems : userItems
+  const items = isAdmin ? adminItems : user.role === 'owner' ? ownerItems : userItems
   const displayName = user.username
   const location = useLocation()
   const [unreadCount, setUnreadCount] = useState(0)
@@ -118,7 +125,7 @@ export default function Sidebar({ user, isDark, setIsDark, onLogout }: SidebarPr
           </div>
           <div>
             <strong>{displayName}</strong>
-            <span>{isAdmin ? 'Administrador' : 'Usuario'}</span>
+            <span>{isAdmin ? 'Administrador' : user.role === 'owner' ? 'Propietario' : 'Usuario'}</span>
           </div>
         </div>
         <button className="sidebar-link sidebar-action" type="button" onClick={() => setIsDark(!isDark)}>

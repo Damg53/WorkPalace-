@@ -24,17 +24,23 @@ interface Place {
   active: boolean
   unavailable_reason?: string | null
   available_from?: string | null
+  owner_name?: string | null
+  average_rating?: number | string | null
+  review_count?: number | string | null
 }
 
 type LivePlace = Omit<Place, 'available_from'> & { available_from: string | Date | null }
 
 interface PlaceFilters {
   search: string
-  tipo?: string
+  tipo: string
   ciudad: string
   barrio: string
   capacidad: string
   modalidad: string
+  precioMin: string
+  precioMax: string
+  orden: string
 }
 
 interface PlacesPageProps {
@@ -52,10 +58,14 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
   const [spacesError, setSpacesError] = useState<string | null>(null)
   const [filters, setFilters] = useState<PlaceFilters>({
     search: '',
+    tipo: '',
     ciudad: '',
     barrio: '',
     capacidad: '',
     modalidad: '',
+    precioMin: '',
+    precioMax: '',
+    orden: 'recomendados',
   })
 
   useEffect(() => {
@@ -80,7 +90,7 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
         }
         setPlaces(data.places || [])
         setFiltered(data.places || [])
-      } catch (_e) {
+      } catch {
         if (!cancelled) setSpacesError('No se pudieron cargar los espacios disponibles.')
       } finally {
         if (!cancelled) setLoadingSpaces(false)
@@ -164,6 +174,10 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
     if (filters.ciudad) result = result.filter((place) => place.ciudad === filters.ciudad)
     if (filters.barrio) result = result.filter((place) => place.barrio === filters.barrio)
     if (filters.modalidad) result = result.filter((place) => place.modalidad === filters.modalidad)
+    const minPrice = filters.precioMin === '' ? null : Number(filters.precioMin)
+    const maxPrice = filters.precioMax === '' ? null : Number(filters.precioMax)
+    if (minPrice !== null) result = result.filter((place) => place.precio_hora != null && place.precio_hora >= minPrice)
+    if (maxPrice !== null) result = result.filter((place) => place.precio_hora != null && place.precio_hora <= maxPrice)
     if (filters.capacidad) {
       const exact = Number.parseInt(filters.capacidad, 10)
       if (!Number.isNaN(exact)) {
@@ -172,6 +186,13 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
             return match !== null && match !== undefined && Number.parseInt(match[0], 10) === exact
         })
       }
+    }
+    if (filters.orden === 'precio-asc') {
+      result = [...result].sort((a, b) => (a.precio_hora ?? Number.MAX_SAFE_INTEGER) - (b.precio_hora ?? Number.MAX_SAFE_INTEGER))
+    } else if (filters.orden === 'precio-desc') {
+      result = [...result].sort((a, b) => (b.precio_hora ?? -1) - (a.precio_hora ?? -1))
+    } else if (filters.orden === 'calificacion') {
+      result = [...result].sort((a, b) => Number(b.average_rating ?? 0) - Number(a.average_rating ?? 0))
     }
     setFiltered(result)
   }, [places, filters])

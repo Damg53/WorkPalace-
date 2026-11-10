@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS places (
   caracteristicas TEXT,
   nivel_ruido VARCHAR(100),
   image_url TEXT,
+  owner_id INT REFERENCES users(id) ON DELETE SET NULL,
   active BOOLEAN DEFAULT TRUE NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -125,6 +126,25 @@ ALTER TABLE places ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 -- Agregar columna image_url si no existe (para migración)
 ALTER TABLE places ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE places ADD COLUMN IF NOT EXISTS direccion TEXT;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS owner_id INT REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_places_owner_id ON places(owner_id);
+
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS place_id INT REFERENCES places(id) ON DELETE SET NULL;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE TABLE IF NOT EXISTS place_reviews (
+  id SERIAL PRIMARY KEY,
+  reservation_id INT NOT NULL UNIQUE REFERENCES reservations(id) ON DELETE CASCADE,
+  place_id INT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment VARCHAR(1000),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_place_reviews_place_id ON place_reviews(place_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_place_reviews_user_id ON place_reviews(user_id);
 
 -- Bloqueos manuales de disponibilidad por espacio
 CREATE TABLE IF NOT EXISTS place_blocks (

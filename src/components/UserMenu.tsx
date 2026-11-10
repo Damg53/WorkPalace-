@@ -41,7 +41,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             <span className="user-menu-username">@{user.username}</span>
             {user.role && (
               <span className={`user-menu-role ${user.role}`}>
-                {user.role === 'admin' ? 'Admin' : 'Usuario'}
+                {user.role === 'admin' ? 'Admin' : user.role === 'owner' ? 'Propietario' : 'Usuario'}
               </span>
             )}
           </div>
@@ -55,6 +55,11 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           {user.role !== 'admin' && (
             <Link to="/dashboard" className="user-menu-item">
               Mis reservas
+            </Link>
+          )}
+          {user.role === 'owner' && (
+            <Link to="/owner" className="user-menu-item">
+              Panel de propietario
             </Link>
           )}
 
@@ -74,4 +79,3 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
     </div>
   )
 }
-

@@ -12,6 +12,8 @@ import reservationsRoutes from './modules/reservations/routes.js';
 import availabilityRoutes from './modules/availability/routes.js';
 import paymentsRoutes from './modules/payments/routes.js';
 import passwordResetRoutes from './modules/verification/password-reset.js';
+import ownerRoutes from './modules/owners/routes.js';
+import reviewRoutes from './modules/reviews/routes.js';
 
 dotenv.config();
 
@@ -84,8 +86,10 @@ app.use(usersRoutes);
 app.use(verificationRoutes);
 app.use(passwordResetRoutes);
 app.use(spacesRoutes);
+app.use(ownerRoutes);
 app.use(searchRoutes);
 app.use(reservationsRoutes);
+app.use(reviewRoutes);
 app.use(availabilityRoutes);
 app.use(paymentsRoutes);
 

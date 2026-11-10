@@ -26,6 +26,9 @@ interface Reserva {
   huespedes: number
   estado: EstadoReserva
   cancellationReason: string | null
+  placeId: number | null
+  reviewRating: number | null
+  reviewComment: string | null
 }
 
 interface ReservaApiRecord {
@@ -38,6 +41,10 @@ interface ReservaApiRecord {
   huespedes: number
   estado: string
   cancellation_reason?: string | null
+  place_id?: number | null
+  review_id?: number | null
+  review_rating?: number | null
+  review_comment?: string | null
 }
 
 interface NotificationItem {
@@ -104,6 +111,9 @@ function mapReservation(reservation: ReservaApiRecord): Reserva {
     huespedes: reservation.huespedes,
     estado: reservation.estado as EstadoReserva,
     cancellationReason: reservation.cancellation_reason ?? null,
+    placeId: reservation.place_id == null ? null : Number(reservation.place_id),
+    reviewRating: reservation.review_rating == null ? null : Number(reservation.review_rating),
+    reviewComment: reservation.review_comment ?? null,
   }
 }
 
@@ -154,6 +164,11 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   const [clearingNotifications, setClearingNotifications] = useState(false)
   const [showClearNotificationsDialog, setShowClearNotificationsDialog] = useState(false)
   const [suggestedPlaces, setSuggestedPlaces] = useState<Array<{ id: number; name: string; ciudad: string | null }>>([])
+  const [reviewingReservation, setReviewingReservation] = useState<number | null>(null)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [submittingReview, setSubmittingReview] = useState(false)
 
   const prioritizeSuggestedPlaces = (places: Array<{ id: number; name: string; ciudad?: string | null; active?: boolean; precio_hora?: number | null }>, userCity: string) => {
     const normalizedCity = userCity.trim().toLowerCase()
@@ -415,8 +430,14 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         if (!cancelled) setLoading(false)
       }
     }
-    fetchReservations()
-    return () => { cancelled = true }
+    void fetchReservations()
+    const intervalId = window.setInterval(() => void fetchReservations(), 30000)
+    window.addEventListener('focus', fetchReservations)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', fetchReservations)
+    }
   }, [user.id])
 
   useEffect(() => {
@@ -520,6 +541,37 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     const reservationId = reservationToCancel.id
     setReservationToCancel(null)
     await handleCancelReservation(reservationId)
+  }
+
+  const submitReview = async (reservation: Reserva) => {
+    if (!user.id || reservation.placeId == null) return
+    setSubmittingReview(true)
+    setReviewError(null)
+    try {
+      const response = await fetch(`${API}/api/places/${reservation.placeId}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(user.id),
+        },
+        body: JSON.stringify({
+          reservationId: reservation.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      })
+      const data = await response.json() as { error?: string; review?: { rating: number; comment: string | null } }
+      if (!response.ok) throw new Error(data.error || 'No se pudo guardar la reseña.')
+      setReservas((current) => current.map((item) => item.id === reservation.id
+        ? { ...item, reviewRating: data.review?.rating ?? reviewRating, reviewComment: data.review?.comment ?? reviewComment }
+        : item))
+      setReviewingReservation(null)
+      setReviewComment('')
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : 'No se pudo guardar la reseña.')
+    } finally {
+      setSubmittingReview(false)
+    }
   }
 
   function renderReservationsTable(rows: Reserva[], emptyText: string, showActions: boolean = false) {
@@ -648,6 +700,56 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                   </button>
                 )}
               </div>
+              {r.estado === 'completada' && r.placeId != null && (
+                <div className="reservation-review">
+                  {r.reviewRating != null ? (
+                    <p className="reservation-review__submitted">
+                      Reseña verificada · {'★'.repeat(r.reviewRating)}
+                      {r.reviewComment && <span>{r.reviewComment}</span>}
+                    </p>
+                  ) : reviewingReservation === r.id ? (
+                    <form
+                      className="reservation-review__form"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        void submitReview(r)
+                      }}
+                    >
+                      <label>
+                        Tu calificación
+                        <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
+                          <option value={5}>★★★★★ · Excelente</option>
+                          <option value={4}>★★★★ · Muy bueno</option>
+                          <option value={3}>★★★ · Bueno</option>
+                          <option value={2}>★★ · Regular</option>
+                          <option value={1}>★ · Malo</option>
+                        </select>
+                      </label>
+                      <label>
+                        Cuéntale a otras personas (opcional)
+                        <textarea maxLength={1000} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} />
+                      </label>
+                      {reviewError && <p role="alert">{reviewError}</p>}
+                      <button type="submit" className="btn btn-primary" disabled={submittingReview}>
+                        {submittingReview ? 'Enviando...' : 'Publicar reseña verificada'}
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="reservation-card__ghost"
+                      onClick={() => {
+                        setReviewingReservation(r.id)
+                        setReviewRating(5)
+                        setReviewComment('')
+                        setReviewError(null)
+                      }}
+                    >
+                      Calificar espacio
+                    </button>
+                  )}
+                </div>
+              )}
             </article>
           ))
         )}

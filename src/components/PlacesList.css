@@ -76,6 +76,29 @@
   white-space: nowrap;
 }
 
+.place-card__price {
+  margin: 0.25rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.place-card__location,
+.place-card__trust {
+  margin: 0.3rem 0;
+  color: #68708c;
+  font-size: 0.88rem;
+}
+
+.place-card__trust {
+  min-height: 1.2em;
+  color: #5968bd;
+}
+
+html[data-theme="dark"] .place-card__location,
+html[data-theme="dark"] .place-card__trust {
+  color: #bbc5e2;
+}
+
 .place-availability {
   flex: 0 0 auto;
   padding: 0.22rem 0.55rem;
@@ -335,6 +358,108 @@ html[data-theme="dark"] .place-reserve-button.is-unavailable:disabled {
   color: #b45309;
 }
 
+.place-detail-modal__price-note {
+  margin: 0.75rem 0;
+  color: #59627a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.place-detail-modal__host {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #dce3f2;
+  border-radius: 12px;
+  background: #f8f9fc;
+}
+
+.place-detail-modal__host span:last-child {
+  color: #68708c;
+  font-size: 0.88rem;
+}
+
+.place-reviews {
+  margin-top: 1.25rem;
+}
+
+.place-reviews summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.place-reviews summary::marker {
+  color: #5968bd;
+}
+
+.place-reviews__rating {
+  color: #5968bd;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.place-reviews__toggle {
+  color: #5968bd;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.place-reviews[open] .place-reviews__toggle {
+  font-size: 0;
+}
+
+.place-reviews[open] .place-reviews__toggle::after {
+  content: "Ocultar reseñas";
+  font-size: 0.9rem;
+}
+
+.place-reviews[open] .place-reviews__list,
+.place-reviews[open] .place-reviews__message {
+  margin-top: 0.75rem;
+}
+
+.place-reviews__message {
+  color: #68708c;
+  font-size: 0.9rem;
+}
+
+.place-reviews__list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.place-review {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #e5e9f2;
+  border-radius: 10px;
+}
+
+.place-review p {
+  margin: 0.4rem 0;
+  overflow-wrap: anywhere;
+}
+
+.place-review small {
+  color: #68708c;
+}
+
+.place-review small::before {
+  content: "✓ ";
+  color: #16834b;
+  font-weight: 700;
+}
+
+.place-detail-modal__host strong {
+  color: #252b3d;
+}
+
 .place-detail-modal__footer {
   display: flex;
   justify-content: flex-end;
@@ -371,6 +496,12 @@ html[data-theme="dark"] .place-reserve-button.is-unavailable:disabled {
   border-color: #dce3f2;
   background: #f8f9ff;
   color: #465174;
+}
+
+[data-theme="light"] .place-detail-modal__host,
+[data-theme="light"] .place-review {
+  border-color: #e5e9f2;
+  background: #f8f9fc;
 }
 
 [data-theme="light"] .place-detail-modal__unavailable {
@@ -413,6 +544,23 @@ html[data-theme="dark"] .place-detail-modal__close {
 
 html[data-theme="dark"] .place-detail-modal__unavailable {
   color: #fdba74;
+}
+
+html[data-theme="dark"] .place-detail-modal__price-note,
+html[data-theme="dark"] .place-detail-modal__host span:last-child,
+html[data-theme="dark"] .place-reviews__message,
+html[data-theme="dark"] .place-review small {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .place-detail-modal__host,
+html[data-theme="dark"] .place-review {
+  border-color: #3c4353;
+  background: #2d333f;
+}
+
+html[data-theme="dark"] .place-detail-modal__host strong {
+  color: #edf2ff;
 }
 
 html[data-theme="dark"] .place-detail-modal__footer {
