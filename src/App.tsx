@@ -251,8 +251,13 @@ function App() {
 
   // Aplicar tema al documento
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+    const theme = isDark ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light')
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (themeColor) {
+      themeColor.content = isDark ? '#1a1a1a' : '#f3f4f6'
+    }
     const favicon = document.querySelector<HTMLLinkElement>('#page-favicon')
     if (favicon) {
       favicon.href = isDark ? '/favicon.svg?v=3' : '/favicon-light.svg?v=1'
