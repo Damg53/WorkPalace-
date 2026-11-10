@@ -131,6 +131,8 @@ flowchart LR
   </tr>
 </table>
 
+La búsqueda permite filtrar por tipo de espacio, ubicación, capacidad, modalidad y rango de precio, además de ordenar por precio o calificación. Cada ficha muestra información de precio y anfitrión, disponibilidad y reseñas verificadas. Las cuentas de propietario pueden publicar espacios, actualizar sus datos, activar o desactivar anuncios y gestionar reservas; los clientes pueden reseñar un espacio después de que su reserva figure como completada.
+
 ## Atributos de calidad
 
 Seleccionados bajo el estándar **ISO/IEC 25010**.

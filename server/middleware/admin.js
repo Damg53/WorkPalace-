@@ -22,6 +22,26 @@ export async function requireAdmin(req, res, next) {
   }
 }
 
+export async function requireOwner(req, res, next) {
+  try {
+    const userId = Number.parseInt(req.header('x-user-id') || '', 10);
+    if (Number.isNaN(userId)) {
+      return res.status(401).json({ error: 'Debes iniciar sesión como propietario.' });
+    }
+
+    const result = await pool.query('SELECT role, active FROM users WHERE id = $1', [userId]);
+    if (result.rows[0]?.role !== 'owner' || result.rows[0]?.active === false) {
+      return res.status(403).json({ error: 'Esta función está disponible únicamente para propietarios activos.' });
+    }
+
+    req.ownerUserId = userId;
+    return next();
+  } catch (error) {
+    console.error('Error validando permisos de propietario:', error);
+    return res.status(500).json({ error: 'No se pudieron validar los permisos de propietario.' });
+  }
+}
+
 export async function logAdminAction(req, action, entityType, entityId, details = {}) {
   try {
     await pool.query(

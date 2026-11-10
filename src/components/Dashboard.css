@@ -994,6 +994,76 @@
   cursor: pointer;
 }
 
+.reservation-review {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.reservation-review__submitted {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  color: #16834b;
+  font-weight: 700;
+}
+
+.reservation-review__submitted span {
+  color: #68708c;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.reservation-review__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reservation-review__form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.reservation-review__form select,
+.reservation-review__form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+
+.reservation-review__form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.reservation-review__form > button {
+  justify-self: start;
+}
+
+[data-theme="dark"] .reservation-review__submitted span {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .reservation-review__form select,
+[data-theme="dark"] .reservation-review__form textarea {
+  background: #1f2937;
+  color: #edf2ff;
+}
+
+[data-theme="dark"] .reservation-review__form select option {
+  background-color: #1f2937;
+  color: #edf2ff;
+}
+
 [data-theme="dark"] .reservation-detail-modal {
   background: #101d2e;
   color: #edf2ff;

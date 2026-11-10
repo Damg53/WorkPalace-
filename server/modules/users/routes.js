@@ -14,6 +14,7 @@ router.post('/api/signup', async (req, res) => {
     const username = normalizeText(req.body.username || '');
     const password = String(req.body.password || '');
     const phone = req.body.phone ? normalizeColombianPhone(req.body.phone) : null;
+    const role = req.body.accountType === 'owner' ? 'owner' : 'user';
 
     if (!fullName || !email || !username || !password) {
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -63,16 +64,20 @@ router.post('/api/signup', async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcryptjs.hash(password, saltRounds);
 
-    // Insertar nuevo usuario (role por defecto user)
     const result = await pool.query(
-      'INSERT INTO users (full_name, email, username, password, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, username, role',
-      [fullName, email, username, hashedPassword, phone]
+      'INSERT INTO users (full_name, email, username, password, phone, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, username, role',
+      [fullName, email, username, hashedPassword, phone, role]
     );
 
     await pool.query(
       `INSERT INTO user_notifications (user_id, title, detail, tone)
-       VALUES ($1, 'Bienvenido a WorkPalace', 'Tu cuenta quedó lista para empezar a reservar.', 'success')`,
-      [result.rows[0].id]
+       VALUES ($1, 'Bienvenido a WorkPalace', $2, 'success')`,
+      [
+        result.rows[0].id,
+        role === 'owner'
+          ? 'Tu panel de propietario está listo para publicar y administrar espacios.'
+          : 'Tu cuenta quedó lista para empezar a reservar.',
+      ]
     );
 
     res.status(201).json({
@@ -114,7 +119,7 @@ router.put('/api/users/:id/role', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    if (!['admin', 'user'].includes(role)) {
+    if (!['admin', 'user', 'owner'].includes(role)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
     const update = await pool.query(

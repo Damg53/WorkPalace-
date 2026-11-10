@@ -17,10 +17,13 @@ router.get('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
     const result = await pool.query(
-      `SELECT id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, coupon_code, total_amount, created_at
-       FROM reservations
-       WHERE user_id = $1
-       ORDER BY check_in DESC`,
+      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.ubicacion, r.check_in, r.check_out, r.huespedes,
+              r.estado, r.cancellation_reason, r.coupon_code, r.total_amount, r.place_id, r.created_at,
+              review.id AS review_id, review.rating AS review_rating, review.comment AS review_comment
+       FROM reservations r
+       LEFT JOIN place_reviews review ON review.reservation_id = r.id
+       WHERE r.user_id = $1
+       ORDER BY r.check_in DESC`,
       [uid]
     );
     res.json({ reservations: result.rows });
@@ -75,7 +78,7 @@ router.post('/api/reservations', async (req, res) => {
     inTransaction = true;
 
     const placeResult = await client.query(
-      `SELECT id, name, tipo, barrio, ciudad, precio_hora, active FROM places WHERE id = $1 FOR UPDATE`,
+      `SELECT id, name, tipo, barrio, ciudad, precio_hora, active, owner_id FROM places WHERE id = $1 FOR UPDATE`,
       [pid]
     );
     if (placeResult.rows.length === 0) {
@@ -89,6 +92,11 @@ router.post('/api/reservations', async (req, res) => {
       return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
     }
     const place = placeResult.rows[0];
+    if (Number(place.owner_id) === uid) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(403).json({ error: 'No puedes reservar tu propio espacio.' });
+    }
     const quantity = Number(huespedes ?? 1);
     if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 120) {
       await client.query('ROLLBACK');

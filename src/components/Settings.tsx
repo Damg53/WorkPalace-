@@ -305,7 +305,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
           <div className="profile-summary">
             <div><span className="profile-summary-label">Nombre visible</span><strong>{fullName || username}</strong></div>
             <div><span className="profile-summary-label">Usuario</span><span>@{username}</span></div>
-            <div><span className="profile-summary-label">Acceso</span><span className="profile-role">{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span></div>
+            <div><span className="profile-summary-label">Acceso</span><span className="profile-role">{user.role === 'admin' ? 'Administrador' : user.role === 'owner' ? 'Propietario' : 'Usuario'}</span></div>
           </div>
 
           <h2 className="profile-form-title">Información personal</h2>
@@ -512,7 +512,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
               <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              <Link to={user.role === 'admin' ? '/admin' : '/dashboard'} className="btn btn-secondary">
+              <Link to={user.role === 'admin' ? '/admin' : user.role === 'owner' ? '/owner' : '/dashboard'} className="btn btn-secondary">
                 Volver
               </Link>
             </div>

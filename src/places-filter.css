@@ -86,6 +86,12 @@ input[type=number] {
     margin-top: 0;
   }
 
+  .places-filter-form .advanced-filters select,
+  .places-filter-form .advanced-filters input {
+    flex: 1 1 150px;
+    min-width: 130px;
+  }
+
   .places-filter-form .google-search-bar input {
     min-width: 0;
     width: 100%;

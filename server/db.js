@@ -187,6 +187,9 @@ async function createTablesIfNotExist() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE places ADD COLUMN IF NOT EXISTS direccion TEXT;');
+    await pool.query('ALTER TABLE places ADD COLUMN IF NOT EXISTS owner_id INT REFERENCES users(id) ON DELETE SET NULL;');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_places_owner_id ON places(owner_id);');
     console.log('✅ Tabla "places" verificada/creada');
 
     // Crear tabla de reservas (estilo Airbnb / hoteles)
@@ -228,7 +231,21 @@ async function createTablesIfNotExist() {
       ALTER TABLE reservations
       ADD COLUMN IF NOT EXISTS place_id INT REFERENCES places(id) ON DELETE SET NULL;
     `);
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
     console.log('✅ Columna place_id verificada/creada en reservations');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS place_reviews (
+        id SERIAL PRIMARY KEY,
+        reservation_id INT NOT NULL UNIQUE REFERENCES reservations(id) ON DELETE CASCADE,
+        place_id INT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        comment VARCHAR(1000),
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_place_reviews_place_id ON place_reviews(place_id, created_at DESC);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_place_reviews_user_id ON place_reviews(user_id);');
 
     // Seed inicial de places si la tabla está vacía
     const countPlaces = await pool.query('SELECT COUNT(*) AS total FROM places');

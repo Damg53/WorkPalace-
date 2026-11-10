@@ -85,6 +85,7 @@ const bodySchemas = {
       username: stringField('Nombre de usuario.'),
       password: stringField('Contraseña (6 a 128 caracteres).'),
       phone: stringField('Opcional: no es necesario enviarlo para registrar la cuenta.'),
+      accountType: { type: 'string', enum: ['user', 'owner'], description: 'Registra una cuenta para reservar o administrar espacios.' },
     }, ['fullName', 'email', 'username', 'password']),
     example: {
       fullName: 'Nombre Completo',
@@ -119,7 +120,7 @@ const bodySchemas = {
     code: stringField('Código vigente de seis dígitos de Microsoft Authenticator.'),
   }, ['password', 'code']),
   role: objectBody({
-    role: { type: 'string', enum: ['admin', 'user'], description: 'Nuevo rol.' },
+    role: { type: 'string', enum: ['admin', 'owner', 'user'], description: 'Nuevo rol.' },
   }, ['role']),
   active: objectBody({
     active: booleanField('Indica si la cuenta debe estar activa.'),
@@ -185,6 +186,7 @@ const bodySchemas = {
   placeCreate: objectBody({
     name: stringField('Nombre del espacio.'),
     tipo: stringField('Tipo de espacio.'),
+    direccion: stringField('Dirección.'),
     barrio: stringField('Barrio.'),
     ciudad: stringField('Ciudad.'),
     capacidad: integerField('Capacidad.'),
@@ -197,15 +199,26 @@ const bodySchemas = {
   placeUpdate: objectBody({
     name: stringField('Nombre del espacio.'),
     tipo: stringField('Tipo de espacio.'),
+    direccion: stringField('Dirección.'),
     barrio: stringField('Barrio.'),
     ciudad: stringField('Ciudad.'),
     capacidad: integerField('Capacidad.'),
     precio_hora: integerField('Precio por hora.'),
     modalidad: stringField('Modalidad.'),
     caracteristicas: stringField('Características.'),
+    nivel_ruido: stringField('Nivel de ruido.'),
     image_url: stringField('URL de la imagen.'),
     active: booleanField('Indica si el espacio está activo.'),
   }),
+  reviewCreate: objectBody({
+    reservationId: integerField('Reserva completada que habilita la reseña.'),
+    rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Calificación de una a cinco estrellas.' },
+    comment: { type: 'string', maxLength: 1000, description: 'Comentario opcional.' },
+  }, ['reservationId', 'rating']),
+  ownerReservationUpdate: objectBody({
+    estado: { type: 'string', enum: ['confirmada', 'cancelada', 'completada'], description: 'Nuevo estado permitido para la reserva.' },
+    cancellationReason: { type: 'string', maxLength: 500, description: 'Motivo opcional de cancelación.' },
+  }, ['estado']),
 };
 
 const endpoints = [
@@ -250,6 +263,14 @@ const endpoints = [
     query: [{ name: 'date', description: 'Fecha para consultar disponibilidad (AAAA-MM-DD).' }],
     description: 'Envía el header x-user-id para ver espacios; sin él la API devuelve una lista vacía.',
   }],
+  ['get', '/api/places/:id/reviews', 'Listar reseñas verificadas de un espacio', 'Espacios', { notFound: true }],
+  ['post', '/api/places/:id/reviews', 'Crear una reseña para una reserva completada propia', 'Espacios', { auth: 'user', body: true, bodySchema: bodySchemas.reviewCreate, successStatus: 201, conflict: true }],
+  ['get', '/api/owner/places', 'Listar espacios del propietario', 'Propietarios', { auth: 'owner' }],
+  ['post', '/api/owner/places', 'Publicar un espacio propio', 'Propietarios', { auth: 'owner', body: true, bodySchema: bodySchemas.placeCreate, successStatus: 201 }],
+  ['put', '/api/owner/places/:id', 'Editar un espacio propio', 'Propietarios', { auth: 'owner', body: true, bodySchema: bodySchemas.placeUpdate, notFound: true }],
+  ['delete', '/api/owner/places/:id', 'Eliminar un espacio propio sin reservas', 'Propietarios', { auth: 'owner', successStatus: 204, notFound: true, conflict: true }],
+  ['get', '/api/owner/reservations', 'Listar reservas de espacios propios', 'Propietarios', { auth: 'owner' }],
+  ['put', '/api/owner/reservations/:id', 'Gestionar una reserva de espacio propio', 'Propietarios', { auth: 'owner', body: true, bodySchema: bodySchemas.ownerReservationUpdate, notFound: true, conflict: true }],
   ['get', '/api/admin/places', 'Listar espacios para administración', 'Administración', { auth: 'admin' }],
   ['post', '/api/admin/places', 'Crear un espacio', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.placeCreate, successStatus: 201 }],
   ['put', '/api/admin/places/:id', 'Actualizar un espacio', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.placeUpdate, notFound: true }],
@@ -278,6 +299,7 @@ export const openApiSpec = {
     { name: 'Espacios' },
     { name: 'Reservas' },
     { name: 'Cupones' },
+    { name: 'Propietarios' },
     { name: 'Administración' },
   ],
   paths,

@@ -20,7 +20,7 @@ export default function AdminUsersSection({ users, updateRole, toggleUserActive,
   return (
     <section className="users-section" id="users">
       <h2>Usuarios registrados</h2>
-      <div className="admin-toolbar"><input placeholder="Buscar por nombre, correo o usuario" value={query} onChange={(event) => setQuery(event.target.value)} /><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">Todos los roles</option><option value="admin">Administradores</option><option value="user">Usuarios</option></select><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select><span>{filteredUsers.length} resultados</span></div>
+      <div className="admin-toolbar"><input placeholder="Buscar por nombre, correo o usuario" value={query} onChange={(event) => setQuery(event.target.value)} /><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">Todos los roles</option><option value="admin">Administradores</option><option value="owner">Propietarios</option><option value="user">Usuarios</option></select><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select><span>{filteredUsers.length} resultados</span></div>
 
       {users.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>Cargando usuarios...</p>
@@ -40,6 +40,7 @@ export default function AdminUsersSection({ users, updateRole, toggleUserActive,
                   <td data-label="Rol">
                     <select className="role-select" value={user.role} onChange={(event) => updateRole(user.id, event.target.value)}>
                       <option value="user">Usuario</option>
+                      <option value="owner">Propietario</option>
                       <option value="admin">Administrador</option>
                     </select>
                   </td>

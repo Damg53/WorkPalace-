@@ -10,6 +10,7 @@ import ResetPassword from './components/ResetPassword.tsx'
 import Navbar from './components/Navbar'
 import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
+import OwnerDashboard from './components/OwnerDashboard'
 import Settings from './components/Settings'
 import Checkout from './components/Checkout'
 import PlacesPage from './components/PlacesPage'
@@ -36,6 +37,8 @@ function Landing({
       {/* Si el usuario es admin, redirigir al panel de administrador */}
       {user && user.role === 'admin' ? (
         <Navigate to="/admin" replace />
+      ) : user && user.role === 'owner' ? (
+        <Navigate to="/owner" replace />
       ) : user && user.role !== 'admin' ? (
         <Navigate to="/places" replace />
       ) : (
@@ -315,7 +318,7 @@ function App() {
           path="/login"
           element={
             user ? (
-              isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
+              user.role === 'admin' ? <Navigate to="/admin" replace /> : user.role === 'owner' ? <Navigate to="/owner" replace /> : <Navigate to="/dashboard" replace />
             ) : (
               <div className="auth-layout">
                 <Login onLogin={handleLogin} />
@@ -378,7 +381,7 @@ function App() {
             user && !isAdmin && user.id != null ? (
               <Checkout user={user} isDark={isDark} setIsDark={setIsDark} />
             ) : user ? (
-              <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
+              <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'owner' ? '/owner' : '/dashboard'} replace />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -391,6 +394,16 @@ function App() {
           element={
             user && isAdmin ? (
               <AdminDashboard user={user!} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+        <Route
+          path="/owner"
+          element={
+            user && user.role === 'owner' ? (
+              <OwnerDashboard user={user} onLogout={handleLogout} isDark={isDark} setIsDark={setIsDark} />
             ) : (
               <Navigate to="/" replace />
             )
@@ -418,7 +431,7 @@ function App() {
                 setIsDark={setIsDark}
               />
             ) : user ? (
-              <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
+              <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'owner' ? '/owner' : '/dashboard'} replace />
             ) : (
               <Navigate to="/" replace />
             )

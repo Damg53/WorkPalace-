@@ -18,6 +18,9 @@ interface Place {
   active: boolean
   unavailable_reason?: string | null
   available_from?: string | null
+  owner_name?: string | null
+  average_rating?: number | string | null
+  review_count?: number | string | null
 }
 
 interface PlacesListProps {
@@ -33,6 +36,14 @@ interface Favorite {
   place_id: number
   place_name: string
   place_city: string | null
+}
+
+interface PlaceReview {
+  id: number
+  rating: number
+  comment: string | null
+  reviewer_name: string
+  created_at: string
 }
 
 const API = API_BASE_URL
@@ -64,6 +75,37 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
   const [loadingFavorites, setLoadingFavorites] = useState(true)
   const [pendingFavoriteId, setPendingFavoriteId] = useState<number | null>(null)
   const [favoriteError, setFavoriteError] = useState<string | null>(null)
+  const [placeReviews, setPlaceReviews] = useState<PlaceReview[]>([])
+  const [reviewsError, setReviewsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedPlace) {
+      setPlaceReviews([])
+      setReviewsError(null)
+      return
+    }
+
+    const placeId = selectedPlace.id
+    let cancelled = false
+    async function fetchReviews() {
+      try {
+        const response = await fetch(`${API}/api/places/${placeId}/reviews`)
+        const data = await response.json() as { reviews?: PlaceReview[]; error?: string }
+        if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las reseñas.')
+        if (!cancelled) {
+          setPlaceReviews(data.reviews || [])
+          setReviewsError(null)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setReviewsError(error instanceof Error ? error.message : 'No se pudieron cargar las reseñas.')
+        }
+      }
+    }
+
+    void fetchReviews()
+    return () => { cancelled = true }
+  }, [selectedPlace])
 
   useEffect(() => {
     if (!selectedPlace) return
@@ -216,6 +258,16 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
             {place.active ? 'Disponible' : 'No disponible'}
           </span>
         </div>
+        <p className="place-card__price">{getPriceByModality(place.precio_hora, place.modalidad)}</p>
+        <p className="place-card__location">
+          {[place.barrio, place.ciudad].filter(Boolean).join(', ') || 'Ubicación por confirmar'}
+        </p>
+        <p className="place-card__trust">
+          {Number(place.review_count) > 0
+            ? `★ ${Number(place.average_rating).toFixed(1)} · ${place.review_count} reseñas verificadas`
+            : 'Aún sin reseñas'}
+          {place.owner_name ? ` · Publicado por ${place.owner_name}` : ''}
+        </p>
         <div className="place-card-actions">
           <button
             type="button"
@@ -321,6 +373,14 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
                 </div>
               )}
             </dl>
+            <p className="place-detail-modal__price-note">
+              Precio publicado por el anfitrión. El valor final se confirma en el resumen antes de reservar.
+            </p>
+            <div className="place-detail-modal__host">
+              <strong>Anfitrión</strong>
+              <span>{selectedPlace.owner_name || 'Equipo WorkPalace'}</span>
+              <span>La solicitud queda pendiente hasta que el anfitrión la confirme.</span>
+            </div>
 
             {!selectedPlace.active && (
               <p className="place-detail-modal__unavailable">
@@ -333,6 +393,32 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
                 <strong>Características:</strong> {selectedPlace.caracteristicas}
               </p>
             )}
+            <details className="place-reviews">
+              <summary>
+                <span>
+                  Reseñas verificadas
+                  {Number(selectedPlace.review_count) > 0 && (
+                    <span className="place-reviews__rating"> · ★ {Number(selectedPlace.average_rating).toFixed(1)} ({selectedPlace.review_count})</span>
+                  )}
+                </span>
+                <span className="place-reviews__toggle">Ver reseñas</span>
+              </summary>
+              {reviewsError ? (
+                <p className="place-reviews__message" role="alert">{reviewsError}</p>
+              ) : placeReviews.length === 0 ? (
+                <p className="place-reviews__message">Todavía no hay reseñas de reservas completadas.</p>
+              ) : (
+                <div className="place-reviews__list">
+                  {placeReviews.map((review) => (
+                    <article className="place-review" key={review.id}>
+                      <strong>{review.reviewer_name} · {'★'.repeat(review.rating)}</strong>
+                      {review.comment && <p>{review.comment}</p>}
+                      <small>Reserva completada · {availabilityDate(review.created_at)}</small>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </details>
 
             <footer className="place-detail-modal__footer">
               <button type="button" className="btn btn-secondary" onClick={() => setSelectedPlace(null)}>

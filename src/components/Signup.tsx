@@ -14,6 +14,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [registerAsOwner, setRegisterAsOwner] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -71,6 +72,7 @@ export default function Signup() {
           username: cleanUsername,
           password,
           phone: phone.trim(),
+          accountType: registerAsOwner ? 'owner' : 'user',
         }),
       });
       const data = await response.json();
@@ -92,7 +94,7 @@ export default function Signup() {
     <AuthShell>
       <Link to="/" className="wp-auth__back">← Volver al inicio</Link>
       <h2 className="wp-auth__heading">Crea tu cuenta</h2>
-      <p className="wp-auth__subtitle">Regístrate y encuentra el espacio ideal para trabajar.</p>
+      <p className="wp-auth__subtitle">Regístrate para reservar espacios o publicar el tuyo.</p>
 
       {success ? (
         <>
@@ -184,6 +186,15 @@ export default function Signup() {
             disabled={loading}
             required
           />
+          <label className="wp-auth__checkbox">
+            <input
+              type="checkbox"
+              checked={registerAsOwner}
+              onChange={(event) => setRegisterAsOwner(event.target.checked)}
+              disabled={loading}
+            />
+            Quiero publicar y administrar mis espacios.
+          </label>
           <label className="wp-auth__checkbox">
             <input
               type="checkbox"
