@@ -7,6 +7,12 @@
     <link rel="apple-touch-icon" href="/workpalace-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f3f4f6" />
+    <script>
+      const savedTheme = localStorage.getItem('theme-mode') === 'dark' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = savedTheme;
+      document.querySelector('meta[name="theme-color"]').content =
+        savedTheme === 'dark' ? '#1a1a1a' : '#f3f4f6';
+    </script>
     <title>WorkPalace - Tu Plataforma Colaborativa Moderna</title>
   </head>
   <body>
