@@ -14,6 +14,8 @@ import paymentsRoutes from './modules/payments/routes.js';
 import passwordResetRoutes from './modules/verification/password-reset.js';
 import ownerRoutes from './modules/owners/routes.js';
 import reviewRoutes from './modules/reviews/routes.js';
+import { completeExpiredReservations } from './modules/availability/service.js';
+import { containsProfanityInPayload } from './shared/validation.js';
 
 dotenv.config();
 
@@ -81,6 +83,12 @@ app.use('/api', (_req, res, next) => {
   }
   next();
 });
+app.use('/api', (req, res, next) => {
+  if (containsProfanityInPayload(req.body)) {
+    return res.status(400).json({ error: 'No se permiten palabras ofensivas en los campos de texto.' });
+  }
+  next();
+});
 
 app.use(usersRoutes);
 app.use(verificationRoutes);
@@ -100,6 +108,13 @@ app.listen(PORT, '0.0.0.0', () => {
 
 initializationReady.then(() => {
   databaseReady = true;
+  const completeReservations = () => {
+    void completeExpiredReservations().catch((error) => {
+      console.error('Error completando reservas vencidas:', error);
+    });
+  };
+  completeReservations();
+  setInterval(completeReservations, 60_000);
 }).catch((error) => {
   console.error(`⚠️ El servidor sigue disponible, pero la base de datos no pudo inicializarse: ${error.message}`);
 });

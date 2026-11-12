@@ -113,6 +113,15 @@
   color: rgba(237, 242, 255, 0.55);
 }
 
+.ck--dark .ck-field select {
+  color-scheme: dark;
+}
+
+.ck--dark .ck-field select option {
+  background-color: #101d2e;
+  color: #edf2ff;
+}
+
 .ck--dark .ck-coupon button,
 .ck--dark .ck-btn {
   box-shadow: 0 6px 0 rgba(44, 57, 160, 0.95);

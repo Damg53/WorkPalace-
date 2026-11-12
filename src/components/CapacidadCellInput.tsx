@@ -20,11 +20,23 @@ const CapacidadCellInput: React.FC<Props> = ({ value, onSave }) => {
   return (
     <input
       type="text"
+      pattern="[0-9]+"
+      required
+      inputMode="numeric"
+      aria-label="Capacidad en unidades"
       value={localValue}
-      onChange={e => setLocalValue(e.target.value)}
-      onBlur={() => onSave(localValue)}
+      onChange={e => {
+        e.currentTarget.setCustomValidity('')
+        setLocalValue(e.target.value)
+      }}
+      onBlur={e => {
+        const valid = /^\d+$/.test(localValue) && Number.isSafeInteger(Number(localValue)) && Number(localValue) > 0
+        e.currentTarget.setCustomValidity(valid ? '' : 'Ingresa una capacidad entera mayor que cero.')
+        if (valid) onSave(localValue)
+        else e.currentTarget.reportValidity()
+      }}
       className="table-select"
-      placeholder="Ej: 10 personas"
+      placeholder="Capacidad"
     />
   );
 };

@@ -31,6 +31,7 @@
   margin-bottom: 0.9rem;
   overflow: hidden;
   border-radius: 12px;
+  background: rgba(130, 146, 255, 0.08);
   box-shadow: 0 4px 18px rgba(102, 126, 234, 0.1);
 }
 
@@ -41,11 +42,6 @@
   object-fit: cover;
   object-position: center;
   border-radius: inherit;
-  transition: transform 0.3s ease;
-}
-
-.place-image-wrapper:hover .place-image {
-  transform: scale(1.03);
 }
 
 .place-card {
@@ -309,11 +305,13 @@ html[data-theme="dark"] .place-reserve-button.is-unavailable:disabled {
 
 .place-detail-modal__image {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  height: auto;
   max-height: 300px;
-  margin-bottom: 1.1rem;
+  margin: 0 auto 1.1rem;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .place-detail-list {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import './PlacesList.css'
 import { API_BASE_URL } from '../services/api'
+import { formatAvailableFrom, formatReadableDate } from '../utils/dateFormatting'
 
 interface Place {
   id: number
@@ -64,10 +65,6 @@ const getPriceByModality = (precioHora: number | null, modalidad: string | null)
 
   return `$${precioHora.toLocaleString('es-CO')}${unidades[modalidad ?? ''] ?? ''}`
 }
-
-const availabilityDate = (value: string | null | undefined) => value
-  ? new Date(value).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
-  : null
 
 const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error, onReserve }) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
@@ -385,7 +382,7 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
             {!selectedPlace.active && (
               <p className="place-detail-modal__unavailable">
                 <strong>Motivo:</strong> {selectedPlace.unavailable_reason || 'No disponible temporalmente'}.
-                {availabilityDate(selectedPlace.available_from) && ` Disponible nuevamente el ${availabilityDate(selectedPlace.available_from)}.`}
+                {formatAvailableFrom(selectedPlace.available_from) && ` Disponible nuevamente el ${formatAvailableFrom(selectedPlace.available_from)}.`}
               </p>
             )}
             {selectedPlace.caracteristicas && (
@@ -413,7 +410,7 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
                     <article className="place-review" key={review.id}>
                       <strong>{review.reviewer_name} · {'★'.repeat(review.rating)}</strong>
                       {review.comment && <p>{review.comment}</p>}
-                      <small>Reserva completada · {availabilityDate(review.created_at)}</small>
+                      <small>Reserva completada · {formatReadableDate(review.created_at)}</small>
                     </article>
                   ))}
                 </div>

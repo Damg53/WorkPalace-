@@ -3,6 +3,7 @@ import Sidebar from './Sidebar'
 import AdminPlacesSection from './AdminPlacesSection'
 import type { AdminPlace } from './adminTypes'
 import { API_BASE_URL } from '../services/api'
+import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
 import './OwnerDashboard.css'
 
 interface OwnerDashboardProps {
@@ -18,17 +19,15 @@ interface OwnerReservation {
   place_name: string
   check_in: string
   check_out: string
+  check_in_time: string | null
+  check_out_time: string | null
   huespedes: number
   estado: string
   customer_name: string
+  can_complete: boolean
 }
 
 const API = API_BASE_URL
-
-function localDateString() {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
 
 export default function OwnerDashboard({ user, onLogout, isDark, setIsDark }: OwnerDashboardProps) {
   const [places, setPlaces] = useState<AdminPlace[]>([])
@@ -100,8 +99,6 @@ export default function OwnerDashboard({ user, onLogout, isDark, setIsDark }: Ow
 
   const pendingReservations = reservations.filter((reservation) => reservation.estado === 'pendiente').length
   const activePlaces = places.filter((place) => place.active !== false).length
-  const today = localDateString()
-
   return (
     <div className="with-sidebar">
       <Sidebar user={user} isDark={isDark} setIsDark={setIsDark} onLogout={onLogout} />
@@ -162,13 +159,20 @@ export default function OwnerDashboard({ user, onLogout, isDark, setIsDark }: Ow
             ) : (
               <div className="owner-reservation-list">
                 {reservations.map((reservation) => {
-                  const canComplete = reservation.estado === 'confirmada' && reservation.check_out.slice(0, 10) <= today
+                  const canComplete = reservation.estado === 'confirmada' && reservation.can_complete
                   return (
                     <article className="owner-reservation" key={reservation.id}>
                       <div>
                         <strong>{reservation.place_name}</strong>
                         <span>Reserva #{reservation.id} · {reservation.customer_name}</span>
-                        <span>{reservation.check_in.slice(0, 10)} al {reservation.check_out.slice(0, 10)} · {reservation.huespedes} unidades</span>
+                        <span>
+                          {formatReadableDate(reservation.check_in)}
+                          {reservation.check_in_time ? ` · ${formatReadableTime(reservation.check_in_time)}` : ''}
+                          {' al '}
+                          {formatReadableDate(reservation.check_out)}
+                          {reservation.check_out_time ? ` · ${formatReadableTime(reservation.check_out_time)}` : ''}
+                          {' · '}{reservation.huespedes}{reservation.check_in_time ? ' horas' : ' unidades'}
+                        </span>
                       </div>
                       <span className={`reservation-badge ${reservation.estado}`}>{reservation.estado}</span>
                       <div className="owner-reservation__actions">

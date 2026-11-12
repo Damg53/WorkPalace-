@@ -4,6 +4,7 @@ import Sidebar from './Sidebar'
 import './Settings.css'
 import { cacheProfileImageFromUrl, loadCachedProfileImage, saveCachedProfileImage } from '../services/profileImageCache'
 import { API_BASE_URL } from '../services/api'
+import { containsProfanity } from '../utils/contentValidation'
 
 export interface UserProfile {
   id: number
@@ -82,6 +83,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
   }, [user.fullName, user.email, user.username, user.profileImage, user.twoFactorEnabled])
 
   useEffect(() => {
+    if (containsProfanity(city) || containsProfanity(preferences)) return
     const next = { phone, city, preferences, notificationsEnabled }
     localStorage.setItem(PREFERENCES_KEY, JSON.stringify(next))
   }, [phone, city, preferences, notificationsEnabled])
@@ -304,7 +306,7 @@ export default function Settings({ user, onLogout, onProfileUpdate, isDark, setI
 
           <div className="profile-summary">
             <div><span className="profile-summary-label">Nombre visible</span><strong>{fullName || username}</strong></div>
-            <div><span className="profile-summary-label">Usuario</span><span>@{username}</span></div>
+            <div><span className="profile-summary-label">Usuario</span><span>{username}</span></div>
             <div><span className="profile-summary-label">Acceso</span><span className="profile-role">{user.role === 'admin' ? 'Administrador' : user.role === 'owner' ? 'Propietario' : 'Usuario'}</span></div>
           </div>
 

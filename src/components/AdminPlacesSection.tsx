@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import CapacidadCellInput from './CapacidadCellInput'
 import type { AdminPlace, NewPlaceForm } from './adminTypes'
+import { containsProfanity } from '../utils/contentValidation'
 
 interface Props {
   places: AdminPlace[]
@@ -32,6 +33,8 @@ const BARRIOS: Record<string, string[]> = {
   Otra: ['Otro / No aplica'],
 }
 const EMPTY: NewPlaceForm = { name: '', tipo: '', direccion: '', barrio: '', ciudad: '', capacidad: '', precio_hora: '', modalidad: '', caracteristicas: '', nivel_ruido: '', image_url: '' }
+const isValidCapacity = (value: string) => /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0
+const capacityValidationMessage = 'Ingresa un número entero mayor que 0.'
 
 interface PlaceImagePickerProps {
   id: string
@@ -285,6 +288,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingAddress, setEditingAddress] = useState('')
   const [editingUrl, setEditingUrl] = useState('')
+  const [formError, setFormError] = useState('')
   const setField = (field: keyof NewPlaceForm, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const stopWheel = (event: React.WheelEvent<HTMLInputElement>) => event.currentTarget.blur()
 
@@ -292,7 +296,16 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()
-    if (!form.name || !form.tipo) return
+    const textFields = [form.name, form.tipo, form.direccion, form.barrio, form.ciudad, form.modalidad, form.caracteristicas, form.nivel_ruido]
+    if (textFields.some(containsProfanity)) {
+      setFormError('No se permiten palabras ofensivas en los campos del espacio.')
+      return
+    }
+    if (!isValidCapacity(form.capacidad)) {
+      setFormError('La capacidad es obligatoria y debe ser un número entero mayor que 0.')
+      return
+    }
+    setFormError('')
     const finalPrice = Number(form.precio_hora || suggestedPrice)
     try {
       await createPlace({ ...form, direccion: form.direccion.trim() || null, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: Number.isFinite(finalPrice) ? finalPrice : null, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
@@ -306,23 +319,45 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   return <section className="users-section" id="places" style={{ marginTop: '3rem' }}>
     <div className="admin-section-heading admin-places-heading"><h2>Lugares publicados</h2><button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancelar' : '+ Crear nuevo lugar'}</button></div>
     {showForm && <form onSubmit={handleCreate} className="form-create-place"><h3>Crear Nuevo Lugar</h3><div className="form-create-place-grid">
-      <input className="form-create-place-input" placeholder="Nombre *" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
+      <input className="form-create-place-input" placeholder="Nombre *" value={form.name} onChange={(e) => setField('name', e.target.value)} maxLength={255} required />
       <select className="form-create-place-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)} required><option value="">Tipo *</option>{TIPOS.map((item) => <option key={item}>{item}</option>)}</select>
       <select className="form-create-place-input" value={form.ciudad} onChange={(e) => setField('ciudad', e.target.value)}><option value="">Ciudad</option>{CIUDADES.map((item) => <option key={item}>{item}</option>)}</select>
       <select className="form-create-place-input" value={form.barrio} onChange={(e) => setField('barrio', e.target.value)} disabled={!form.ciudad}><option value="">Barrio</option>{(BARRIOS[form.ciudad] || []).map((item) => <option key={item}>{item}</option>)}</select>
       <input className="form-create-place-input" placeholder="Dirección" value={form.direccion} onChange={(e) => setField('direccion', e.target.value)} autoComplete="street-address" />
-      <input className="form-create-place-input" placeholder="Capacidad" value={form.capacidad} onChange={(e) => setField('capacidad', e.target.value)} />
       <input
         className="form-create-place-input"
-        type="number"
-        placeholder="Precio sugerido"
-        value={form.precio_hora || String(Math.round(suggestedPrice))}
-        onChange={(e) => setField('precio_hora', e.target.value)}
-        onWheel={stopWheel}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]+"
+        placeholder="Capacidad *"
+        aria-label="Capacidad en unidades"
+        value={form.capacidad}
+        onChange={(event) => {
+          const value = event.target.value
+          setField('capacidad', value)
+          event.currentTarget.setCustomValidity(isValidCapacity(value) ? '' : capacityValidationMessage)
+        }}
+        onInvalid={(event) => event.currentTarget.setCustomValidity(capacityValidationMessage)}
+        required
       />
+      <label className="form-create-place-price">
+        <span aria-hidden="true">$</span>
+        <input
+          className="form-create-place-input"
+          type="number"
+          min="0"
+          step="1"
+          placeholder="Precio base"
+          aria-label="Precio base en pesos colombianos"
+          value={form.precio_hora || String(Math.round(suggestedPrice))}
+          onChange={(e) => setField('precio_hora', e.target.value)}
+          onWheel={stopWheel}
+          required
+        />
+      </label>
       <select className="form-create-place-input" value={form.modalidad} onChange={(e) => setField('modalidad', e.target.value)}><option value="">Modalidad</option>{MODALIDADES.map((item) => <option key={item}>{item}</option>)}</select>
       <select className="form-create-place-input" value={form.nivel_ruido} onChange={(e) => setField('nivel_ruido', e.target.value)}><option value="">Nivel de ruido</option>{RUIDO.map((item) => <option key={item}>{item}</option>)}</select>
-      <textarea className="form-create-place-textarea form-create-place-full-width" placeholder="Características" value={form.caracteristicas} onChange={(e) => setField('caracteristicas', e.target.value)} />
+      <textarea className="form-create-place-textarea form-create-place-full-width" placeholder="Características" value={form.caracteristicas} onChange={(e) => setField('caracteristicas', e.target.value)} maxLength={2000} />
       {form.tipo && form.ciudad && form.modalidad && (
         <div className="form-create-place-full-width form-create-place-suggested-price">
           Precio sugerido: <strong>{formatPriceForModality(suggestedPrice, form.modalidad)}</strong>
@@ -331,7 +366,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       <div className="form-create-place-full-width">
         <PlaceImagePicker id="create-place-image" value={form.image_url} onChange={(value) => setField('image_url', value)} />
       </div>
-    </div><button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
+    </div>{formError && <p className="admin-operation-message" role="alert">{formError}</p>}<button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
     {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper" role="region" aria-label="Tabla de espacios" tabIndex={0}><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
       {places.map((place) => (
         <tr key={place.id}>
@@ -363,7 +398,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
             </select>
           </td>
           <td data-label="Capacidad"><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td>
-          <td data-label="Precio base"><div style={{ fontWeight: 600, color: '#374151' }}>{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
+          <td data-label="Precio base"><div className="admin-place-price">{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
           <td data-label="Modalidad">
             <select className="table-select" defaultValue={place.modalidad || ''} onChange={(event) => updatePlace(place.id, { modalidad: event.target.value })}>
               {MODALIDADES.map((item) => <option key={item}>{item}</option>)}

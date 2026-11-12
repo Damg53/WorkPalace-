@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './Checkout.css'
 import { API_BASE_URL } from '../services/api'
+import { formatAvailableFrom } from '../utils/dateFormatting'
 
 const API = API_BASE_URL
 
@@ -55,7 +56,21 @@ const DECLINED_TEST_CARD = '4000000000000002'
 const cop = (n: number) =>
   n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
-const hourLabel = (h: number) => `${h > 12 ? h - 12 : h}:00 ${h >= 12 && h < 24 ? 'pm' : 'am'}`
+const timeToMinutes = (value: string) => {
+  const [hours, minutes] = value.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+const minutesToTime = (minutes: number) => {
+  const normalized = ((minutes % 1440) + 1440) % 1440
+  return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`
+}
+
+const hourLabel = (minutes: number) => {
+  const normalized = ((minutes % 1440) + 1440) % 1440
+  const hours = Math.floor(normalized / 60)
+  return `${hours % 12 || 12}:${String(normalized % 60).padStart(2, '0')} ${hours < 12 ? 'am' : 'pm'}`
+}
 
 const toDate = (iso: string, plus = 0) => {
   const d = new Date(`${iso}T00:00:00`)
@@ -66,10 +81,49 @@ const toDate = (iso: string, plus = 0) => {
 const dateLabel = (d: Date) =>
   d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })
 
-const tomorrow = () => {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+const dateInputValue = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+const bogotaDateTime = (instant: Date) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant)
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+  const wallClock = new Date(Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  ))
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    time: `${values.hour}:${values.minute}`,
+    wallClock,
+  }
+}
+
+const addDaysToDateInput = (value: string, days: number) => {
+  const [year, month, day] = value.split('-').map(Number)
+  return dateInputValue(new Date(year, month - 1, day + days))
+}
+
+const nextAvailableDateTime = (now: Date) => {
+  const nextMinute = bogotaDateTime(now).wallClock
+  nextMinute.setUTCSeconds(0, 0)
+  nextMinute.setUTCMinutes(nextMinute.getUTCMinutes() + 1)
+  return {
+    date: `${nextMinute.getUTCFullYear()}-${String(nextMinute.getUTCMonth() + 1).padStart(2, '0')}-${String(nextMinute.getUTCDate()).padStart(2, '0')}`,
+    time: `${String(nextMinute.getUTCHours()).padStart(2, '0')}:${String(nextMinute.getUTCMinutes()).padStart(2, '0')}`,
+  }
 }
 
 const isValidCardExpiry = (value: string) => {
@@ -80,19 +134,11 @@ const isValidCardExpiry = (value: string) => {
   return expiry >= new Date(now.getFullYear(), now.getMonth() + 1, 0)
 }
 
-const formatAvailabilityDate = (value: string | null | undefined) => value
-  ? new Date(`${value}T00:00:00`).toLocaleDateString('es-CO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  : null
-
 const getUnavailableMessage = (placeData: Partial<Place> | null | undefined) => {
   if (!placeData) return 'Este espacio no está disponible para la fecha seleccionada.'
 
   const reason = placeData.unavailable_reason || 'No disponible temporalmente'
-  const nextDate = formatAvailabilityDate(placeData.available_from)
+  const nextDate = formatAvailableFrom(placeData.available_from)
 
   if (nextDate) {
     return `Este espacio no está disponible por ${reason.toLowerCase()}. Disponible nuevamente el ${nextDate}.`
@@ -136,8 +182,9 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('hour')
   const [availableModes, setAvailableModes] = useState<Mode[]>(['hour', 'day', 'week', 'fortnight', 'month'])
-  const [date, setDate] = useState(tomorrow())
-  const [start, setStart] = useState(9)
+  const [date, setDate] = useState(() => bogotaDateTime(new Date()).date)
+  const [startTime, setStartTime] = useState(() => nextAvailableDateTime(new Date()).time)
+  const [clock, setClock] = useState(() => new Date())
   const [qty, setQty] = useState(3)
   const [name, setName] = useState(user.fullName || user.username || '')
   const [email, setEmail] = useState(user.email || '')
@@ -154,6 +201,11 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const [couponChecking, setCouponChecking] = useState(false)
   const [terms, setTerms] = useState(false)
   const [status, setStatus] = useState<'idle' | 'paying' | 'done' | 'rejected'>('idle')
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     if (!placeId) {
@@ -195,6 +247,10 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
         setMode(initialMode)
         setAvailableModes(getModeOptionsFromPlace(found.modalidad))
         setQty(initialMode === 'hour' ? 3 : 1)
+        const todayInBogota = bogotaDateTime(new Date()).date
+        if (initialMode !== 'hour' && date <= todayInBogota) {
+          setDate(addDaysToDateInput(todayInBogota, 1))
+        }
       } catch (_e) {
         if (!cancelled) setError('No se pudo cargar la información del espacio.')
       } finally {
@@ -218,16 +274,30 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   }, [status])
 
   const cfg = MODES.find((m) => m.id === mode) ?? MODES[0]
-  const maxQty = mode === 'hour' ? Math.min(cfg.max, 22 - start) : cfg.max
+  const maxQty = cfg.max
+  const earliest = nextAvailableDateTime(clock)
+  const todayInBogota = bogotaDateTime(clock).date
+  const minimumDate = mode === 'hour' ? earliest.date : addDaysToDateInput(todayInBogota, 1)
+  const minimumTime = date === earliest.date ? earliest.time : '00:00'
+  const startMinutes = timeToMinutes(startTime)
+  const endMinutes = startMinutes + qty * 60
+  const endDate = addDaysToDateInput(date, Math.floor(endMinutes / 1440))
+
+  useEffect(() => {
+    const minDate = mode === 'hour' ? earliest.date : addDaysToDateInput(todayInBogota, 1)
+    if (date < minDate) setDate(minDate)
+    if (mode === 'hour' && date === earliest.date && startTime < earliest.time) {
+      setStartTime(earliest.time)
+    }
+  }, [clock, date, earliest.date, earliest.time, mode, startTime, todayInBogota])
 
   const changeMode = (m: Mode) => {
     setMode(m)
     setQty(m === 'hour' ? 3 : 1)
-  }
-
-  const changeStart = (h: number) => {
-    setStart(h)
-    setQty((q) => Math.min(q, 22 - h))
+    const todayInBogota = bogotaDateTime(new Date()).date
+    if (m !== 'hour' && date <= todayInBogota) {
+      setDate(addDaysToDateInput(todayInBogota, 1))
+    }
   }
 
   const baseRate = Number(place?.precio_hora ?? 45000)
@@ -260,7 +330,11 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
 
   const slot = useMemo(() => {
     if (mode === 'hour') {
-      return { title: dateLabel(toDate(date)), sub: `${hourLabel(start)} a ${hourLabel(start + qty)}` }
+      const endDay = addDaysToDateInput(date, Math.floor((timeToMinutes(startTime) + qty * 60) / 1440))
+      return {
+        title: endDay === date ? dateLabel(toDate(date)) : `${dateLabel(toDate(date))} al ${dateLabel(toDate(endDay))}`,
+        sub: `${hourLabel(timeToMinutes(startTime))} a ${hourLabel(timeToMinutes(startTime) + qty * 60)}${endDay === date ? '' : ' (día siguiente)'}`,
+      }
     }
 
     const days = mode === 'day' || mode === 'halfDay' || mode === 'fullDay' || mode === 'night' || mode === 'appointment' || mode === 'flexible'
@@ -270,17 +344,34 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
       title: `${dateLabel(toDate(date))} al ${dateLabel(toDate(date, days - 1))}`,
       sub: `${days} ${days === 1 ? 'día' : 'días'} completos`,
     }
-  }, [date, mode, qty, start])
+  }, [date, mode, qty, startTime])
 
   const emailOk = /^\S+@\S+\.\S+$/.test(email)
+  const phoneOk = /^3\d{9}$/.test(phone)
   const expiryOk = isValidCardExpiry(exp)
   const cardOk = pay !== 'card' || (card.replace(/\s/g, '').length === 16 && expiryOk && cvc.length >= 3)
-  const canPay = name.trim().length > 2 && emailOk && phone.replace(/\D/g, '').length >= 10 && cardOk && terms
+  const canPay = name.trim().length > 2 && emailOk && phoneOk && cardOk && terms
 
   async function handlePay() {
     if (!place || !user.id) return
     if (!date) {
       setError('Debes seleccionar una fecha válida.')
+      return
+    }
+    if (mode === 'hour' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) {
+      setError('Debes seleccionar una hora de inicio válida.')
+      return
+    }
+    if (!phoneOk) {
+      setError('Ingresa un celular colombiano de 10 dígitos que empiece por 3.')
+      return
+    }
+    if (mode === 'hour' && Date.parse(`${date}T${startTime}:00-05:00`) <= Date.now()) {
+      setError('Selecciona una hora de inicio futura.')
+      return
+    }
+    if (mode !== 'hour' && date <= bogotaDateTime(new Date()).date) {
+      setError('Las reservas por días deben iniciar desde mañana.')
       return
     }
     setError(null)
@@ -305,7 +396,14 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
         body: JSON.stringify({
           placeId: place.id,
           checkIn: date,
-          checkOut: new Date(new Date(date).getTime() + (mode === 'hour' ? qty * 60 * 60 * 1000 : qty * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10),
+          checkOut: mode === 'hour'
+            ? endDate
+            : addDaysToDateInput(date, qty),
+          ...(mode === 'hour' ? {
+            checkInTime: startTime,
+            checkOutTime: minutesToTime(endMinutes),
+          } : {}),
+          phone,
           huespedes: qty,
           couponCode: applied,
           payment: {
@@ -470,17 +568,32 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
             <div className="ck-row">
               <label className="ck-field">
                 <span>{mode === 'hour' ? 'Fecha' : 'Fecha de inicio'}</span>
-                <input type="date" value={date} min={tomorrow()} onChange={(e) => setDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={date}
+                  min={minimumDate}
+                  required
+                  onChange={(event) => {
+                    setDate(event.target.value)
+                    if (event.target.value === earliest.date && startTime < earliest.time) {
+                      setStartTime(earliest.time)
+                    }
+                  }}
+                />
               </label>
 
               {mode === 'hour' && (
                 <label className="ck-field">
                   <span>Hora de llegada</span>
-                  <select value={start} onChange={(e) => changeStart(Number(e.target.value))}>
-                    {Array.from({ length: 14 }, (_, i) => 8 + i).map((h) => (
-                      <option key={h} value={h}>{hourLabel(h)}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="time"
+                    value={startTime}
+                    min={minimumTime}
+                    max="23:59"
+                    step="60"
+                    required
+                    onChange={(event) => setStartTime(event.target.value)}
+                  />
                 </label>
               )}
 
@@ -518,10 +631,21 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
                   autoComplete="tel"
+                  inputMode="numeric"
+                  pattern="3[0-9]{9}"
+                  maxLength={10}
+                  required
                   placeholder="300 123 4567"
+                  aria-invalid={phone.length > 0 && !phoneOk}
+                  aria-describedby={phone.length > 0 && !phoneOk ? 'checkout-phone-error' : undefined}
                 />
+                {phone.length > 0 && !phoneOk && (
+                  <span className="ck-field-hint" id="checkout-phone-error">
+                    Debe ser un número colombiano de 10 dígitos que empiece por 3.
+                  </span>
+                )}
               </label>
             </div>
           </section>
@@ -610,18 +734,18 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
             </div>
 
             {mode === 'hour' && (
-              <div className="ck-bar" role="img" aria-label={`Ocupas de ${hourLabel(start)} a ${hourLabel(start + qty)}`}>
+              <div className="ck-bar" role="img" aria-label={`Ocupas de ${hourLabel(startMinutes)} a ${hourLabel(endMinutes)}`}>
                 <div className="ck-bar__track">
                   <i
                     style={{
-                      left: `${((start - 8) / 14) * 100}%`,
-                      width: `${(qty / 14) * 100}%`,
+                      left: `${(startMinutes / 1440) * 100}%`,
+                      width: `${(qty * 60 / 1440) * 100}%`,
                     }}
                   />
                 </div>
                 <div className="ck-bar__ends">
-                  <span>{hourLabel(8)}</span>
-                  <span>{hourLabel(22)}</span>
+                  <span>00:00</span>
+                  <span>24:00</span>
                 </div>
               </div>
             )}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../../db.js';
 import { requireOwner } from '../../middleware/admin.js';
 import { syncPlaceReservationState } from '../availability/service.js';
+import { hasProfanityInFields, isValidCapacity, parseNonNegativeInteger } from '../../shared/validation.js';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ router.get('/api/owner/places', requireOwner, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad,
-              caracteristicas, nivel_ruido, image_url, active, created_at
+              caracteristicas, nivel_ruido, image_url, owner_active AS active, created_at
        FROM places WHERE owner_id = $1 ORDER BY id DESC`,
       [req.ownerUserId]
     );
@@ -25,11 +26,22 @@ router.post('/api/owner/places', requireOwner, async (req, res) => {
     const payload = req.body || {};
     const name = typeof payload.name === 'string' ? payload.name.trim() : '';
     const tipo = typeof payload.tipo === 'string' ? payload.tipo.trim() : '';
-    const price = payload.precio_hora == null || payload.precio_hora === '' ? null : Number(payload.precio_hora);
+    const price = payload.precio_hora == null || payload.precio_hora === ''
+      ? null
+      : parseNonNegativeInteger(payload.precio_hora);
     if (!name || !tipo) return res.status(400).json({ error: 'El nombre y el tipo de espacio son obligatorios.' });
     if (name.length > 255 || tipo.length > 100) return res.status(400).json({ error: 'El nombre o tipo del espacio es demasiado largo.' });
-    if (price !== null && (!Number.isSafeInteger(price) || price < 0)) {
+    if (payload.precio_hora != null && payload.precio_hora !== '' && price === null) {
       return res.status(400).json({ error: 'El precio debe ser un valor entero válido.' });
+    }
+    if (!isValidCapacity(payload.capacidad)) {
+      return res.status(400).json({ error: 'La capacidad es obligatoria y debe ser un número entero mayor que cero.' });
+    }
+    if (hasProfanityInFields(payload, ['name', 'tipo', 'direccion', 'barrio', 'ciudad', 'modalidad', 'caracteristicas', 'nivel_ruido'])) {
+      return res.status(400).json({ error: 'No se permiten palabras ofensivas en los campos del espacio.' });
+    }
+    if (typeof payload.caracteristicas === 'string' && payload.caracteristicas.length > 2000) {
+      return res.status(400).json({ error: 'Las características no pueden superar 2000 caracteres.' });
     }
     if (typeof payload.image_url === 'string' && payload.image_url.length > 50_000_000) {
       return res.status(413).json({ error: 'La imagen supera el tamaño permitido.' });
@@ -38,13 +50,13 @@ router.post('/api/owner/places', requireOwner, async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO places
-        (owner_id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE)
-       RETURNING id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active, created_at`,
+        (owner_id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, active, owner_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, TRUE)
+       RETURNING id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad, caracteristicas, nivel_ruido, image_url, owner_active AS active, created_at`,
       [
         req.ownerUserId, name, tipo,
         textValue(payload.direccion), textValue(payload.barrio), textValue(payload.ciudad),
-        textValue(payload.capacidad), price, textValue(payload.modalidad),
+        String(payload.capacidad).trim(), price, textValue(payload.modalidad),
         textValue(payload.caracteristicas), textValue(payload.nivel_ruido), textValue(payload.image_url),
       ]
     );
@@ -61,11 +73,21 @@ router.put('/api/owner/places/:id', requireOwner, async (req, res) => {
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'ID de espacio inválido.' });
 
     const payload = req.body || {};
-    const price = payload.precio_hora === undefined || payload.precio_hora === null || payload.precio_hora === ''
+    const hasPrice = payload.precio_hora !== undefined && payload.precio_hora !== null && payload.precio_hora !== '';
+    const price = !hasPrice
       ? null
-      : Number(payload.precio_hora);
-    if (price !== null && (!Number.isSafeInteger(price) || price < 0)) {
+      : parseNonNegativeInteger(payload.precio_hora);
+    if (hasPrice && price === null) {
       return res.status(400).json({ error: 'El precio debe ser un valor entero válido.' });
+    }
+    if (payload.capacidad !== undefined && !isValidCapacity(payload.capacidad)) {
+      return res.status(400).json({ error: 'La capacidad debe ser un número entero mayor que cero.' });
+    }
+    if (hasProfanityInFields(payload, ['name', 'tipo', 'direccion', 'barrio', 'ciudad', 'modalidad', 'caracteristicas', 'nivel_ruido'])) {
+      return res.status(400).json({ error: 'No se permiten palabras ofensivas en los campos del espacio.' });
+    }
+    if (typeof payload.caracteristicas === 'string' && payload.caracteristicas.length > 2000) {
+      return res.status(400).json({ error: 'Las características no pueden superar 2000 caracteres.' });
     }
     if (typeof payload.image_url === 'string' && payload.image_url.length > 50_000_000) {
       return res.status(413).json({ error: 'La imagen supera el tamaño permitido.' });
@@ -80,17 +102,18 @@ router.put('/api/owner/places/:id', requireOwner, async (req, res) => {
          barrio = COALESCE($4, barrio), ciudad = COALESCE($5, ciudad), capacidad = COALESCE($6, capacidad),
          precio_hora = COALESCE($7, precio_hora), modalidad = COALESCE($8, modalidad),
          caracteristicas = COALESCE($9, caracteristicas), nivel_ruido = COALESCE($10, nivel_ruido),
-         image_url = CASE WHEN $16 THEN $11 ELSE image_url END, active = COALESCE($12, active), updated_at = CURRENT_TIMESTAMP
+         image_url = CASE WHEN $16 THEN $11 ELSE image_url END,
+         active = COALESCE($12, owner_active), owner_active = COALESCE($12, owner_active), updated_at = CURRENT_TIMESTAMP
        WHERE id = $13 AND owner_id = $14
        RETURNING id, name, tipo, direccion, barrio, ciudad, capacidad, precio_hora, modalidad,
-                 caracteristicas, nivel_ruido, image_url, active, created_at`,
+                 caracteristicas, nivel_ruido, image_url, owner_active AS active, created_at`,
       [
         typeof payload.name === 'string' ? payload.name.trim() || null : null,
         typeof payload.tipo === 'string' ? payload.tipo.trim() || null : null,
         typeof payload.direccion === 'string' ? payload.direccion.trim() || null : null,
         typeof payload.barrio === 'string' ? payload.barrio.trim() || null : null,
         typeof payload.ciudad === 'string' ? payload.ciudad.trim() || null : null,
-        typeof payload.capacidad === 'string' ? payload.capacidad.trim() || null : null,
+        payload.capacidad !== undefined ? String(payload.capacidad).trim() || null : null,
         price,
         typeof payload.modalidad === 'string' ? payload.modalidad.trim() || null : null,
         typeof payload.caracteristicas === 'string' ? payload.caracteristicas.trim() || null : null,
@@ -148,7 +171,16 @@ router.delete('/api/owner/places/:id', requireOwner, async (req, res) => {
 router.get('/api/owner/reservations', requireOwner, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.check_in, r.check_out, r.huespedes,
+      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.check_in, r.check_out,
+              TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
+              TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time, r.huespedes,
+              (
+                r.check_out < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+                OR (
+                  r.check_out = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+                  AND COALESCE(r.check_out_time, TIME '23:59:59') <= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::time
+                )
+              ) AS can_complete,
               r.estado, r.created_at, u.full_name AS customer_name, p.name AS place_name
        FROM reservations r
        JOIN places p ON p.id = r.place_id
@@ -180,8 +212,14 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
     await client.query('BEGIN');
     inTransaction = true;
     const currentResult = await client.query(
-      `SELECT r.id, r.user_id, r.estado, r.hotel, r.check_out, r.place_id,
-              r.check_out <= CURRENT_DATE AS can_complete
+      `SELECT r.id, r.user_id, r.estado, r.hotel, r.check_out, r.check_out_time, r.place_id,
+              (
+                r.check_out < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+                OR (
+                  r.check_out = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+                  AND COALESCE(r.check_out_time, TIME '23:59:59') <= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::time
+                )
+              ) AS can_complete
        FROM reservations r JOIN places p ON p.id = r.place_id
        WHERE r.id = $1 AND p.owner_id = $2 FOR UPDATE OF r`,
       [id, req.ownerUserId]
@@ -219,7 +257,9 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
          cancellation_reason = CASE WHEN $1 = 'cancelada' THEN $2 ELSE NULL END,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
-       RETURNING id, user_id, hotel, estado, check_in, check_out, huespedes, place_id`,
+       RETURNING id, user_id, hotel, estado, check_in, check_out,
+                 TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
+                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, place_id`,
       [estado, reason || (estado === 'cancelada' ? 'Cancelada por el anfitrión.' : null), id]
     );
     const labels = {

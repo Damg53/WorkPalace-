@@ -468,6 +468,11 @@ html[data-theme="dark"] .wp-auth__message--info {
   .wp-auth__back {
     margin-bottom: 27px;
   }
+
+  .wp-auth__heading,
+  .wp-auth__subtitle {
+    text-align: center;
+  }
 }
 
 @media (max-width: 460px) {

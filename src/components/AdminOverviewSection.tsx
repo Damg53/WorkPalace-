@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AdminCoupon, AdminPlace, AdminReservation, AdminUser } from './adminTypes'
+import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
 
 interface AdminOverviewSectionProps {
   users: AdminUser[]
@@ -29,6 +30,26 @@ function reservationIncomeInRange(reservations: AdminReservation[], start: numbe
     if (!Number.isFinite(createdAt) || createdAt < start || createdAt >= end || !Number.isFinite(amount)) return total
     return total + amount
   }, 0)
+}
+
+function dateInBogota(timestamp: number) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(timestamp))
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function couponExpiration(coupon: AdminCoupon) {
+  if (!coupon.ends_at) return null
+  const date = coupon.ends_at.slice(0, 10)
+  const time = coupon.ends_at_time?.slice(0, 5) || null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))) return null
+  const expiresAt = Date.parse(`${date}T${time ? `${time}:00` : '23:59:59'}-05:00`)
+  return Number.isFinite(expiresAt) ? { date, time, expiresAt } : null
 }
 
 export default function AdminOverviewSection({ users, reservations, places, coupons }: AdminOverviewSectionProps) {
@@ -71,19 +92,22 @@ export default function AdminOverviewSection({ users, reservations, places, coup
   const topCities = Object.entries(cityCounts).sort(([, first], [, second]) => second - first).slice(0, 5)
   const inactiveUsers = users.filter((user) => user.active === false).length
   const inactivePlaces = places.filter((place) => place.active === false).length
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const alertWindow = new Date(today)
-  alertWindow.setDate(alertWindow.getDate() + 7)
-  const couponsNeedingAttention = coupons.filter((coupon) => {
-    if (!coupon.active || !coupon.ends_at) return false
-    const endDate = new Date(`${coupon.ends_at.slice(0, 10)}T00:00:00`)
-    return endDate >= today && endDate <= alertWindow
-  }).length
-  const expiredActiveCoupons = coupons.filter((coupon) => {
-    if (!coupon.active || !coupon.ends_at) return false
-    return new Date(`${coupon.ends_at.slice(0, 10)}T00:00:00`) < today
-  }).length
+  const todayInBogota = dateInBogota(now)
+  const tomorrowDate = new Date(`${todayInBogota}T00:00:00.000Z`)
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1)
+  const tomorrowInBogota = tomorrowDate.toISOString().slice(0, 10)
+  const couponExpirations = coupons
+    .filter((coupon) => coupon.active)
+    .map((coupon) => ({ coupon, expiration: couponExpiration(coupon) }))
+    .filter((item): item is { coupon: AdminCoupon; expiration: NonNullable<ReturnType<typeof couponExpiration>> } => item.expiration !== null)
+  const couponsNeedingAttention = couponExpirations
+    .filter(({ expiration }) => expiration.expiresAt >= now && expiration.expiresAt <= now + 7 * 24 * 60 * 60 * 1000)
+    .sort((first, second) => first.expiration.expiresAt - second.expiration.expiresAt)
+  const expiredActiveCoupons = couponExpirations.filter(({ expiration }) => expiration.expiresAt < now).length
+  const nextCouponExpiration = couponsNeedingAttention[0]?.expiration
+  const nextCouponExpiryLabel = nextCouponExpiration
+    ? `${nextCouponExpiration.date === todayInBogota ? 'hoy' : nextCouponExpiration.date === tomorrowInBogota ? 'mañana' : formatReadableDate(nextCouponExpiration.date)} ${nextCouponExpiration.time ? `a las ${formatReadableTime(nextCouponExpiration.time)}` : 'al final del día'}`
+    : ''
   const recentUsers = users.slice(-4).reverse()
   const recentReservations = reservations.slice(-4).reverse()
   const recentPlaces = places.slice(-4).reverse()
@@ -96,12 +120,17 @@ export default function AdminOverviewSection({ users, reservations, places, coup
   const inactivePlacesMessage = inactivePlaces
     ? `${inactivePlaces} lugar${inactivePlaces === 1 ? '' : 'es'} desactivado${inactivePlaces === 1 ? '' : 's'}.`
     : 'Todos los lugares están publicados.'
-  const couponAlertMessage = expiredActiveCoupons
-    ? `${expiredActiveCoupons} cupón${expiredActiveCoupons === 1 ? '' : 'es'} activo${expiredActiveCoupons === 1 ? '' : 's'} ya vencido${expiredActiveCoupons === 1 ? '' : 's'}.`
-    : couponsNeedingAttention
-      ? `${couponsNeedingAttention} cupón${couponsNeedingAttention === 1 ? '' : 'es'} vence${couponsNeedingAttention === 1 ? '' : 'n'} en los próximos 7 días.`
-      : 'No hay cupones próximos a vencer.'
-  const couponAlertCount = expiredActiveCoupons + couponsNeedingAttention
+  const couponAlertMessage = [
+    expiredActiveCoupons
+      ? `${expiredActiveCoupons} cupón${expiredActiveCoupons === 1 ? '' : 'es'} activo${expiredActiveCoupons === 1 ? '' : 's'} ya vencido${expiredActiveCoupons === 1 ? '' : 's'}.`
+      : '',
+    couponsNeedingAttention.length === 1
+      ? `1 cupón vence ${nextCouponExpiryLabel}.`
+      : couponsNeedingAttention.length > 1
+        ? `${couponsNeedingAttention.length} cupones vencen en los próximos 7 días. El próximo vence ${nextCouponExpiryLabel}.`
+        : '',
+  ].filter(Boolean).join(' ') || 'No hay cupones próximos a vencer.'
+  const couponAlertCount = expiredActiveCoupons + couponsNeedingAttention.length
 
   return (
     <section className="admin-overview">
@@ -173,7 +202,7 @@ export default function AdminOverviewSection({ users, reservations, places, coup
       </div>
 
       <div className="admin-overview-grid activity-grid">
-        <article className="overview-card activity-card activity-users"><div className="overview-card-heading"><div><span className="overview-kicker">Actividad reciente</span><h2>Nuevos usuarios</h2></div><span className="activity-count">{recentUsers.length}</span></div><div className="activity-list">{recentUsers.length ? recentUsers.map((user) => <div className="activity-item" key={user.id}><span className="activity-icon activity-user-icon"><i className="fa fa-user" aria-hidden="true" /></span><div><strong>{text(user.full_name, user.username)}</strong><span>@{user.username}</span></div></div>) : <p className="overview-empty">No hay usuarios recientes.</p>}</div></article>
+        <article className="overview-card activity-card activity-users"><div className="overview-card-heading"><div><span className="overview-kicker">Actividad reciente</span><h2>Nuevos usuarios</h2></div><span className="activity-count">{recentUsers.length}</span></div><div className="activity-list">{recentUsers.length ? recentUsers.map((user) => <div className="activity-item" key={user.id}><span className="activity-icon activity-user-icon"><i className="fa fa-user" aria-hidden="true" /></span><div><strong>{text(user.full_name, user.username)}</strong><span>{user.username}</span></div></div>) : <p className="overview-empty">No hay usuarios recientes.</p>}</div></article>
         <article className="overview-card activity-card activity-reservations"><div className="overview-card-heading"><div><span className="overview-kicker">Actividad reciente</span><h2>Últimas reservas</h2></div><span className="activity-count">{recentReservations.length}</span></div><div className="activity-list">{recentReservations.length ? recentReservations.map((reservation) => <div className="activity-item" key={reservation.id}><span className="activity-icon"><i className="fa fa-calendar" aria-hidden="true" /></span><div><strong>{text(reservation.hotel, 'Reserva sin alojamiento')}</strong><span>{text(reservation.username, 'Cliente')} · {text(reservation.estado, 'Sin estado')}</span></div></div>) : <p className="overview-empty">No hay reservas recientes.</p>}</div></article>
         <article className="overview-card activity-card activity-places"><div className="overview-card-heading"><div><span className="overview-kicker">Actividad reciente</span><h2>Nuevos lugares</h2></div><span className="activity-count">{recentPlaces.length}</span></div><div className="activity-list">{recentPlaces.length ? recentPlaces.map((place) => <div className="activity-item" key={place.id}><span className="activity-icon"><i className="fa fa-home" aria-hidden="true" /></span><div><strong>{place.name}</strong><span>{text(place.tipo, 'Espacio')} · {text(place.ciudad, 'Sin ciudad')}</span></div></div>) : <p className="overview-empty">No hay lugares recientes.</p>}</div></article>
       </div>

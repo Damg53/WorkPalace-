@@ -36,7 +36,7 @@ export default function AdminUsersSection({ users, updateRole, toggleUserActive,
                   <td className="user-id" data-label="ID">#{user.id}</td>
                   <td className="user-name" data-label="Nombre">{String(user.full_name ?? '')}</td>
                   <td className="user-email" data-label="Email">{String(user.email ?? '')}</td>
-                  <td className="user-username" data-label="Usuario">@{user.username}</td>
+                  <td className="user-username" data-label="Usuario">{user.username}</td>
                   <td data-label="Rol">
                     <select className="role-select" value={user.role} onChange={(event) => updateRole(user.id, event.target.value)}>
                       <option value="user">Usuario</option>
