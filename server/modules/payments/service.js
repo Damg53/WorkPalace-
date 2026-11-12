@@ -14,12 +14,16 @@ export const isValidCardExpiry = (value) => {
 export async function findCoupon(code) {
   try {
     const result = await pool.query(
-      `SELECT code, discount, max_uses, used_count, starts_at, ends_at, active
+      `SELECT code, discount, max_uses, used_count, starts_at, ends_at, ends_at_time, active
        FROM coupons
        WHERE code = $1
          AND active = TRUE
-         AND (starts_at IS NULL OR starts_at <= CURRENT_DATE)
-         AND (ends_at IS NULL OR ends_at >= CURRENT_DATE)
+         AND (starts_at IS NULL OR starts_at <= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date)
+         AND (
+           ends_at IS NULL
+           OR ends_at + COALESCE(ends_at_time, TIME '23:59:59')
+             >= CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota'
+         )
          AND (max_uses IS NULL OR used_count < max_uses)`,
       [code]
     );

@@ -3,8 +3,38 @@ import pool from '../../db.js';
 import { requireAdmin } from '../../middleware/admin.js';
 import { syncPlaceReservationState } from '../availability/service.js';
 import { findCoupon, isValidCardExpiry } from '../payments/service.js';
+import { normalizeColombianPhone } from '../../shared/validation.js';
 
 const router = Router();
+
+function isValidDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isValidTime(value) {
+  return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function bogotaDate() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getEndDateTime(startDate, startTime, durationHours) {
+  const totalMinutes = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3)) + durationHours * 60;
+  const date = new Date(`${startDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + Math.floor(totalMinutes / 1440));
+  const endTime = `${String(Math.floor((totalMinutes % 1440) / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+  return { date: date.toISOString().slice(0, 10), time: endTime };
+}
 
 router.get('/api/reservations', async (req, res) => {
   try {
@@ -17,7 +47,9 @@ router.get('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
     const result = await pool.query(
-      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.ubicacion, r.check_in, r.check_out, r.huespedes,
+      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.ubicacion, r.check_in, r.check_out,
+              TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
+              TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time, r.huespedes,
               r.estado, r.cancellation_reason, r.coupon_code, r.total_amount, r.place_id, r.created_at,
               review.id AS review_id, review.rating AS review_rating, review.comment AS review_comment
        FROM reservations r
@@ -46,12 +78,26 @@ router.post('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
 
-    const { placeId, checkIn, checkOut, huespedes, payment } = req.body || {};
+    const { placeId, checkIn, checkOut, checkInTime, checkOutTime, phone, huespedes, payment } = req.body || {};
     const couponCode = typeof req.body?.couponCode === 'string'
       ? req.body.couponCode.trim().toUpperCase()
       : null;
     if (!placeId || !checkIn || !checkOut) {
       return res.status(400).json({ error: 'placeId, checkIn y checkOut son requeridos' });
+    }
+    if (!isValidDate(checkIn) || !isValidDate(checkOut) || checkOut < checkIn) {
+      return res.status(400).json({ error: 'Las fechas de la reserva no son válidas.' });
+    }
+    const isHourly = checkInTime !== undefined || checkOutTime !== undefined;
+    if (isHourly && (!isValidTime(checkInTime) || !isValidTime(checkOutTime))) {
+      return res.status(400).json({ error: 'Debes seleccionar horas válidas para el inicio y la salida.' });
+    }
+    if (!isHourly && (checkIn <= bogotaDate() || checkOut <= checkIn)) {
+      return res.status(400).json({ error: 'Las reservas por días deben iniciar desde mañana y tener una fecha de salida posterior.' });
+    }
+    const phoneDigits = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+    if (phoneDigits.length !== 10 || !phoneDigits.startsWith('3') || !normalizeColombianPhone(phone)) {
+      return res.status(400).json({ error: 'Ingresa un celular colombiano válido de 10 dígitos que empiece por 3.' });
     }
     if (payment?.method === 'card' && !isValidCardExpiry(payment.exp)) {
       return res.status(400).json({ error: 'La tarjeta está vencida o la fecha no es válida.' });
@@ -78,7 +124,7 @@ router.post('/api/reservations', async (req, res) => {
     inTransaction = true;
 
     const placeResult = await client.query(
-      `SELECT id, name, tipo, barrio, ciudad, precio_hora, active, owner_id FROM places WHERE id = $1 FOR UPDATE`,
+      `SELECT id, name, tipo, barrio, ciudad, precio_hora, owner_active AS active, owner_id FROM places WHERE id = $1 FOR UPDATE`,
       [pid]
     );
     if (placeResult.rows.length === 0) {
@@ -103,6 +149,20 @@ router.post('/api/reservations', async (req, res) => {
       inTransaction = false;
       return res.status(400).json({ error: 'La cantidad de unidades de la reserva no es válida.' });
     }
+    if (isHourly) {
+      const expectedEnd = getEndDateTime(checkIn, checkInTime, quantity);
+      if (expectedEnd.date !== checkOut || expectedEnd.time !== checkOutTime) {
+        await client.query('ROLLBACK');
+        inTransaction = false;
+        return res.status(400).json({ error: 'La hora de salida debe corresponder a la duración seleccionada.' });
+      }
+      const start = new Date(`${checkIn}T${checkInTime}:00-05:00`);
+      if (start <= new Date()) {
+        await client.query('ROLLBACK');
+        inTransaction = false;
+        return res.status(400).json({ error: 'La hora de inicio debe ser futura en la zona horaria de Colombia.' });
+      }
+    }
     const subtotal = Number(place.precio_hora ?? 45000) * quantity;
     const discount = coupon ? Math.round(subtotal * (Number(coupon.discount) / 100)) : 0;
     const simulatedTotal = subtotal - discount + Math.round((subtotal - discount) * 0.08);
@@ -111,8 +171,17 @@ router.post('/api/reservations', async (req, res) => {
       `SELECT id FROM reservations
        WHERE place_id = $1 AND active = TRUE AND estado IN ('pendiente', 'confirmada')
          AND check_out >= $2::date AND check_in <= $3::date
+         AND (
+           $4::time IS NULL
+           OR check_in_time IS NULL
+           OR check_out_time IS NULL
+           OR (
+             (check_in + check_in_time) < ($3::date + $5::time)
+             AND ($2::date + $4::time) < (check_out + check_out_time)
+           )
+         )
        LIMIT 1`,
-      [pid, checkIn, checkOut]
+      [pid, checkIn, checkOut, isHourly ? checkInTime : null, isHourly ? checkOutTime : null]
     );
     if (existingReservation.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -136,10 +205,13 @@ router.post('/api/reservations', async (req, res) => {
     const ubicacion = ubicacionParts.join(', ');
 
     const insert = await client.query(
-      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code, total_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendiente', $8, $9, $10)
-       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, place_id, coupon_code, total_amount, created_at`,
-      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, quantity, pid, couponCode, simulatedTotal]
+      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, check_in_time, check_out_time, huespedes, estado, place_id, coupon_code, total_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendiente', $10, $11, $12)
+       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
+                 TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
+                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
+                 huespedes, estado, place_id, coupon_code, total_amount, created_at`,
+      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, isHourly ? checkInTime : null, isHourly ? checkOutTime : null, quantity, pid, couponCode, simulatedTotal]
     );
 
     await client.query(
@@ -149,7 +221,7 @@ router.post('/api/reservations', async (req, res) => {
         uid,
         insert.rows[0].id,
         'Solicitud de reserva enviada',
-        `Tu reserva para ${place.name} del ${checkIn} al ${checkOut} quedó pendiente de confirmación.`,
+        `Tu reserva para ${place.name} del ${checkIn}${isHourly ? ` a las ${checkInTime}` : ''} al ${checkOut}${isHourly ? ` a las ${checkOutTime}` : ''} quedó pendiente de confirmación.`,
         'info',
       ]
     );
@@ -183,6 +255,8 @@ router.get('/api/admin/reservations', requireAdmin, async (_req, res) => {
               r.ubicacion,
               r.check_in,
               r.check_out,
+              TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
+              TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time,
               r.huespedes,
               r.estado,
               r.cancellation_reason,
@@ -236,7 +310,7 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     inTransaction = true;
 
     const previousResult = await client.query(
-      'SELECT id, user_id, hotel, estado, check_in, check_out, huespedes FROM reservations WHERE id = $1 FOR UPDATE',
+      'SELECT id, user_id, hotel, estado, check_in, check_out, check_in_time, check_out_time, huespedes FROM reservations WHERE id = $1 FOR UPDATE',
       [rid]
     );
     if (previousResult.rows.length === 0) {
@@ -248,6 +322,11 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(400).json({ error: 'Selecciona un motivo para cancelar la reserva.' });
+    }
+    if (previousResult.rows[0].check_in_time && typeof huespedes === 'number' && huespedes !== previousResult.rows[0].huespedes) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'La duración de una reserva por hora no se puede cambiar desde administración.' });
     }
     if (cancellationReason.length > 500) {
       await client.query('ROLLBACK');
@@ -268,7 +347,10 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
            ELSE cancellation_reason
          END
        WHERE id = $6
-      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, active, place_id, total_amount, created_at`,
+      RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
+                TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
+                TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
+                huespedes, estado, cancellation_reason, active, place_id, total_amount, created_at`,
       [
         checkIn || null,
         checkOut || null,
@@ -326,7 +408,7 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
 
     if (['completada', 'cancelada'].includes(result.rows[0].estado)) {
       await pool.query(
-        'UPDATE places SET active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        'UPDATE places SET active = owner_active, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
         [result.rows[0].place_id]
       );
     } else {
@@ -429,7 +511,7 @@ router.delete('/api/reservations/:id', async (req, res) => {
 
     // Actualizar estado a cancelada
     const updated = await client.query(
-      "UPDATE reservations SET estado = $1, cancellation_reason = 'Cancelada por el usuario.' WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado, cancellation_reason, created_at",
+      "UPDATE reservations SET estado = $1, cancellation_reason = 'Cancelada por el usuario.' WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time, TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, estado, cancellation_reason, created_at",
       ['cancelada', rid]
     );
 

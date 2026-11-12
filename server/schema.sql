@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS reservations (
   ubicacion VARCHAR(255) NOT NULL,
   check_in DATE NOT NULL,
   check_out DATE NOT NULL,
+  check_in_time TIME,
+  check_out_time TIME,
   huespedes INT NOT NULL DEFAULT 1,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
   coupon_code VARCHAR(50),
@@ -67,6 +69,8 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_in_time TIME;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_out_time TIME;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);
 
 CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);
@@ -82,10 +86,13 @@ CREATE TABLE IF NOT EXISTS coupons (
   used_count INT NOT NULL DEFAULT 0,
   starts_at DATE,
   ends_at DATE,
+  ends_at_time TIME,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS ends_at_time TIME;
 
 -- Registro de acciones administrativas
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
@@ -116,12 +123,14 @@ CREATE TABLE IF NOT EXISTS places (
   image_url TEXT,
   owner_id INT REFERENCES users(id) ON DELETE SET NULL,
   active BOOLEAN DEFAULT TRUE NOT NULL,
+  owner_active BOOLEAN,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Agregar columna active si no existe (para migración)
 ALTER TABLE places ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS owner_active BOOLEAN;
 
 -- Agregar columna image_url si no existe (para migración)
 ALTER TABLE places ADD COLUMN IF NOT EXISTS image_url TEXT;
@@ -132,6 +141,16 @@ CREATE INDEX IF NOT EXISTS idx_places_owner_id ON places(owner_id);
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS place_id INT REFERENCES places(id) ON DELETE SET NULL;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+UPDATE places
+SET owner_active = active OR EXISTS (
+  SELECT 1 FROM reservations
+  WHERE reservations.place_id = places.id
+    AND reservations.active = TRUE
+    AND reservations.estado IN ('pendiente', 'confirmada')
+)
+WHERE owner_active IS NULL;
+ALTER TABLE places ALTER COLUMN owner_active SET DEFAULT TRUE;
+ALTER TABLE places ALTER COLUMN owner_active SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS place_reviews (
   id SERIAL PRIMARY KEY,

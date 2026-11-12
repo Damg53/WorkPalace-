@@ -4,6 +4,7 @@ import './Dashboard.css'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE_URL, cancelReservation } from '../services/api'
+import { formatReadableTime } from '../utils/dateFormatting'
 
 interface DashboardProps {
   user: { id?: number; username: string; role?: string; fullName?: string; email?: string }
@@ -23,6 +24,7 @@ interface Reserva {
   checkOut: string
   checkInRaw: string
   checkOutRaw: string
+  isHourly: boolean
   huespedes: number
   estado: EstadoReserva
   cancellationReason: string | null
@@ -38,6 +40,8 @@ interface ReservaApiRecord {
   ubicacion: string
   check_in: string
   check_out: string
+  check_in_time?: string | null
+  check_out_time?: string | null
   huespedes: number
   estado: string
   cancellation_reason?: string | null
@@ -104,10 +108,11 @@ function mapReservation(reservation: ReservaApiRecord): Reserva {
     hotel: reservation.hotel,
     tipo: reservation.tipo_alojamiento,
     ubicacion: reservation.ubicacion,
-    checkIn: formatDate(reservation.check_in),
-    checkOut: formatDate(reservation.check_out),
+    checkIn: `${formatDate(reservation.check_in)}${reservation.check_in_time ? ` · ${formatReadableTime(reservation.check_in_time)}` : ''}`,
+    checkOut: `${formatDate(reservation.check_out)}${reservation.check_out_time ? ` · ${formatReadableTime(reservation.check_out_time)}` : ''}`,
     checkInRaw: reservation.check_in,
     checkOutRaw: reservation.check_out,
+    isHourly: Boolean(reservation.check_in_time),
     huespedes: reservation.huespedes,
     estado: reservation.estado as EstadoReserva,
     cancellationReason: reservation.cancellation_reason ?? null,
@@ -585,7 +590,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                 <th>Ubicación</th>
                 <th>Check-in</th>
                 <th>Check-out</th>
-                <th>Huéspedes</th>
+                <th>Huéspedes / horas</th>
                 <th>Estado</th>
                 {showActions && <th>Acciones</th>}
               </tr>
@@ -607,7 +612,9 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                     <td data-label="Ubicación">{r.ubicacion}</td>
                     <td data-label="Check-in">{r.checkIn}</td>
                     <td data-label="Check-out">{r.checkOut}</td>
-                    <td data-label="Huéspedes">{r.huespedes}</td>
+                    <td data-label={r.isHourly ? 'Duración' : 'Huéspedes'}>
+                      {r.huespedes}{r.isHourly ? ' horas' : ''}
+                    </td>
                     <td data-label="Estado">
                       <span className={`reservation-badge ${r.estado}`}>
                         {r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}
@@ -664,8 +671,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                   <strong>{r.ubicacion}</strong>
                 </div>
                 <div>
-                  <span className="reservation-card__label">Huéspedes</span>
-                  <strong>{r.huespedes}</strong>
+                  <span className="reservation-card__label">{r.isHourly ? 'Duración' : 'Huéspedes'}</span>
+                  <strong>{r.huespedes}{r.isHourly ? ' horas' : ''}</strong>
                 </div>
               </div>
 
@@ -1071,8 +1078,8 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                 <dd>{selectedReservation.checkOut}</dd>
               </div>
               <div>
-                <dt>Huéspedes</dt>
-                <dd>{selectedReservation.huespedes}</dd>
+                <dt>{selectedReservation.isHourly ? 'Duración' : 'Huéspedes'}</dt>
+                <dd>{selectedReservation.huespedes}{selectedReservation.isHourly ? ' horas' : ''}</dd>
               </div>
             </dl>
 

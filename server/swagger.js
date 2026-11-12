@@ -10,6 +10,8 @@ const errorResponse = {
 };
 
 const stringField = (description) => ({ type: 'string', description });
+const dateField = (description) => ({ type: 'string', format: 'date', description });
+const timeField = (description) => ({ type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$', description });
 const integerField = (description) => ({ type: 'integer', description });
 const booleanField = (description) => ({ type: 'boolean', description });
 const objectBody = (properties, required = []) => ({
@@ -145,27 +147,32 @@ const bodySchemas = {
     label: stringField('Descripción del cupón.'),
     discount: integerField('Porcentaje de descuento (1 a 100).'),
     maxUses: integerField('Máximo de usos (opcional).'),
-    startsAt: stringField('Fecha de inicio (opcional).'),
-    endsAt: stringField('Fecha de finalización (opcional).'),
+    startsAt: dateField('Fecha de inicio (opcional).'),
+    endsAt: dateField('Fecha de finalización (opcional).'),
+    endsAtTime: timeField('Hora de vencimiento en hora de Colombia (HH:MM, opcional; sin hora vence al final del día).'),
   }, ['code', 'label', 'discount']),
   couponUpdate: objectBody({
     label: stringField('Descripción del cupón.'),
     discount: integerField('Porcentaje de descuento.'),
     maxUses: integerField('Máximo de usos.'),
-    startsAt: stringField('Fecha de inicio.'),
-    endsAt: stringField('Fecha de finalización.'),
+    startsAt: dateField('Fecha de inicio.'),
+    endsAt: dateField('Fecha de finalización.'),
+    endsAtTime: timeField('Hora de vencimiento en formato HH:MM.'),
     active: booleanField('Indica si el cupón está activo.'),
   }),
   blockCreate: objectBody({
     placeId: integerField('ID del espacio.'),
     startsAt: stringField('Fecha de inicio del bloqueo (AAAA-MM-DD).'),
     endsAt: stringField('Fecha de finalización del bloqueo (AAAA-MM-DD).'),
-    reason: stringField('Motivo del bloqueo.'),
-  }, ['placeId', 'startsAt', 'endsAt']),
+    reason: { type: 'string', minLength: 1, maxLength: 500, description: 'Motivo obligatorio del bloqueo.' },
+  }, ['placeId', 'startsAt', 'endsAt', 'reason']),
   reservationCreate: objectBody({
     placeId: integerField('ID del espacio.'),
     checkIn: stringField('Fecha de inicio (AAAA-MM-DD).'),
     checkOut: stringField('Fecha de finalización (AAAA-MM-DD).'),
+    checkInTime: stringField('Hora de inicio opcional en formato HH:MM; permite reservar desde el minuto elegido.'),
+    checkOutTime: stringField('Hora de salida correspondiente a la duración en horas.'),
+    phone: stringField('Celular colombiano de 10 dígitos que comienza por 3.'),
     huespedes: integerField('Cantidad de huéspedes.'),
     couponCode: stringField('Código del cupón (opcional).'),
     payment: {
@@ -175,7 +182,7 @@ const bodySchemas = {
         exp: stringField('Vencimiento de tarjeta (MM/AA).'),
       },
     },
-  }, ['placeId', 'checkIn', 'checkOut']),
+  }, ['placeId', 'checkIn', 'checkOut', 'phone']),
   reservationUpdate: objectBody({
     checkIn: stringField('Fecha de inicio (AAAA-MM-DD).'),
     checkOut: stringField('Fecha de finalización (AAAA-MM-DD).'),
@@ -189,13 +196,19 @@ const bodySchemas = {
     direccion: stringField('Dirección.'),
     barrio: stringField('Barrio.'),
     ciudad: stringField('Ciudad.'),
-    capacidad: integerField('Capacidad.'),
+    capacidad: {
+      oneOf: [
+        { type: 'integer', minimum: 1 },
+        { type: 'string', pattern: '^[0-9]+$' },
+      ],
+      description: 'Capacidad entera mayor que cero.',
+    },
     precio_hora: integerField('Precio por hora.'),
     modalidad: stringField('Modalidad.'),
     caracteristicas: stringField('Características.'),
     nivel_ruido: stringField('Nivel de ruido.'),
     image_url: stringField('URL de la imagen.'),
-  }, ['name', 'tipo']),
+  }, ['name', 'tipo', 'capacidad']),
   placeUpdate: objectBody({
     name: stringField('Nombre del espacio.'),
     tipo: stringField('Tipo de espacio.'),

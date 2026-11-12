@@ -1,21 +1,22 @@
 import { useState } from 'react'
 import type { AdminAuditLog, AdminBlock, AdminCoupon, AdminPlace } from './adminTypes'
+import { containsProfanity } from '../utils/contentValidation'
+import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
 
 interface Props {
   coupons: AdminCoupon[]
   blocks: AdminBlock[]
   auditLogs: AdminAuditLog[]
   places: AdminPlace[]
-  createCoupon: (payload: { code: string; label: string; discount: number; maxUses: number | null; startsAt: string; endsAt: string }) => Promise<void>
+  createCoupon: (payload: { code: string; label: string; discount: number; maxUses: number | null; startsAt: string; endsAt: string; endsAtTime: string }) => Promise<void>
   toggleCoupon: (id: number, active: boolean) => Promise<void>
   deleteCoupon: (id: number) => Promise<void>
   createBlock: (payload: { placeId: number; startsAt: string; endsAt: string; reason: string }) => Promise<void>
   deleteBlock: (id: number) => Promise<void>
 }
 
-const emptyCoupon = { code: '', label: '', discount: 10, maxUses: '', startsAt: '', endsAt: '' }
+const emptyCoupon = { code: '', label: '', discount: 10, maxUses: '', startsAt: '', endsAt: '', endsAtTime: '' }
 const emptyBlock = { placeId: '', startsAt: '', endsAt: '', reason: '' }
-const dateOnly = (value: string) => value.slice(0, 10)
 const actionLabel = (action: string) => ({ create: 'Creado', update: 'Actualizado', delete: 'Eliminado' }[action] || action)
 const entityLabel = (entity: string) => ({ coupon: 'Cupón', place_block: 'Bloqueo de disponibilidad', place: 'Espacio', reservation: 'Reserva', user: 'Usuario' }[entity] || entity)
 const auditDetail = (log: AdminAuditLog) => {
@@ -30,6 +31,7 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
   const [couponForm, setCouponForm] = useState(emptyCoupon)
   const [blockForm, setBlockForm] = useState(emptyBlock)
   const [message, setMessage] = useState('')
+  const [blockError, setBlockError] = useState('')
 
   const submitCoupon = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -44,6 +46,15 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
 
   const submitBlock = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!blockForm.reason.trim()) {
+      setBlockError('El motivo del bloqueo es obligatorio.')
+      return
+    }
+    if (containsProfanity(blockForm.reason)) {
+      setBlockError('No se permiten palabras ofensivas en el motivo.')
+      return
+    }
+    setBlockError('')
     try {
       await createBlock({ ...blockForm, placeId: Number(blockForm.placeId) })
       setBlockForm(emptyBlock)
@@ -63,11 +74,12 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
             <input placeholder="Descripción" value={couponForm.label} onChange={(event) => setCouponForm({ ...couponForm, label: event.target.value })} required />
             <label>Descuento (%)<input type="number" min="1" max="100" placeholder="Ej.: 10 = 10% menos" value={couponForm.discount} onChange={(event) => setCouponForm({ ...couponForm, discount: Number(event.target.value) })} required /></label>
             <input type="number" min="1" placeholder="Usos máximos" value={couponForm.maxUses} onChange={(event) => setCouponForm({ ...couponForm, maxUses: event.target.value })} />
-            <label>Desde<input type="date" value={couponForm.startsAt} onChange={(event) => setCouponForm({ ...couponForm, startsAt: event.target.value })} /></label>
-            <label>Hasta<input type="date" value={couponForm.endsAt} onChange={(event) => setCouponForm({ ...couponForm, endsAt: event.target.value })} /></label>
+            <label>Desde<input type="date" value={couponForm.startsAt} max={couponForm.endsAt || undefined} onChange={(event) => setCouponForm({ ...couponForm, startsAt: event.target.value })} /></label>
+            <label>Hasta<input type="date" value={couponForm.endsAt} min={couponForm.startsAt || undefined} onChange={(event) => setCouponForm({ ...couponForm, endsAt: event.target.value, endsAtTime: event.target.value ? couponForm.endsAtTime : '' })} /></label>
+            <label>Hora de vencimiento (Colombia)<input type="time" value={couponForm.endsAtTime} onChange={(event) => setCouponForm({ ...couponForm, endsAtTime: event.target.value })} disabled={!couponForm.endsAt} /><small>Opcional. Si queda vacía, vence al final del día.</small></label>
             <button className="btn btn-primary" type="submit">Crear cupón</button>
           </form>
-          <div className="admin-mini-list">{coupons.map((coupon) => <div className="admin-mini-row" key={coupon.id}><div><strong>{coupon.code}</strong><span>{coupon.label} · {coupon.discount}% · {coupon.used_count}{coupon.max_uses ? `/${coupon.max_uses}` : ''} usos</span></div><div><button className="btn btn-secondary" onClick={() => toggleCoupon(coupon.id, !coupon.active)}>{coupon.active ? 'Desactivar' : 'Activar'}</button><button className="user-delete-button" onClick={() => deleteCoupon(coupon.id)}>Eliminar</button></div></div>)}</div>
+          <div className="admin-mini-list">{coupons.map((coupon) => <div className="admin-mini-row" key={coupon.id}><div><strong>{coupon.code}</strong><span>{coupon.label} · {coupon.discount}% · {coupon.used_count}{coupon.max_uses ? `/${coupon.max_uses}` : ''} usos</span><span>{coupon.ends_at ? `Vence ${formatReadableDate(coupon.ends_at)}${coupon.ends_at_time ? ` a las ${formatReadableTime(coupon.ends_at_time)}` : ' al final del día'}` : 'Sin vencimiento'}</span></div><div><button className="btn btn-secondary" onClick={() => toggleCoupon(coupon.id, !coupon.active)}>{coupon.active ? 'Desactivar' : 'Activar'}</button><button className="user-delete-button" onClick={() => deleteCoupon(coupon.id)}>Eliminar</button></div></div>)}</div>
         </article>
 
         <article className="users-section">
@@ -76,10 +88,11 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
             <select value={blockForm.placeId} onChange={(event) => setBlockForm({ ...blockForm, placeId: event.target.value })} required><option value="">Selecciona un espacio</option>{places.map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}</select>
             <label>Desde<input type="date" value={blockForm.startsAt} onChange={(event) => setBlockForm({ ...blockForm, startsAt: event.target.value })} required /></label>
             <label>Hasta<input type="date" value={blockForm.endsAt} onChange={(event) => setBlockForm({ ...blockForm, endsAt: event.target.value })} required /></label>
-            <input placeholder="Motivo" value={blockForm.reason} onChange={(event) => setBlockForm({ ...blockForm, reason: event.target.value })} />
+            <input placeholder="Motivo *" value={blockForm.reason} onChange={(event) => setBlockForm({ ...blockForm, reason: event.target.value })} maxLength={500} required />
             <button className="btn btn-primary" type="submit">Bloquear fechas</button>
           </form>
-          <div className="admin-mini-list">{blocks.map((block) => <div className="admin-mini-row" key={block.id}><div><strong>{block.place_name || `Lugar #${block.place_id}`}</strong><span>{dateOnly(block.starts_at)} a {dateOnly(block.ends_at)}{block.reason ? ` · ${block.reason}` : ''}</span></div><button className="user-delete-button" onClick={() => deleteBlock(block.id)}>Quitar</button></div>)}</div>
+          {blockError && <p className="admin-operation-message" role="alert">{blockError}</p>}
+          <div className="admin-mini-list">{blocks.map((block) => <div className="admin-mini-row" key={block.id}><div><strong>{block.place_name || `Lugar #${block.place_id}`}</strong><span>{formatReadableDate(block.starts_at)} a {formatReadableDate(block.ends_at)}{block.reason ? ` · ${block.reason}` : ''}</span></div><button className="user-delete-button" onClick={() => deleteBlock(block.id)}>Quitar</button></div>)}</div>
         </article>
       </div>
 

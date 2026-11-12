@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AdminReservation } from './adminTypes'
+import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
 
 interface AdminReservationsSectionProps {
   reservations: AdminReservation[]
@@ -91,7 +92,7 @@ export default function AdminReservationsSection({ reservations, updateReservati
         <div className="users-table-wrapper" role="region" aria-label="Tabla de reservas" tabIndex={0}>
           <table className="users-table">
             <thead>
-              <tr><th>ID</th><th>Usuario</th><th>Email</th><th>Alojamiento</th><th>Ubicación</th><th>Check-in</th><th>Check-out</th><th>Huéspedes</th><th>Estado</th><th>Activo</th><th>Acciones</th></tr>
+              <tr><th>ID</th><th>Usuario</th><th>Email</th><th>Alojamiento</th><th>Ubicación</th><th>Check-in</th><th>Check-out</th><th>Huéspedes / horas</th><th>Estado</th><th>Activo</th><th>Acciones</th></tr>
             </thead>
             <tbody>
               {filteredReservations.map((reservation) => (
@@ -101,10 +102,16 @@ export default function AdminReservationsSection({ reservations, updateReservati
                   <td data-label="Email">{String(reservation.email ?? 'N/A')}</td>
                   <td data-label="Espacio">{String(reservation.hotel ?? '')}</td>
                   <td data-label="Ubicación">{String(reservation.ubicacion ?? '')}</td>
-                  <td data-label="Check-in">{String(reservation.check_in ?? '')}</td>
-                  <td data-label="Check-out">{String(reservation.check_out ?? '')}</td>
-                  <td data-label="Huéspedes">
-                    <input type="number" min={1} value={typeof reservation.huespedes === 'number' ? reservation.huespedes : 1} onChange={(event) => updateReservation(reservation.id, { huespedes: Number(event.target.value) || 1 })} className="table-input" style={{ width: '4rem' }} />
+                  <td data-label="Check-in">
+                    {formatReadableDate(reservation.check_in)}
+                    {typeof reservation.check_in_time === 'string' && ` · ${formatReadableTime(reservation.check_in_time)}`}
+                  </td>
+                  <td data-label="Check-out">
+                    {formatReadableDate(reservation.check_out)}
+                    {typeof reservation.check_out_time === 'string' && ` · ${formatReadableTime(reservation.check_out_time)}`}
+                  </td>
+                  <td data-label={typeof reservation.check_in_time === 'string' ? 'Duración en horas' : 'Huéspedes'}>
+                    <input type="number" min={1} value={typeof reservation.huespedes === 'number' ? reservation.huespedes : 1} disabled={typeof reservation.check_in_time === 'string'} onChange={(event) => updateReservation(reservation.id, { huespedes: Number(event.target.value) || 1 })} className="table-input" style={{ width: '4rem' }} />
                   </td>
                   <td data-label="Estado">
                     <select value={typeof reservation.estado === 'string' ? reservation.estado : ''} onChange={(event) => {

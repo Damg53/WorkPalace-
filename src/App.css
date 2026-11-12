@@ -593,6 +593,14 @@ header {
     font-size: 0.82rem;
   }
 
+  .landing-header--home .auth-buttons .btn,
+  .hero-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
   .theme-toggle {
     margin-right: 0.15rem;
   }

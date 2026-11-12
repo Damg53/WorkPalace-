@@ -38,7 +38,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
       {open && (
         <div className="user-menu-dropdown">
           <div className="user-menu-header">
-            <span className="user-menu-username">@{user.username}</span>
+            <span className="user-menu-username">{user.username}</span>
             {user.role && (
               <span className={`user-menu-role ${user.role}`}>
                 {user.role === 'admin' ? 'Admin' : user.role === 'owner' ? 'Propietario' : 'Usuario'}

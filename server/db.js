@@ -183,12 +183,14 @@ async function createTablesIfNotExist() {
         nivel_ruido VARCHAR(100),
         image_url TEXT,
         active BOOLEAN NOT NULL DEFAULT TRUE,
+        owner_active BOOLEAN,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     await pool.query('ALTER TABLE places ADD COLUMN IF NOT EXISTS direccion TEXT;');
     await pool.query('ALTER TABLE places ADD COLUMN IF NOT EXISTS owner_id INT REFERENCES users(id) ON DELETE SET NULL;');
+    await pool.query('ALTER TABLE places ADD COLUMN IF NOT EXISTS owner_active BOOLEAN;');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_places_owner_id ON places(owner_id);');
     console.log('✅ Tabla "places" verificada/creada');
 
@@ -202,6 +204,8 @@ async function createTablesIfNotExist() {
         ubicacion VARCHAR(255) NOT NULL,
         check_in DATE NOT NULL,
         check_out DATE NOT NULL,
+        check_in_time TIME,
+        check_out_time TIME,
         huespedes INT NOT NULL DEFAULT 1,
         estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
         cancellation_reason TEXT,
@@ -214,6 +218,8 @@ async function createTablesIfNotExist() {
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_in_time TIME;');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_out_time TIME;');
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
@@ -233,6 +239,18 @@ async function createTablesIfNotExist() {
     `);
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
     console.log('✅ Columna place_id verificada/creada en reservations');
+    await pool.query(`
+      UPDATE places
+      SET owner_active = active OR EXISTS (
+        SELECT 1 FROM reservations
+        WHERE reservations.place_id = places.id
+          AND reservations.active = TRUE
+          AND reservations.estado IN ('pendiente', 'confirmada')
+      )
+      WHERE owner_active IS NULL;
+    `);
+    await pool.query('ALTER TABLE places ALTER COLUMN owner_active SET DEFAULT TRUE;');
+    await pool.query('ALTER TABLE places ALTER COLUMN owner_active SET NOT NULL;');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS place_reviews (
         id SERIAL PRIMARY KEY,
@@ -280,11 +298,13 @@ async function createTablesIfNotExist() {
         used_count INT NOT NULL DEFAULT 0,
         starts_at DATE,
         ends_at DATE,
+        ends_at_time TIME,
         active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await pool.query('ALTER TABLE coupons ADD COLUMN IF NOT EXISTS ends_at_time TIME;');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS place_blocks (
         id SERIAL PRIMARY KEY,
@@ -339,7 +359,7 @@ async function createTablesIfNotExist() {
 
     await pool.query(`
       UPDATE places
-      SET active = TRUE, updated_at = CURRENT_TIMESTAMP
+      SET active = TRUE, owner_active = TRUE, updated_at = CURRENT_TIMESTAMP
       WHERE id IN (
         SELECT place_id FROM reservations
         WHERE place_id IS NOT NULL AND estado IN ('completada', 'cancelada')

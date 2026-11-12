@@ -38,6 +38,7 @@ export interface AdminCoupon {
   used_count: number
   starts_at: string | null
   ends_at: string | null
+  ends_at_time: string | null
   active: boolean
   created_at?: string
 }

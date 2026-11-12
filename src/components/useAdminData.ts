@@ -158,7 +158,7 @@ export function useAdminData(userId?: number) {
     setPlaces((current) => [...current, data.place])
   }
 
-  async function createCoupon(payload: { code: string; label: string; discount: number; maxUses: number | null; startsAt: string; endsAt: string }) {
+  async function createCoupon(payload: { code: string; label: string; discount: number; maxUses: number | null; startsAt: string; endsAt: string; endsAtTime: string }) {
     const response = await fetch(`${API}/api/admin/coupons`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(payload) })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Error al crear cupón')

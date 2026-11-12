@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import pool from '../../db.js';
 import { logAdminAction, requireAdmin } from '../../middleware/admin.js';
-import { normalizeText } from '../../shared/validation.js';
+import { containsProfanity, normalizeText } from '../../shared/validation.js';
 
 const router = Router();
 
@@ -22,16 +22,23 @@ router.get('/api/admin/blocks', requireAdmin, async (_req, res) => {
 
 router.post('/api/admin/blocks', requireAdmin, async (req, res) => {
   try {
-    const placeId = Number.parseInt(req.body?.placeId, 10);
+    const placeId = Number(req.body?.placeId);
     const startsAt = req.body?.startsAt;
     const endsAt = req.body?.endsAt;
-    if (!Number.isInteger(placeId) || !startsAt || !endsAt || endsAt < startsAt) {
+    const reason = normalizeText(req.body?.reason || '');
+    const isDate = (value) => typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+    if (!Number.isSafeInteger(placeId) || placeId < 1 || !isDate(startsAt) || !isDate(endsAt) || endsAt < startsAt) {
       return res.status(400).json({ error: 'Lugar y rango de fechas válido son requeridos' });
     }
+    if (!reason) return res.status(400).json({ error: 'El motivo del bloqueo es obligatorio.' });
+    if (reason.length > 500) return res.status(400).json({ error: 'El motivo no puede superar 500 caracteres.' });
+    if (containsProfanity(reason)) return res.status(400).json({ error: 'No se permiten palabras ofensivas en el motivo.' });
     const result = await pool.query(
       `INSERT INTO place_blocks (place_id, starts_at, ends_at, reason) VALUES ($1, $2, $3, $4)
        RETURNING id, place_id, starts_at, ends_at, reason`,
-      [placeId, startsAt, endsAt, normalizeText(req.body?.reason || '') || null]
+      [placeId, startsAt, endsAt, reason]
     );
     await logAdminAction(req, 'create', 'place_block', result.rows[0].id, { placeId, startsAt, endsAt });
     res.status(201).json({ block: result.rows[0] });
@@ -57,7 +64,9 @@ router.delete('/api/admin/blocks/:id', requireAdmin, async (req, res) => {
 router.get('/api/available-reservations', async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, huespedes, estado
+      `SELECT id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
+              TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
+              TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, estado
        FROM reservations
        WHERE estado IN ('pendiente', 'confirmada')
        ORDER BY check_in ASC, hotel ASC`
