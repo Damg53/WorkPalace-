@@ -280,7 +280,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
         if (initialMode !== 'hour' && initialMode !== 'appointment' && initialMode !== 'flexible' && date <= todayInBogota) {
           setDate(addDaysToDateInput(todayInBogota, 1))
         }
-      } catch (_e) {
+      } catch {
         if (!cancelled) setError('No se pudo cargar la información del espacio.')
       } finally {
         if (!cancelled) setLoading(false)
@@ -491,7 +491,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
 
       setStatus('done')
       setTimeout(() => navigate('/dashboard', { replace: true }), 5000)
-    } catch (_e) {
+    } catch {
       setError(API_UNAVAILABLE_MESSAGE)
       setStatus('idle')
     }
@@ -532,7 +532,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
 
       setApplied(normalizedCoupon)
       setCouponDiscount(Number(data.coupon?.discount ?? COUPONS[normalizedCoupon]?.discount ?? 0))
-    } catch (_e) {
+    } catch {
       setCouponError('No se pudo validar el cupón. Inténtalo de nuevo.')
     } finally {
       setCouponChecking(false)

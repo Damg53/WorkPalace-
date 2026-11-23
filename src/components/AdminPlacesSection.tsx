@@ -831,7 +831,9 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               <p>Actualiza la dirección y la imagen del espacio.</p>
             </div>
             <button type="button" className="admin-image-dialog__close" onClick={() => setEditingId(null)} aria-label="Cerrar">
-              <i className="fa fa-times" aria-hidden="true" />
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m18 6-12 12M6 6l12 12" />
+              </svg>
             </button>
           </div>
           <label className="place-image-picker__url-field" htmlFor="edit-place-address">

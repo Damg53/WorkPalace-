@@ -1007,11 +1007,22 @@ html[data-theme="light"] .admin-container select option {
   height: 38px;
   flex: 0 0 auto;
   place-items: center;
+  padding: 0;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
   color: inherit;
   cursor: pointer;
+}
+
+.admin-image-dialog__close svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
 }
 
 .admin-image-dialog__close:hover {
