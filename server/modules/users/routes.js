@@ -173,6 +173,16 @@ router.get('/api/admin/audit', requireAdmin, async (_req, res) => {
   }
 });
 
+router.delete('/api/admin/audit', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM admin_audit_logs');
+    res.json({ deleted: result.rowCount });
+  } catch (error) {
+    console.error('Error limpiando auditoría:', error);
+    res.status(500).json({ error: 'No se pudo limpiar la actividad reciente' });
+  }
+});
+
 router.delete('/api/users/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -235,10 +245,11 @@ router.put('/api/users/:id/profile', async (req, res) => {
     const newFullName = full_name !== undefined ? full_name.trim() : existing.full_name;
     const newEmail = email !== undefined ? email.trim() : existing.email;
     const newUsername = username !== undefined ? username.trim() : existing.username;
+    const updateProfileImage = profile_image_url !== undefined;
     let newProfileImage = existing.profile_image_url;
     let profileImageDataUrl = null;
-    if (profile_image_url !== undefined) {
-      const requestedImage = String(profile_image_url).trim();
+    if (updateProfileImage) {
+      const requestedImage = profile_image_url == null ? '' : String(profile_image_url).trim();
       if (requestedImage.startsWith('data:')) {
         profileImageDataUrl = requestedImage;
       } else if (
@@ -280,11 +291,11 @@ router.put('/api/users/:id/profile', async (req, res) => {
         full_name = COALESCE($1, full_name),
         email = COALESCE($2, email),
         username = COALESCE($3, username),
-        profile_image_url = COALESCE($4, profile_image_url),
-        phone = $5
-      WHERE id = $6
+        profile_image_url = CASE WHEN $4 THEN $5 ELSE profile_image_url END,
+        phone = $6
+      WHERE id = $7
        RETURNING id, username, full_name, email, role, profile_image_url, phone, two_factor_enabled`,
-      [newFullName || null, newEmail || null, newUsername || null, newProfileImage, newPhone || null, userId]
+      [newFullName || null, newEmail || null, newUsername || null, updateProfileImage, newProfileImage, newPhone || null, userId]
     );
 
     const updatedUser = update.rows[0];
@@ -309,10 +320,24 @@ router.get('/api/users/:id/favorites', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, place_id, place_name, place_city, created_at
-       FROM user_favorites
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
+      `SELECT favorite.id, favorite.place_id, favorite.place_name, favorite.place_city, favorite.created_at,
+              place.tipo, place.precio_hora,
+              CASE
+                WHEN length(place.image_url) <= 150000
+                  AND (place.image_url LIKE 'data:image/%' OR place.image_url ~ '^https?://')
+                  THEN place.image_url
+              END AS image_url,
+              COALESCE(review_stats.average_rating, 0) AS average_rating,
+              COALESCE(review_stats.review_count, 0) AS review_count
+       FROM user_favorites favorite
+       LEFT JOIN places place ON place.id = favorite.place_id
+       LEFT JOIN LATERAL (
+         SELECT ROUND(AVG(rating)::numeric, 1) AS average_rating, COUNT(*)::int AS review_count
+         FROM place_reviews
+         WHERE place_id = favorite.place_id
+       ) review_stats ON TRUE
+       WHERE favorite.user_id = $1
+       ORDER BY favorite.created_at DESC`,
       [userId]
     );
 
@@ -428,14 +453,126 @@ router.delete('/api/users/:id/notifications', async (req, res) => {
     }
 
     const result = await pool.query(
-      'DELETE FROM user_notifications WHERE user_id = $1 RETURNING id',
+      `DELETE FROM user_notifications
+       WHERE user_id = $1
+       RETURNING id, reservation_id, title, detail, tone, is_read, created_at`,
       [userId]
     );
 
-    res.json({ deletedCount: result.rowCount ?? result.rows.length });
+    res.json({
+      deletedCount: result.rowCount ?? result.rows.length,
+      notifications: result.rows,
+    });
   } catch (error) {
     console.error('Error limpiando notificaciones:', error);
     res.status(500).json({ error: 'No se pudieron limpiar las notificaciones' });
+  }
+});
+
+router.delete('/api/users/:id/notifications/:notificationId', async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    const notificationId = Number.parseInt(req.params.notificationId, 10);
+    const sessionUserId = Number.parseInt(req.header('x-user-id') || '', 10);
+
+    if (!Number.isInteger(userId) || !Number.isInteger(sessionUserId) || sessionUserId !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM user_notifications
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, reservation_id, title, detail, tone, is_read, created_at`,
+      [notificationId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notificación no encontrada' });
+    }
+
+    res.json({ notification: result.rows[0] });
+  } catch (error) {
+    console.error('Error eliminando notificación:', error);
+    res.status(500).json({ error: 'No se pudo eliminar la notificación' });
+  }
+});
+
+router.post('/api/users/:id/notifications/restore', async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    const sessionUserId = Number.parseInt(req.header('x-user-id') || '', 10);
+    const notifications = req.body?.notifications;
+
+    if (!Number.isInteger(userId) || !Number.isInteger(sessionUserId) || sessionUserId !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+    if (!Array.isArray(notifications) || notifications.length === 0 || notifications.length > 500) {
+      return res.status(400).json({ error: 'La lista de notificaciones a restaurar no es válida.' });
+    }
+
+    const restoredNotifications = [];
+    for (const notification of notifications) {
+      const timestamp = new Date(notification?.created_at);
+      if (
+        typeof notification?.title !== 'string'
+        || notification.title.length > 255
+        || typeof notification?.detail !== 'string'
+        || notification.detail.length > 10000
+        || !['info', 'success', 'warning'].includes(notification?.tone)
+        || typeof notification?.is_read !== 'boolean'
+        || (notification.reservation_id != null && (!Number.isSafeInteger(notification.reservation_id) || notification.reservation_id < 1))
+        || Number.isNaN(timestamp.getTime())
+      ) {
+        return res.status(400).json({ error: 'Una de las notificaciones a restaurar no es válida.' });
+      }
+
+      restoredNotifications.push({
+        reservation_id: notification.reservation_id ?? null,
+        title: notification.title,
+        detail: notification.detail,
+        tone: notification.tone,
+        is_read: notification.is_read,
+        created_at: timestamp.toISOString(),
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone, is_read, created_at)
+       SELECT $1, restored.reservation_id, restored.title, restored.detail, restored.tone,
+              restored.is_read, restored.created_at
+       FROM jsonb_to_recordset($2::jsonb) AS restored(
+         reservation_id INT, title VARCHAR(255), detail TEXT, tone VARCHAR(20), is_read BOOLEAN, created_at TIMESTAMP
+       )
+       RETURNING id, reservation_id, title, detail, tone, is_read, created_at`,
+      [userId, JSON.stringify(restoredNotifications)]
+    );
+
+    res.json({ notifications: result.rows });
+  } catch (error) {
+    console.error('Error restaurando notificaciones:', error);
+    res.status(500).json({ error: 'No se pudieron restaurar las notificaciones' });
+  }
+});
+
+router.put('/api/users/:id/notifications/read', async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    const sessionUserId = Number.parseInt(req.header('x-user-id') || '', 10);
+
+    if (!Number.isInteger(userId) || !Number.isInteger(sessionUserId) || sessionUserId !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const result = await pool.query(
+      `UPDATE user_notifications
+       SET is_read = TRUE
+       WHERE user_id = $1 AND is_read = FALSE`,
+      [userId]
+    );
+
+    res.json({ updatedCount: result.rowCount ?? 0 });
+  } catch (error) {
+    console.error('Error marcando todas las notificaciones como leídas:', error);
+    res.status(500).json({ error: 'No se pudieron marcar las notificaciones como leídas' });
   }
 });
 

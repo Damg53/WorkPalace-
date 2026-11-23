@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api';
 import { AuthMessage, AuthShell, PasswordField } from './AuthUI';
 
 export default function Signup() {
@@ -84,7 +84,7 @@ export default function Signup() {
 
       setSuccess(true);
     } catch {
-      setError('No se pudo conectar con el servidor. Intenta de nuevo más tarde.');
+      setError(API_UNAVAILABLE_MESSAGE);
     } finally {
       setLoading(false);
     }

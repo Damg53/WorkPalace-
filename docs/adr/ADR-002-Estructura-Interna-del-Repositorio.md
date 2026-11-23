@@ -16,7 +16,7 @@ Además, se busca mantener la lógica del negocio separada de los detalles tecno
 
 ## 2. Decisión tomada
 
-Se adopta una estructura de monorepo que mantiene diferenciadas las responsabilidades del frontend y del backend, y organiza la API del backend en siete módulos funcionales. Las rutas de cada módulo se agrupan en un router propio. Las responsabilidades compartidas se mantienen en utilidades y middleware comunes, y los servicios de dominio se ubican en el módulo al que pertenecen. Se podrán introducir capas de dominio, aplicación e infraestructura dentro de un módulo cuando su complejidad lo justifique.
+Se adopta una estructura de monorepo que mantiene diferenciadas las responsabilidades del frontend y del backend, y organiza la API del backend en nueve módulos funcionales. Las rutas de cada módulo se agrupan en un router propio. Las responsabilidades compartidas se mantienen en utilidades y middleware comunes, y los servicios de dominio se ubican en el módulo al que pertenecen. Se podrán introducir capas de dominio, aplicación e infraestructura dentro de un módulo cuando su complejidad lo justifique.
 
 **Estrategia de alojamiento del código: Monorepo.** El frontend y el backend se mantienen en un mismo repositorio, con una raíz y configuración de proyecto compartidas, en lugar de dividirlos en repositorios independientes (Multirepo). Se elige este enfoque porque WorkPalace parte de un Monolito Modular: permite coordinar y versionar conjuntamente cambios que afectan a ambas partes, reutilizar herramientas y simplificar el desarrollo y la integración mientras el equipo y el sistema se mantienen en esta etapa. La separación en `src/` y `server/` conserva sus responsabilidades diferenciadas sin requerir repositorios separados.
 
@@ -36,10 +36,14 @@ workpalace/
 │   │   ├── availability/
 │   │   │   ├── routes.js
 │   │   │   └── service.js
+│   │   ├── owners/
+│   │   │   └── routes.js
 │   │   ├── payments/
 │   │   │   ├── routes.js
 │   │   │   └── service.js
 │   │   ├── reservations/
+│   │   │   └── routes.js
+│   │   ├── reviews/
 │   │   │   └── routes.js
 │   │   ├── search/
 │   │   │   └── routes.js
@@ -67,15 +71,17 @@ workpalace/
 └── README.md
 ```
 
-El backend integra Swagger UI mediante `server/swagger.js` y `server/server.js`; la documentación interactiva está disponible en `/api-docs` y la especificación OpenAPI en `/api-docs.json`. Esta especificación documenta la API completa del backend y no requiere un Swagger independiente por módulo. Las pruebas del backend se mantienen en archivos `server/test-*.js`.
+El backend integra Swagger UI mediante `server/swagger.js` y `server/server.js`; la documentación interactiva está disponible en `/api-docs` y la especificación OpenAPI en `/api-docs.json`. `server/swagger.js` centraliza los contratos HTTP de los routers y de los endpoints del sistema, sin mantener un Swagger independiente por módulo. Cada cambio de rutas, parámetros, solicitudes, respuestas o requisitos de autenticación debe actualizar esta especificación y comprobarse frente a los routers implementados. Las pruebas del backend se mantienen en archivos `server/test-*.js`.
 
-Los siete módulos están implementados como routers Express montados por `server/server.js`. Cada ruta conserva su dirección HTTP actual; la modularización organiza el código internamente sin cambiar los contratos de la API. Sus responsabilidades actuales son:
+Los nueve módulos están implementados como routers Express montados por `server/server.js`. Cada ruta conserva su dirección HTTP actual; la modularización organiza el código internamente sin cambiar los contratos de la API. Sus responsabilidades actuales son:
 
 - **Users:** registro de cuentas, perfiles, roles, favoritos, notificaciones y administración de usuarios.
 - **Verification:** inicio de sesión y flujos de verificación mediante código OTP. Este módulo no representa todavía una verificación de identidad documental.
 - **Spaces:** publicación, consulta y administración de espacios.
+- **Owners:** consulta, creación, actualización y eliminación de espacios del propietario; consulta de reservas y datos del panel del propietario.
 - **Search:** listado y consulta de espacios, incluyendo el filtro de fecha disponible en la API actual.
 - **Reservations:** creación y administración de reservas.
+- **Reviews:** consulta y creación de reseñas de espacios, limitadas a reservas propias completadas.
 - **Availability:** consulta de reservas disponibles, administración de bloqueos de espacios y sincronización de disponibilidad.
 - **Payments:** validación y administración de cupones, y validación del vencimiento de tarjeta en el flujo actual de reservas. No hay todavía un proveedor integrado ni procesamiento de pagos o endpoints de transacciones.
 
@@ -143,7 +149,7 @@ Para mantener la coherencia de la estructura adoptada, se establecen las siguien
 
 ## 6. Conclusión
 
-Se adopta y se implementa la organización del backend de WorkPalace en siete módulos funcionales, alineados con la arquitectura de Monolito Modular seleccionada en el ADR-001. Esta decisión busca mantener el código organizado, facilitar el mantenimiento y reducir el acoplamiento entre las funcionalidades del sistema, sin convertir los módulos en servicios independientes.
+Se adopta y se implementa la organización del backend de WorkPalace en nueve módulos funcionales, alineados con la arquitectura de Monolito Modular seleccionada en el ADR-001. Esta decisión busca mantener el código organizado, facilitar el mantenimiento y reducir el acoplamiento entre las funcionalidades del sistema, sin convertir los módulos en servicios independientes.
 
 La estructura también permite aplicar principios de separación de responsabilidades e inversión de dependencias, manteniendo la posibilidad de utilizar patrones como la Arquitectura Hexagonal dentro de los módulos cuando resulte conveniente. El módulo Payments organiza ahora la validación y administración de cupones; la integración de pagos reales queda como funcionalidad futura, no como una capacidad ya implementada.
 

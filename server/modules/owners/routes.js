@@ -168,6 +168,22 @@ router.delete('/api/owner/places/:id', requireOwner, async (req, res) => {
   }
 });
 
+router.get('/api/owner/reservations/pending-count', requireOwner, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS pending_count
+       FROM reservations r
+       JOIN places p ON p.id = r.place_id
+       WHERE p.owner_id = $1 AND r.estado = 'pendiente'`,
+      [req.ownerUserId]
+    );
+    res.json({ pendingCount: result.rows[0].pending_count });
+  } catch (error) {
+    console.error('Error contando solicitudes pendientes del propietario:', error);
+    res.status(500).json({ error: 'No se pudieron consultar tus solicitudes pendientes.' });
+  }
+});
+
 router.get('/api/owner/reservations', requireOwner, async (req, res) => {
   try {
     const result = await pool.query(
@@ -194,6 +210,126 @@ router.get('/api/owner/reservations', requireOwner, async (req, res) => {
   } catch (error) {
     console.error('Error obteniendo reservas de espacios del propietario:', error);
     res.status(500).json({ error: 'No se pudieron cargar las reservas de tus espacios.' });
+  }
+});
+
+router.get('/api/owner/dashboard-data', requireOwner, async (req, res) => {
+  try {
+    const [metrics, reviewSummary, reviews, upcomingReservations] = await Promise.all([
+      pool.query(
+        `WITH month_bounds AS (
+           SELECT date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date AS month_start,
+                  (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota') + INTERVAL '1 month')::date AS month_end
+         ),
+         active_spaces AS (
+           SELECT id FROM places
+           WHERE owner_id = $1 AND COALESCE(owner_active, active) = TRUE
+         ),
+         monthly_reservations AS (
+           SELECT r.total_amount
+           FROM reservations r
+           JOIN places p ON p.id = r.place_id
+           CROSS JOIN month_bounds b
+           WHERE p.owner_id = $1
+             AND r.estado IN ('confirmada', 'completada')
+             AND r.check_in >= b.month_start
+             AND r.check_in < b.month_end
+         ),
+         monthly_totals AS (
+           SELECT COUNT(*)::int AS reservation_count,
+                  COUNT(*) FILTER (WHERE total_amount IS NOT NULL)::int AS priced_reservation_count,
+                  COALESCE(SUM(total_amount), 0)::text AS reservation_value
+           FROM monthly_reservations
+         ),
+         booked_hours AS (
+           SELECT COALESCE(SUM(GREATEST(
+             EXTRACT(EPOCH FROM (
+               LEAST(r.check_out + COALESCE(r.check_out_time, TIME '00:00'), b.month_end::timestamp)
+               - GREATEST(r.check_in + COALESCE(r.check_in_time, TIME '00:00'), b.month_start::timestamp)
+             )) / 3600,
+             0
+           )), 0)::numeric AS hours
+           FROM reservations r
+           JOIN active_spaces p ON p.id = r.place_id
+           CROSS JOIN month_bounds b
+           WHERE r.estado IN ('confirmada', 'completada')
+             AND r.check_out + COALESCE(r.check_out_time, TIME '00:00') > b.month_start::timestamp
+             AND r.check_in + COALESCE(r.check_in_time, TIME '00:00') < b.month_end::timestamp
+         ),
+         capacity AS (
+           SELECT COUNT(active_spaces.id)::int AS active_space_count,
+                  EXTRACT(EPOCH FROM (b.month_end::timestamp - b.month_start::timestamp)) / 3600 AS month_hours
+           FROM month_bounds b
+           LEFT JOIN active_spaces ON TRUE
+           GROUP BY b.month_start, b.month_end
+         )
+         SELECT totals.reservation_count AS monthly_reservations,
+                totals.priced_reservation_count AS priced_reservations,
+                totals.reservation_value AS monthly_value,
+                capacity.active_space_count,
+                CASE WHEN capacity.active_space_count = 0 THEN NULL
+                     ELSE ROUND(LEAST(
+                       100.0,
+                       booked_hours.hours / (capacity.active_space_count * capacity.month_hours) * 100
+                     ), 1)::text
+                END AS occupancy_percentage
+         FROM monthly_totals totals
+         CROSS JOIN capacity
+         CROSS JOIN booked_hours`,
+        [req.ownerUserId]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS review_count,
+                COALESCE(ROUND(AVG(review.rating)::numeric, 1)::text, '0') AS average_rating
+         FROM place_reviews review
+         JOIN places p ON p.id = review.place_id
+         WHERE p.owner_id = $1`,
+        [req.ownerUserId]
+      ),
+      pool.query(
+        `SELECT review.id, review.rating, review.comment, review.created_at,
+                p.name AS place_name,
+                COALESCE(NULLIF(split_part(u.full_name, ' ', 1), ''), u.username) AS reviewer_name
+         FROM place_reviews review
+         JOIN places p ON p.id = review.place_id
+         JOIN users u ON u.id = review.user_id
+         WHERE p.owner_id = $1
+         ORDER BY review.created_at DESC, review.id DESC
+         LIMIT 5`,
+        [req.ownerUserId]
+      ),
+      pool.query(
+        `SELECT r.id, r.check_in, r.check_out,
+                TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
+                TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time,
+                u.full_name AS customer_name, p.name AS place_name
+         FROM reservations r
+         JOIN places p ON p.id = r.place_id
+         JOIN users u ON u.id = r.user_id
+         WHERE p.owner_id = $1
+           AND r.estado = 'confirmada'
+           AND (
+             r.check_out > (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+             OR (
+               r.check_out = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+               AND (r.check_out_time IS NULL OR r.check_out_time >= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::time)
+             )
+           )
+         ORDER BY r.check_in, r.check_in_time NULLS LAST, r.id
+         LIMIT 5`,
+        [req.ownerUserId]
+      ),
+    ]);
+
+    res.json({
+      metrics: metrics.rows[0],
+      reviewSummary: reviewSummary.rows[0],
+      reviews: reviews.rows,
+      upcomingReservations: upcomingReservations.rows,
+    });
+  } catch (error) {
+    console.error('Error obteniendo el resumen del propietario:', error);
+    res.status(500).json({ error: 'No se pudo cargar el resumen de tu negocio.' });
   }
 });
 
@@ -253,8 +389,8 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
     }
 
     const updated = await client.query(
-      `UPDATE reservations SET estado = $1,
-         cancellation_reason = CASE WHEN $1 = 'cancelada' THEN $2 ELSE NULL END,
+      `UPDATE reservations SET estado = $1::varchar,
+         cancellation_reason = CASE WHEN $1::varchar = 'cancelada' THEN $2::text ELSE NULL::text END,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
        RETURNING id, user_id, hotel, estado, check_in, check_out,

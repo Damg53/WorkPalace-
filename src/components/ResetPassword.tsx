@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api';
 import { AuthMessage, AuthShell, PasswordField } from './AuthUI';
 
 type TokenStatus = 'checking' | 'valid' | 'invalid' | 'unavailable';
@@ -82,7 +82,7 @@ export default function ResetPassword() {
       setSuccessMessage(data.message || 'Tu contraseña se actualizó correctamente.');
       setResetComplete(true);
     } catch {
-      setError('No se pudo conectar con el servidor. Intenta de nuevo más tarde.');
+      setError(API_UNAVAILABLE_MESSAGE);
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function ResetPassword() {
         <>
           <h2 className="wp-auth__heading">No pudimos validar el enlace</h2>
           <p className="wp-auth__subtitle">Revisa tu conexión e inténtalo de nuevo más tarde.</p>
-          <AuthMessage tone="error">No se pudo conectar con el servidor.</AuthMessage>
+          <AuthMessage tone="error">{API_UNAVAILABLE_MESSAGE}</AuthMessage>
           <p className="wp-auth__footer">
             <Link to="/forgot-password" className="wp-auth__text-link">Solicitar otro enlace</Link>
           </p>

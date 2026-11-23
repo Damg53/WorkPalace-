@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import '../places-filter.css'
+import WorkPalaceSelect from './WorkPalaceSelect'
 
 interface Filters {
   search: string
@@ -36,8 +37,14 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciuda
   })
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
+    const updated = { ...filters, [name]: value }
+    setFilters(updated)
+    onFilter(updated)
+  }
+
+  function handleSelectChange(name: keyof Filters, value: string) {
     const updated = { ...filters, [name]: value }
     setFilters(updated)
     onFilter(updated)
@@ -97,18 +104,9 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciuda
       )}
       {showAdvanced && (
         <div id="places-advanced-filters" className="advanced-filters">
-          <select name="tipo" value={filters.tipo} onChange={handleChange}>
-            <option value="">Tipo de espacio</option>
-            {tipos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
-          </select>
-          <select name="ciudad" value={filters.ciudad} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
-            <option value="">Ciudad</option>
-            {ciudades.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select name="barrio" value={filters.barrio} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
-            <option value="">Barrio</option>
-            {barrios.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
+          <WorkPalaceSelect className="wp-select--places-filter" value={filters.tipo} options={[{ value: '', label: 'Tipo de espacio' }, ...tipos.map((tipo) => ({ value: tipo, label: tipo }))]} onChange={(value) => handleSelectChange('tipo', value)} ariaLabel="Tipo de espacio" />
+          <WorkPalaceSelect className="wp-select--places-filter" value={filters.ciudad} options={[{ value: '', label: 'Ciudad' }, ...ciudades.map((city) => ({ value: city, label: city }))]} onChange={(value) => handleSelectChange('ciudad', value)} ariaLabel="Ciudad" />
+          <WorkPalaceSelect className="wp-select--places-filter" value={filters.barrio} options={[{ value: '', label: 'Barrio' }, ...barrios.map((neighborhood) => ({ value: neighborhood, label: neighborhood }))]} onChange={(value) => handleSelectChange('barrio', value)} ariaLabel="Barrio" />
           <input
             type="number"
             name="capacidad"
@@ -118,18 +116,15 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciuda
             style={{ flex: 1, minWidth: 100 }}
             min={1}
           />
-          <select name="modalidad" value={filters.modalidad} onChange={handleChange} style={{ flex: 1, minWidth: 120 }}>
-            <option value="">Modalidad</option>
-            {modalidades.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <WorkPalaceSelect className="wp-select--places-filter" value={filters.modalidad} options={[{ value: '', label: 'Modalidad' }, ...modalidades.map((modality) => ({ value: modality, label: modality }))]} onChange={(value) => handleSelectChange('modalidad', value)} ariaLabel="Modalidad" />
           <input type="number" name="precioMin" min={0} placeholder="Precio mínimo" value={filters.precioMin} onChange={handleChange} />
           <input type="number" name="precioMax" min={0} placeholder="Precio máximo" value={filters.precioMax} onChange={handleChange} />
-          <select name="orden" value={filters.orden} onChange={handleChange} aria-label="Ordenar espacios">
-            <option value="recomendados">Orden recomendado</option>
-            <option value="precio-asc">Menor precio</option>
-            <option value="precio-desc">Mayor precio</option>
-            <option value="calificacion">Mejor calificados</option>
-          </select>
+          <WorkPalaceSelect className="wp-select--places-filter" value={filters.orden} options={[
+            { value: 'recomendados', label: 'Orden recomendado' },
+            { value: 'precio-asc', label: 'Menor precio' },
+            { value: 'precio-desc', label: 'Mayor precio' },
+            { value: 'calificacion', label: 'Mejor calificados' },
+          ]} onChange={(value) => handleSelectChange('orden', value)} ariaLabel="Ordenar espacios" />
         </div>
       )}
     </form>

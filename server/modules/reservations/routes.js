@@ -6,6 +6,15 @@ import { findCoupon, isValidCardExpiry } from '../payments/service.js';
 import { normalizeColombianPhone } from '../../shared/validation.js';
 
 const router = Router();
+const RESERVATION_MODES = new Set([
+  'hour', 'halfDay', 'fullDay', 'day', 'night', 'week', 'fortnight', 'month', 'appointment', 'flexible',
+]);
+const TIMED_RESERVATION_MODES = new Set(['hour', 'halfDay', 'fullDay', 'night', 'appointment', 'flexible']);
+const FIXED_RESERVATION_SCHEDULES = {
+  halfDay: { minStartTime: '07:00', maxStartTime: '18:00', minuteStep: 30, durationHours: 4 },
+  fullDay: { minStartTime: '07:00', maxStartTime: '09:00', minuteStep: 30, durationHours: 8 },
+  night: { startTime: '18:00', durationHours: 14 },
+};
 
 function isValidDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -78,7 +87,7 @@ router.post('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'x-user-id inválido' });
     }
 
-    const { placeId, checkIn, checkOut, checkInTime, checkOutTime, phone, huespedes, payment } = req.body || {};
+    const { placeId, checkIn, checkOut, checkInTime, checkOutTime, phone, huespedes, payment, reservationMode } = req.body || {};
     const couponCode = typeof req.body?.couponCode === 'string'
       ? req.body.couponCode.trim().toUpperCase()
       : null;
@@ -88,12 +97,25 @@ router.post('/api/reservations', async (req, res) => {
     if (!isValidDate(checkIn) || !isValidDate(checkOut) || checkOut < checkIn) {
       return res.status(400).json({ error: 'Las fechas de la reserva no son válidas.' });
     }
-    const isHourly = checkInTime !== undefined || checkOutTime !== undefined;
-    if (isHourly && (!isValidTime(checkInTime) || !isValidTime(checkOutTime))) {
+    if (reservationMode !== undefined && !RESERVATION_MODES.has(reservationMode)) {
+      return res.status(400).json({ error: 'La modalidad de reserva no es válida.' });
+    }
+    const isTimeBased = checkInTime !== undefined || checkOutTime !== undefined;
+    if (reservationMode !== undefined && TIMED_RESERVATION_MODES.has(reservationMode) !== isTimeBased) {
+      return res.status(400).json({ error: 'La modalidad seleccionada requiere un horario específico.' });
+    }
+    if (isTimeBased && (!isValidTime(checkInTime) || !isValidTime(checkOutTime))) {
       return res.status(400).json({ error: 'Debes seleccionar horas válidas para el inicio y la salida.' });
     }
-    if (!isHourly && (checkIn <= bogotaDate() || checkOut <= checkIn)) {
+    const allowsSameDayBooking = reservationMode === 'hour'
+      || reservationMode === 'appointment'
+      || reservationMode === 'flexible'
+      || (reservationMode === undefined && isTimeBased);
+    if (!isTimeBased && (checkIn <= bogotaDate() || checkOut <= checkIn)) {
       return res.status(400).json({ error: 'Las reservas por días deben iniciar desde mañana y tener una fecha de salida posterior.' });
+    }
+    if (isTimeBased && !allowsSameDayBooking && checkIn <= bogotaDate()) {
+      return res.status(400).json({ error: 'Esta modalidad debe reservarse desde mañana.' });
     }
     const phoneDigits = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
     if (phoneDigits.length !== 10 || !phoneDigits.startsWith('3') || !normalizeColombianPhone(phone)) {
@@ -149,7 +171,27 @@ router.post('/api/reservations', async (req, res) => {
       inTransaction = false;
       return res.status(400).json({ error: 'La cantidad de unidades de la reserva no es válida.' });
     }
-    if (isHourly) {
+    if (reservationMode === 'appointment' || reservationMode === 'flexible') {
+      if (quantity !== 1 || Number(checkInTime.slice(3)) % 30 !== 0) {
+        await client.query('ROLLBACK');
+        inTransaction = false;
+        return res.status(400).json({ error: 'Las citas y reservas flexibles deben iniciar cada 30 minutos y durar una hora.' });
+      }
+    }
+    const fixedSchedule = FIXED_RESERVATION_SCHEDULES[reservationMode];
+    const invalidFixedStart = fixedSchedule?.startTime
+      ? checkInTime !== fixedSchedule.startTime
+      : fixedSchedule && (
+        checkInTime < fixedSchedule.minStartTime
+        || checkInTime > fixedSchedule.maxStartTime
+        || Number(checkInTime.slice(3)) % fixedSchedule.minuteStep !== 0
+      );
+    if (fixedSchedule && (invalidFixedStart || quantity !== fixedSchedule.durationHours)) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'El horario no coincide con la jornada seleccionada.' });
+    }
+    if (isTimeBased) {
       const expectedEnd = getEndDateTime(checkIn, checkInTime, quantity);
       if (expectedEnd.date !== checkOut || expectedEnd.time !== checkOutTime) {
         await client.query('ROLLBACK');
@@ -181,7 +223,7 @@ router.post('/api/reservations', async (req, res) => {
            )
          )
        LIMIT 1`,
-      [pid, checkIn, checkOut, isHourly ? checkInTime : null, isHourly ? checkOutTime : null]
+      [pid, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null]
     );
     if (existingReservation.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -190,8 +232,21 @@ router.post('/api/reservations', async (req, res) => {
     }
 
     const blocked = await client.query(
-      `SELECT id FROM place_blocks WHERE place_id = $1 AND starts_at <= $3::date AND ends_at >= $2::date LIMIT 1`,
-      [pid, checkIn, checkOut]
+      `SELECT id FROM place_blocks
+       WHERE place_id = $1
+         AND (
+           ($4::time IS NULL AND starts_at <= $3::date AND ends_at >= $2::date)
+           OR (
+             $4::time IS NOT NULL
+             AND (starts_at + COALESCE(starts_at_time, TIME '00:00')) < ($3::date + $5::time)
+             AND ($2::date + $4::time) < CASE
+               WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day'
+               ELSE ends_at + ends_at_time
+             END
+           )
+         )
+       LIMIT 1`,
+      [pid, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null]
     );
     if (blocked.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -211,7 +266,7 @@ router.post('/api/reservations', async (req, res) => {
                  TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
                  TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
                  huespedes, estado, place_id, coupon_code, total_amount, created_at`,
-      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, isHourly ? checkInTime : null, isHourly ? checkOutTime : null, quantity, pid, couponCode, simulatedTotal]
+      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null, quantity, pid, couponCode, simulatedTotal]
     );
 
     await client.query(
@@ -221,7 +276,7 @@ router.post('/api/reservations', async (req, res) => {
         uid,
         insert.rows[0].id,
         'Solicitud de reserva enviada',
-        `Tu reserva para ${place.name} del ${checkIn}${isHourly ? ` a las ${checkInTime}` : ''} al ${checkOut}${isHourly ? ` a las ${checkOutTime}` : ''} quedó pendiente de confirmación.`,
+        `Tu reserva para ${place.name} del ${checkIn}${isTimeBased ? ` a las ${checkInTime}` : ''} al ${checkOut}${isTimeBased ? ` a las ${checkOutTime}` : ''} quedó pendiente de confirmación.`,
         'info',
       ]
     );
@@ -240,6 +295,20 @@ router.post('/api/reservations', async (req, res) => {
     res.status(500).json({ error: 'Error en el servidor' });
   } finally {
     if (client) client.release();
+  }
+});
+
+router.get('/api/admin/reservations/pending-count', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS pending_count
+       FROM reservations
+       WHERE estado = 'pendiente'`
+    );
+    res.json({ pendingCount: result.rows[0].pending_count });
+  } catch (error) {
+    console.error('Error contando solicitudes pendientes (admin):', error);
+    res.status(500).json({ error: 'No se pudieron consultar las solicitudes pendientes.' });
   }
 });
 

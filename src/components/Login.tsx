@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import OtpInput from './OtpInput';
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api';
 
 import { useNavigate } from 'react-router-dom';
 import { AuthMessage, AuthShell, PasswordField } from './AuthUI';
@@ -62,7 +62,7 @@ export default function Login({ onLogin }: LoginProps) {
     }
 
     if (!serverConnected) {
-      setError('El servidor no está disponible. Asegúrate de ejecutar: npm run server');
+      setError(API_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -107,7 +107,7 @@ export default function Login({ onLogin }: LoginProps) {
       const redirect = params.get('redirect') || '/';
       navigate(redirect);
     } catch {
-      setError('Error de conexión. Asegúrate de que el servidor esté ejecutándose: npm run server');
+      setError(API_UNAVAILABLE_MESSAGE);
     } finally {
       setLoading(false);
     }
@@ -160,7 +160,7 @@ export default function Login({ onLogin }: LoginProps) {
           )}
 
           {serverConnected === false && (
-            <AuthMessage tone="error">El servidor no está disponible. Ejecuta: npm run server</AuthMessage>
+            <AuthMessage tone="error">{API_UNAVAILABLE_MESSAGE}</AuthMessage>
           )}
 
           <div className="wp-auth__field">

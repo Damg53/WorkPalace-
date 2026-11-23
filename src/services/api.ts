@@ -4,6 +4,7 @@ export const API_BASE_URL = (
   configuredApiUrl
   || (import.meta.env.PROD ? 'https://workpalace.onrender.com' : 'http://localhost:3001')
 ).replace(/\/+$/, '')
+export const API_UNAVAILABLE_MESSAGE = 'El servicio de WorkPalace no está disponible temporalmente. Inténtalo de nuevo en unos minutos.'
 
 // Signup API call
 export const signupUser = async (userData: {

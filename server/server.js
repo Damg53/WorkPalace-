@@ -15,6 +15,7 @@ import passwordResetRoutes from './modules/verification/password-reset.js';
 import ownerRoutes from './modules/owners/routes.js';
 import reviewRoutes from './modules/reviews/routes.js';
 import { completeExpiredReservations } from './modules/availability/service.js';
+import { deactivateExpiredCoupons } from './modules/payments/service.js';
 import { containsProfanityInPayload } from './shared/validation.js';
 
 dotenv.config();
@@ -113,8 +114,15 @@ initializationReady.then(() => {
       console.error('Error completando reservas vencidas:', error);
     });
   };
+  const expireCoupons = () => {
+    void deactivateExpiredCoupons().catch((error) => {
+      console.error('Error desactivando cupones vencidos:', error);
+    });
+  };
   completeReservations();
+  expireCoupons();
   setInterval(completeReservations, 60_000);
+  setInterval(expireCoupons, 60_000);
 }).catch((error) => {
   console.error(`⚠️ El servidor sigue disponible, pero la base de datos no pudo inicializarse: ${error.message}`);
 });

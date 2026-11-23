@@ -1,20 +1,28 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CapacidadCellInput from './CapacidadCellInput'
+import WorkPalaceSelect from './WorkPalaceSelect'
 import type { AdminPlace, NewPlaceForm } from './adminTypes'
 import { containsProfanity } from '../utils/contentValidation'
+import './AdminPlacesSection.css'
 
 interface Props {
   places: AdminPlace[]
   updatePlace: (id: number, payload: Partial<AdminPlace>) => void
   togglePlaceActive: (id: number, active: boolean) => void
   deletePlace: (id: number) => void
+  deletePlaces?: (ids: number[]) => void
   createPlace: (place: Omit<AdminPlace, 'id' | 'active'>) => Promise<void>
+  withTopSpacing?: boolean
 }
 
 const TIPOS = ['Coworking', 'Oficina privada', 'Sala de reuniones', 'Auditorio / salón de eventos', 'Aula / salón de clases', 'Estudio de grabación', 'Estudio de fotografía', 'Sala de ensayo', 'Taller de carpintería', 'Taller / maker space', 'Cocina industrial', 'Cocina oculta (dark kitchen)', 'Consultorio', 'Gimnasio / sala de entrenamiento', 'Cancha / espacio deportivo', 'Terraza / rooftop', 'Patio / jardín', 'Bodega / almacén', 'Local comercial', 'Otro']
 const CIUDADES = ['Medellín', 'Bello', 'Envigado', 'Sabaneta', 'Itagüí', 'Bogotá', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga', 'Pereira', 'Manizales', 'Santa Marta', 'Cúcuta', 'Otra']
 const MODALIDADES = ['Por hora', 'Media jornada (4 horas)', 'Jornada completa (8 horas)', 'Por día', 'Por noche', 'Por semana', 'Por 15 días', 'Por mes', 'Solo por cita', 'Flexible (acordar con el propietario)']
 const RUIDO = ['Silencioso (ideal para concentración)', 'Moderado (conversación normal)', 'Alto (actividad intensa)', 'Muy alto (industrial / eventos)', 'Aislado acústicamente', 'No aplica']
+const selectOptions = (values: string[], placeholder?: string) => [
+  ...(placeholder ? [{ value: '', label: placeholder }] : []),
+  ...values.map((value) => ({ value, label: value })),
+]
 const BARRIOS: Record<string, string[]> = {
   Medellín: ['El Poblado', 'Laureles - Estadio', 'Belén', 'Robledo', 'Buenos Aires', 'La América', 'San Javier', 'Aranjuez', 'Manrique', 'Castilla', 'Guayabal', 'La Candelaria', 'Centro', 'Otro / No aplica'],
   Bello: ['Centro', 'Niquía', 'Zamora', 'Santa Ana', 'San Félix', 'Otro / No aplica'],
@@ -35,6 +43,21 @@ const BARRIOS: Record<string, string[]> = {
 const EMPTY: NewPlaceForm = { name: '', tipo: '', direccion: '', barrio: '', ciudad: '', capacidad: '', precio_hora: '', modalidad: '', caracteristicas: '', nivel_ruido: '', image_url: '' }
 const isValidCapacity = (value: string) => /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0
 const capacityValidationMessage = 'Ingresa un número entero mayor que 0.'
+const PLACE_CREATE_STEPS = ['Información básica', 'Ubicación', 'Detalles', 'Precio y foto']
+const PAGE_SIZE = 8
+const placePriceFormatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+const placeColors = [
+  ['#3b73ff', '#7c6cff'],
+  ['#7c6cff', '#e0457b'],
+  ['#2fa37a', '#3b73ff'],
+  ['#f0803c', '#e0457b'],
+  ['#f0a951', '#e0457b'],
+  ['#e0457b', '#7c6cff'],
+  ['#3b73ff', '#2fa37a'],
+  ['#6b7280', '#7c6cff'],
+]
+
+type PlaceSortKey = 'id' | 'name' | 'capacidad' | 'precio_hora'
 
 interface PlaceImagePickerProps {
   id: string
@@ -96,7 +119,7 @@ function PlaceImagePicker({ id, value, onChange }: PlaceImagePickerProps) {
               setFileError('')
             }}
             placeholder={isUploadedImage ? 'Usando imagen seleccionada desde tu equipo' : 'https://ejemplo.com/imagen.jpg'}
-            autoComplete="url"
+            autoComplete="off"
           />
         </label>
         <div className="place-image-picker__file-field">
@@ -282,136 +305,516 @@ const formatPriceForModality = (precioHora: number | null, modalidad: string | n
   return `$${precioHora.toLocaleString('es-CO')}${unidades[modalidad ?? ''] ?? ''}`
 }
 
-export default function AdminPlacesSection({ places, updatePlace, togglePlaceActive, deletePlace, createPlace }: Props) {
+export default function AdminPlacesSection({ places, updatePlace, togglePlaceActive, deletePlace, deletePlaces, createPlace, withTopSpacing = false }: Props) {
   const [form, setForm] = useState(EMPTY)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingAddress, setEditingAddress] = useState('')
   const [editingUrl, setEditingUrl] = useState('')
   const [formError, setFormError] = useState('')
+  const [createStep, setCreateStep] = useState(0)
+  const [maxCreateStep, setMaxCreateStep] = useState(0)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [cityFilter, setCityFilter] = useState('')
+  const [sort, setSort] = useState<{ key: PlaceSortKey; direction: 1 | -1 }>({ key: 'id', direction: 1 })
+  const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
+  const searchRef = useRef<HTMLInputElement>(null)
   const setField = (field: keyof NewPlaceForm, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const stopWheel = (event: React.WheelEvent<HTMLInputElement>) => event.currentTarget.blur()
 
   const suggestedPrice = getSuggestedPrice(form.tipo, form.ciudad, form.barrio, form.capacidad, form.modalidad)
+  const normalizedQuery = query.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const filteredPlaces = useMemo(() => {
+    const matches = places.filter((place) => {
+      const active = place.active !== false
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? active : !active)
+      const searchable = `${place.name} ${place.barrio || ''} ${place.ciudad || ''} ${place.tipo} #${place.id}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
 
-  async function handleCreate(event: React.FormEvent) {
+      return matchesStatus
+        && (!typeFilter || place.tipo === typeFilter)
+        && (!cityFilter || place.ciudad === cityFilter)
+        && (!normalizedQuery || searchable.includes(normalizedQuery))
+    })
+
+    return matches.sort((a, b) => {
+      if (sort.key === 'name') return a.name.localeCompare(b.name, 'es') * sort.direction
+      const valueA = sort.key === 'id' ? a.id : Number(a[sort.key] || 0)
+      const valueB = sort.key === 'id' ? b.id : Number(b[sort.key] || 0)
+      return (valueA - valueB) * sort.direction
+    })
+  }, [places, statusFilter, typeFilter, cityFilter, normalizedQuery, sort])
+  const pageCount = Math.max(1, Math.ceil(filteredPlaces.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const visiblePlaces = filteredPlaces.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const allVisibleSelected = visiblePlaces.length > 0 && visiblePlaces.every((place) => selectedIds.has(place.id))
+  const someVisibleSelected = visiblePlaces.some((place) => selectedIds.has(place.id))
+  const activeCount = places.filter((place) => place.active !== false).length
+  const hourlyPlaces = places.filter((place) => place.modalidad === 'Por hora' && Number(place.precio_hora) > 0)
+  const averageHourlyPrice = hourlyPlaces.length
+    ? hourlyPlaces.reduce((total, place) => total + Number(place.precio_hora), 0) / hourlyPlaces.length
+    : 0
+  const hasFilters = Boolean(query || typeFilter || cityFilter || statusFilter !== 'all')
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName
+      if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag || '')) {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
+
+  function changeQuery(value: string) {
+    setQuery(value)
+    setPage(1)
+  }
+
+  function changeStatusFilter(value: 'all' | 'active' | 'inactive') {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  function changeTypeFilter(value: string) {
+    setTypeFilter(value)
+    setPage(1)
+  }
+
+  function changeCityFilter(value: string) {
+    setCityFilter(value)
+    setPage(1)
+  }
+
+  function toggleSort(key: PlaceSortKey) {
+    setSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 1 ? -1 : 1,
+    }))
+  }
+
+  function togglePageSelection() {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      visiblePlaces.forEach((place) => {
+        if (allVisibleSelected) next.delete(place.id)
+        else next.add(place.id)
+      })
+      return next
+    })
+  }
+
+  async function setSelectedPlacesActive(active: boolean) {
+    await Promise.all([...selectedIds].map((id) => updatePlace(id, { active })))
+    setSelectedIds(new Set())
+  }
+
+  function clearFilters() {
+    setQuery('')
+    setStatusFilter('all')
+    setTypeFilter('')
+    setCityFilter('')
+    setPage(1)
+  }
+
+  function goToCreateStep(nextStep: number) {
+    setCreateStep(nextStep)
+    setFormError('')
+  }
+
+  function handleCreateStepSubmit(event: React.FormEvent) {
     event.preventDefault()
+    if (createStep === 0) {
+      if (!form.name.trim()) {
+        setFormError('Escribe el nombre del espacio.')
+        return
+      }
+      if (!form.tipo) {
+        setFormError('Elige el tipo de espacio.')
+        return
+      }
+      if (!isValidCapacity(form.capacidad)) {
+        setFormError(capacityValidationMessage)
+        return
+      }
+    }
+
+    if (createStep < PLACE_CREATE_STEPS.length - 1) {
+      const nextStep = createStep + 1
+      setMaxCreateStep((current) => Math.max(current, nextStep))
+      goToCreateStep(nextStep)
+      return
+    }
+
+    void handleCreate()
+  }
+
+  async function handleCreate() {
     const textFields = [form.name, form.tipo, form.direccion, form.barrio, form.ciudad, form.modalidad, form.caracteristicas, form.nivel_ruido]
     if (textFields.some(containsProfanity)) {
       setFormError('No se permiten palabras ofensivas en los campos del espacio.')
       return
     }
+    if (!form.name.trim() || !form.tipo) {
+      goToCreateStep(0)
+      setFormError('Completa el nombre y el tipo de espacio.')
+      return
+    }
     if (!isValidCapacity(form.capacidad)) {
-      setFormError('La capacidad es obligatoria y debe ser un número entero mayor que 0.')
+      goToCreateStep(0)
+      setFormError(capacityValidationMessage)
+      return
+    }
+    const finalPrice = Number(form.precio_hora || suggestedPrice)
+    if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
+      setFormError('Ingresa un precio mayor que cero.')
       return
     }
     setFormError('')
-    const finalPrice = Number(form.precio_hora || suggestedPrice)
     try {
       await createPlace({ ...form, direccion: form.direccion.trim() || null, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: Number.isFinite(finalPrice) ? finalPrice : null, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
       setForm(EMPTY)
+      setCreateStep(0)
+      setMaxCreateStep(0)
       setShowForm(false)
     } catch {
       // El hook informa los errores de red al panel principal.
     }
   }
 
-  return <section className="users-section" id="places" style={{ marginTop: '3rem' }}>
-    <div className="admin-section-heading admin-places-heading"><h2>Lugares publicados</h2><button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancelar' : '+ Crear nuevo lugar'}</button></div>
-    {showForm && <form onSubmit={handleCreate} className="form-create-place"><h3>Crear Nuevo Lugar</h3><div className="form-create-place-grid">
-      <input className="form-create-place-input" placeholder="Nombre *" value={form.name} onChange={(e) => setField('name', e.target.value)} maxLength={255} required />
-      <select className="form-create-place-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)} required><option value="">Tipo *</option>{TIPOS.map((item) => <option key={item}>{item}</option>)}</select>
-      <select className="form-create-place-input" value={form.ciudad} onChange={(e) => setField('ciudad', e.target.value)}><option value="">Ciudad</option>{CIUDADES.map((item) => <option key={item}>{item}</option>)}</select>
-      <select className="form-create-place-input" value={form.barrio} onChange={(e) => setField('barrio', e.target.value)} disabled={!form.ciudad}><option value="">Barrio</option>{(BARRIOS[form.ciudad] || []).map((item) => <option key={item}>{item}</option>)}</select>
-      <input className="form-create-place-input" placeholder="Dirección" value={form.direccion} onChange={(e) => setField('direccion', e.target.value)} autoComplete="street-address" />
-      <input
-        className="form-create-place-input"
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]+"
-        placeholder="Capacidad *"
-        aria-label="Capacidad en unidades"
-        value={form.capacidad}
-        onChange={(event) => {
-          const value = event.target.value
-          setField('capacidad', value)
-          event.currentTarget.setCustomValidity(isValidCapacity(value) ? '' : capacityValidationMessage)
-        }}
-        onInvalid={(event) => event.currentTarget.setCustomValidity(capacityValidationMessage)}
-        required
-      />
-      <label className="form-create-place-price">
-        <span aria-hidden="true">$</span>
-        <input
-          className="form-create-place-input"
-          type="number"
-          min="0"
-          step="1"
-          placeholder="Precio base"
-          aria-label="Precio base en pesos colombianos"
-          value={form.precio_hora || String(Math.round(suggestedPrice))}
-          onChange={(e) => setField('precio_hora', e.target.value)}
-          onWheel={stopWheel}
-          required
-        />
-      </label>
-      <select className="form-create-place-input" value={form.modalidad} onChange={(e) => setField('modalidad', e.target.value)}><option value="">Modalidad</option>{MODALIDADES.map((item) => <option key={item}>{item}</option>)}</select>
-      <select className="form-create-place-input" value={form.nivel_ruido} onChange={(e) => setField('nivel_ruido', e.target.value)}><option value="">Nivel de ruido</option>{RUIDO.map((item) => <option key={item}>{item}</option>)}</select>
-      <textarea className="form-create-place-textarea form-create-place-full-width" placeholder="Características" value={form.caracteristicas} onChange={(e) => setField('caracteristicas', e.target.value)} maxLength={2000} />
-      {form.tipo && form.ciudad && form.modalidad && (
-        <div className="form-create-place-full-width form-create-place-suggested-price">
-          Precio sugerido: <strong>{formatPriceForModality(suggestedPrice, form.modalidad)}</strong>
+  function toggleCreateForm() {
+    if (showForm) {
+      setForm(EMPTY)
+      setFormError('')
+      setCreateStep(0)
+      setMaxCreateStep(0)
+    }
+    setShowForm((current) => !current)
+  }
+
+  return <section className="users-section ad" id="places" style={{ marginTop: withTopSpacing ? '3rem' : 0 }}>
+    <div className="ad-top ad-top--actions">
+      <button className="ad-btn ad-btn--solid" type="button" onClick={toggleCreateForm}>{showForm ? 'Cancelar' : '+ Nuevo espacio'}</button>
+    </div>
+    <div className="ad-kpis">
+      <article className="ad-kpi" style={{ '--n': 0, '--c': '#7c6cff' } as React.CSSProperties}>
+        <span>Total de espacios</span><strong>{places.length}</strong>
+      </article>
+      <article className="ad-kpi" style={{ '--n': 1, '--c': '#3ccf82' } as React.CSSProperties}>
+        <span>Activos</span><strong>{activeCount}</strong>
+        <div className="ad-kpi__bar"><i style={{ width: `${places.length ? (activeCount / places.length) * 100 : 0}%` }} /></div>
+      </article>
+      <article className="ad-kpi" style={{ '--n': 2, '--c': '#f0a951' } as React.CSSProperties}>
+        <span>Inactivos</span><strong>{places.length - activeCount}</strong>
+      </article>
+      <article className="ad-kpi" style={{ '--n': 3, '--c': '#3b73ff' } as React.CSSProperties}>
+        <span>Precio promedio por hora</span><strong>{placePriceFormatter.format(averageHourlyPrice)}</strong>
+      </article>
+    </div>
+    {showForm && <form onSubmit={handleCreateStepSubmit} className="form-create-place place-create-wizard" autoComplete="off">
+      <header className="place-create-heading">
+        <div>
+          <span className="place-create-eyebrow">Publicación de espacio</span>
+          <h3>Cuéntanos sobre tu espacio</h3>
+          <p>Completa estos pasos para agregarlo a WorkPalace.</p>
         </div>
-      )}
-      <div className="form-create-place-full-width">
-        <PlaceImagePicker id="create-place-image" value={form.image_url} onChange={(value) => setField('image_url', value)} />
+        <span className="place-create-step-count">Paso {createStep + 1} de {PLACE_CREATE_STEPS.length}</span>
+      </header>
+
+      <ol className="place-create-steps" aria-label="Progreso de creación del espacio">
+        {PLACE_CREATE_STEPS.map((title, index) => (
+          <li key={title} className={index === createStep ? 'is-current' : index < createStep ? 'is-complete' : ''}>
+            <button type="button" disabled={index > maxCreateStep} aria-current={index === createStep ? 'step' : undefined} onClick={() => goToCreateStep(index)}>
+              <span>{index < createStep ? <i className="fa fa-check" aria-hidden="true" /> : index + 1}</span>
+              <em>{title}</em>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="place-create-progress" aria-hidden="true"><span style={{ width: `${(createStep / (PLACE_CREATE_STEPS.length - 1)) * 100}%` }} /></div>
+
+      <div className="place-create-layout">
+        <section className="place-create-panel" aria-live="polite">
+          <div className="place-create-panel-heading">
+            <span>0{createStep + 1}</span>
+            <h4>{PLACE_CREATE_STEPS[createStep]}</h4>
+          </div>
+
+          {createStep === 0 && <div className="place-create-fields">
+            <label className="place-create-field place-create-field--full" htmlFor="create-place-name">
+              <span>Nombre del espacio <b>*</b></span>
+              <input id="create-place-name" className="form-create-place-input" value={form.name} onChange={(event) => setField('name', event.target.value)} maxLength={255} autoComplete="off" required />
+              <small>Elige un nombre claro y fácil de recordar.</small>
+            </label>
+            <label className="place-create-field" htmlFor="create-place-type">
+              <span>Tipo de espacio <b>*</b></span>
+              <WorkPalaceSelect inputId="create-place-type" className="wp-select--place-form" value={form.tipo} options={selectOptions(TIPOS, 'Selecciona un tipo')} onChange={(value) => setField('tipo', value)} required />
+            </label>
+            <label className="place-create-field" htmlFor="create-place-capacity">
+              <span>Capacidad máxima <b>*</b></span>
+              <input
+                id="create-place-capacity"
+                className="form-create-place-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]+"
+                value={form.capacidad}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setField('capacidad', value)
+                  event.currentTarget.setCustomValidity(isValidCapacity(value) ? '' : capacityValidationMessage)
+                }}
+                onInvalid={(event) => event.currentTarget.setCustomValidity(capacityValidationMessage)}
+                aria-describedby="create-place-capacity-hint"
+                required
+              />
+              <small id="create-place-capacity-hint">Ingresa un número entero mayor que cero.</small>
+            </label>
+          </div>}
+
+          {createStep === 1 && <div className="place-create-fields">
+            <label className="place-create-field" htmlFor="create-place-city">
+              <span>Ciudad</span>
+              <WorkPalaceSelect inputId="create-place-city" className="wp-select--place-form" value={form.ciudad} options={selectOptions(CIUDADES, 'Selecciona una ciudad')} onChange={(value) => {
+                setField('ciudad', value)
+                setField('barrio', '')
+              }} />
+            </label>
+            <label className="place-create-field" htmlFor="create-place-neighborhood">
+              <span>Barrio</span>
+              <WorkPalaceSelect inputId="create-place-neighborhood" className="wp-select--place-form" value={form.barrio} options={selectOptions(BARRIOS[form.ciudad] || [], form.ciudad ? 'Selecciona un barrio' : 'Primero elige una ciudad')} onChange={(value) => setField('barrio', value)} disabled={!form.ciudad} />
+            </label>
+            <label className="place-create-field place-create-field--full" htmlFor="create-place-address">
+              <span>Dirección</span>
+              <input id="create-place-address" className="form-create-place-input" value={form.direccion} onChange={(event) => setField('direccion', event.target.value)} autoComplete="off" />
+              <small>Podrás completar o cambiar la dirección más adelante.</small>
+            </label>
+          </div>}
+
+          {createStep === 2 && <div className="place-create-fields">
+            <label className="place-create-field" htmlFor="create-place-modality">
+              <span>Modalidad de precio</span>
+              <WorkPalaceSelect inputId="create-place-modality" className="wp-select--place-form" value={form.modalidad} options={selectOptions(MODALIDADES, 'Selecciona una modalidad')} onChange={(value) => setField('modalidad', value)} />
+            </label>
+            <label className="place-create-field" htmlFor="create-place-noise">
+              <span>Nivel de ruido</span>
+              <WorkPalaceSelect inputId="create-place-noise" className="wp-select--place-form" value={form.nivel_ruido} options={selectOptions(RUIDO, 'Selecciona un nivel')} onChange={(value) => setField('nivel_ruido', value)} />
+            </label>
+            <label className="place-create-field place-create-field--full" htmlFor="create-place-details">
+              <span>Características del espacio</span>
+              <textarea id="create-place-details" className="form-create-place-textarea" value={form.caracteristicas} onChange={(event) => setField('caracteristicas', event.target.value)} maxLength={2000} rows={5} />
+              <small>{form.caracteristicas.length}/2000 caracteres.</small>
+            </label>
+          </div>}
+
+          {createStep === 3 && <div className="place-create-fields">
+            <label className="place-create-field place-create-field--full" htmlFor="create-place-price">
+              <span>Precio base en pesos colombianos <b>*</b></span>
+              <div className="form-create-place-price">
+                <span aria-hidden="true">$</span>
+                <input id="create-place-price" className="form-create-place-input" type="number" min="1" step="1" value={form.precio_hora || String(Math.round(suggestedPrice))} onChange={(event) => setField('precio_hora', event.target.value)} onWheel={stopWheel} required />
+              </div>
+              {form.tipo && form.ciudad && form.modalidad && <small>Precio sugerido: <strong>{formatPriceForModality(suggestedPrice, form.modalidad)}</strong></small>}
+            </label>
+            <div className="place-create-field place-create-field--full">
+              <span>Foto principal</span>
+              <small>Elige una imagen que represente tu espacio. Puedes subir un archivo o pegar un enlace.</small>
+              <PlaceImagePicker id="create-place-image" value={form.image_url} onChange={(value) => setField('image_url', value)} />
+            </div>
+          </div>}
+
+          {formError && <p className="place-create-error" role="alert">{formError}</p>}
+          <div className="place-create-actions">
+            {createStep > 0
+              ? <button type="button" className="place-create-button place-create-button--secondary" onClick={() => goToCreateStep(createStep - 1)}><i className="fa fa-arrow-left" aria-hidden="true" /> Atrás</button>
+              : <span />}
+            <button type="submit" className="place-create-button place-create-button--primary">
+              {createStep === PLACE_CREATE_STEPS.length - 1 ? 'Crear espacio' : <>Continuar <i className="fa fa-arrow-right" aria-hidden="true" /></>}
+            </button>
+          </div>
+        </section>
+
+        <aside className="place-create-preview" aria-label="Vista previa del espacio">
+          <p className="place-create-preview__eyebrow">Vista previa</p>
+          <article className="place-create-preview__card">
+            <div className="place-create-preview__cover">
+              {form.image_url
+                ? <img src={form.image_url} alt="" />
+                : <i className="fa fa-building-o" aria-hidden="true" />}
+              <span>Nuevo</span>
+              {form.tipo && <b>{form.tipo}</b>}
+            </div>
+            <div className="place-create-preview__body">
+              <h5>{form.name.trim() || 'Nombre de tu espacio'}</h5>
+              <p>{[form.barrio, form.ciudad].filter(Boolean).join(', ') || 'Ubicación por completar'}</p>
+              <span>{form.capacidad ? `Hasta ${form.capacidad} personas` : 'Capacidad por definir'}</span>
+              <div>{form.precio_hora || (form.tipo && form.ciudad && form.modalidad)
+                ? formatPriceForModality(Number(form.precio_hora || suggestedPrice), form.modalidad || 'Por hora')
+                : 'Precio por definir'}</div>
+            </div>
+          </article>
+          <p className="place-create-preview__note">La información de esta vista previa se actualizará mientras completas el formulario.</p>
+        </aside>
       </div>
-    </div>{formError && <p className="admin-operation-message" role="alert">{formError}</p>}<button type="submit" className="btn btn-primary">Crear Lugar</button></form>}
-    {places.length === 0 ? <p className="admin-empty-state">No hay lugares registrados.</p> : <div className="users-table-wrapper" role="region" aria-label="Tabla de espacios" tabIndex={0}><table className="users-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Barrio</th><th>Ciudad</th><th>Capacidad</th><th>Precio base</th><th>Modalidad</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>
-      {places.map((place) => (
-        <tr key={place.id}>
-          <td data-label="ID">#{place.id}</td>
-          <td data-label="Nombre">
-            <input
-              className="table-input"
-              defaultValue={place.name}
-              onBlur={(event) => updatePlace(place.id, { name: event.target.value })}
-            />
-          </td>
-          <td data-label="Tipo">
-            <select className="table-select" defaultValue={place.tipo || ''} onChange={(event) => updatePlace(place.id, { tipo: event.target.value })}>
-              {TIPOS.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </td>
-          <td data-label="Barrio">
-            <select className="table-select" defaultValue={place.barrio || ''} onChange={(event) => updatePlace(place.id, { barrio: event.target.value })}>
-              {(BARRIOS[place.ciudad || 'Medellín'] || []).map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </td>
-          <td data-label="Ciudad">
-            <select
-              className="table-select"
-              defaultValue={place.ciudad || ''}
-              onChange={(event) => updatePlace(place.id, { ciudad: event.target.value })}
-            >
-              {CIUDADES.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </td>
-          <td data-label="Capacidad"><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></td>
-          <td data-label="Precio base"><div className="admin-place-price">{formatPriceForModality(place.precio_hora, place.modalidad)}</div></td>
-          <td data-label="Modalidad">
-            <select className="table-select" defaultValue={place.modalidad || ''} onChange={(event) => updatePlace(place.id, { modalidad: event.target.value })}>
-              {MODALIDADES.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </td>
-          <td data-label="Activo"><input type="checkbox" checked={place.active !== false} onChange={(event) => togglePlaceActive(place.id, event.target.checked)} /></td>
-          <td data-label="Acciones">
-            <button className="btn btn-secondary" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }}>Editar</button>{' '}
-            <button className="user-delete-button" onClick={() => deletePlace(place.id)}>Eliminar</button>
-          </td>
-        </tr>
-      ))}
-    </tbody></table></div>}
+    </form>}
+    <div className="ad-tabla-wrap">
+      <div className="ad-barra">
+        <label className="ad-buscar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+          <input ref={searchRef} value={query} onChange={(event) => changeQuery(event.target.value)} placeholder="Buscar por nombre, barrio o ID" aria-label="Buscar espacios" />
+          {query
+            ? <button type="button" onClick={() => changeQuery('')} aria-label="Borrar búsqueda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12" /></svg></button>
+            : <kbd>/</kbd>}
+        </label>
+        <div className="ad-seg" role="group" aria-label="Filtrar por estado">
+          {([
+            ['all', 'Todos'],
+            ['active', 'Activos'],
+            ['inactive', 'Inactivos'],
+          ] as const).map(([value, label]) => (
+            <button key={value} type="button" aria-pressed={statusFilter === value} onClick={() => changeStatusFilter(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <WorkPalaceSelect className="wp-select--admin-filter" value={typeFilter} options={selectOptions(TIPOS, 'Todos los tipos')} onChange={changeTypeFilter} ariaLabel="Filtrar por tipo" />
+        <WorkPalaceSelect className="wp-select--admin-filter" value={cityFilter} options={selectOptions(CIUDADES, 'Todas las ciudades')} onChange={changeCityFilter} ariaLabel="Filtrar por ciudad" />
+        {hasFilters && <button className="ad-link" type="button" onClick={clearFilters}>Limpiar filtros</button>}
+      </div>
+
+      {visiblePlaces.length > 0 ? (
+        <div className="ad-scroll" role="region" aria-label="Tabla de espacios" tabIndex={0}>
+          <table className="ad-tabla">
+            <thead>
+              <tr>
+                <th className="ad-chk">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todos los espacios de esta página"
+                    checked={allVisibleSelected}
+                    ref={(element) => {
+                      if (element) element.indeterminate = someVisibleSelected && !allVisibleSelected
+                    }}
+                    onChange={togglePageSelection}
+                  />
+                </th>
+                <th aria-sort={sort.key === 'name' ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
+                  <button type="button" className={`ad-sort${sort.key === 'name' ? ' is-on' : ''}`} onClick={() => toggleSort('name')}>Espacio <span>{sort.key === 'name' ? (sort.direction === 1 ? '↑' : '↓') : ''}</span></button>
+                </th>
+                <th>Tipo</th><th>Barrio</th><th>Ciudad</th>
+                <th aria-sort={sort.key === 'capacidad' ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
+                  <button type="button" className={`ad-sort${sort.key === 'capacidad' ? ' is-on' : ''}`} onClick={() => toggleSort('capacidad')}>Capacidad <span>{sort.key === 'capacidad' ? (sort.direction === 1 ? '↑' : '↓') : ''}</span></button>
+                </th>
+                <th aria-sort={sort.key === 'precio_hora' ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
+                  <button type="button" className={`ad-sort${sort.key === 'precio_hora' ? ' is-on' : ''}`} onClick={() => toggleSort('precio_hora')}>Precio base <span>{sort.key === 'precio_hora' ? (sort.direction === 1 ? '↑' : '↓') : ''}</span></button>
+                </th>
+                <th>Modalidad</th><th>Estado</th><th className="ad-acc-th">Acciones</th>
+              </tr>
+            </thead>
+            <tbody key={`${currentPage}-${normalizedQuery}-${statusFilter}-${typeFilter}-${cityFilter}-${sort.key}-${sort.direction}`}>
+              {visiblePlaces.map((place, index) => {
+                const [accent, accentAlt] = placeColors[Math.max(0, TIPOS.indexOf(place.tipo)) % placeColors.length]
+                const active = place.active !== false
+                return (
+                  <tr key={place.id} className={`${active ? '' : 'is-off'}${selectedIds.has(place.id) ? ' is-sel' : ''}`} style={{ '--a': accent, '--b': accentAlt, '--n': index } as React.CSSProperties}>
+                    <td className="ad-chk"><input type="checkbox" aria-label={`Seleccionar ${place.name}`} checked={selectedIds.has(place.id)} onChange={() => setSelectedIds((current) => {
+                      const next = new Set(current)
+                      if (next.has(place.id)) next.delete(place.id)
+                      else next.add(place.id)
+                      return next
+                    })} /></td>
+                    <td data-label="Espacio">
+                      <div className="ad-esp">
+                        <span className="ad-tile">{place.name.trim().charAt(0).toUpperCase() || '?'}</span>
+                        <div>
+                          <input className="ad-name" aria-label={`Nombre de ${place.name}`} defaultValue={place.name} onBlur={(event) => {
+                            if (event.target.value.trim() && event.target.value.trim() !== place.name) void updatePlace(place.id, { name: event.target.value.trim() })
+                          }} />
+                          <small>#{place.id}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Tipo">
+                      <WorkPalaceSelect className="wp-select--inline wp-select--inline-wide" ariaLabel={`Tipo de ${place.name}`} defaultValue={place.tipo || ''} options={selectOptions(TIPOS)} onChange={(value) => void updatePlace(place.id, { tipo: value })} />
+                    </td>
+                    <td data-label="Barrio">
+                      <WorkPalaceSelect
+                        className="wp-select--inline"
+                        ariaLabel={`Barrio de ${place.name}`}
+                        defaultValue={place.barrio || ''}
+                        options={selectOptions([
+                          ...(place.barrio && !(BARRIOS[place.ciudad || 'Medellín'] || []).includes(place.barrio) ? [place.barrio] : []),
+                          ...(BARRIOS[place.ciudad || 'Medellín'] || []),
+                        ], 'Sin barrio')}
+                        onChange={(value) => void updatePlace(place.id, { barrio: value })}
+                      />
+                    </td>
+                    <td data-label="Ciudad">
+                      <WorkPalaceSelect
+                        className="wp-select--inline"
+                        ariaLabel={`Ciudad de ${place.name}`}
+                        defaultValue={place.ciudad || ''}
+                        options={selectOptions([
+                          ...(place.ciudad && !CIUDADES.includes(place.ciudad) ? [place.ciudad] : []),
+                          ...CIUDADES,
+                        ], 'Sin ciudad')}
+                        onChange={(value) => void updatePlace(place.id, { ciudad: value })}
+                      />
+                    </td>
+                    <td data-label="Capacidad"><span className="ad-cap"><i className="fa fa-users" aria-hidden="true" /><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></span></td>
+                    <td data-label="Precio base"><strong className="ad-precio">{place.precio_hora == null ? 'A convenir' : placePriceFormatter.format(Number(place.precio_hora))}</strong><small>{place.modalidad || 'Modalidad no definida'}</small></td>
+                    <td data-label="Modalidad">
+                      <WorkPalaceSelect className="wp-select--inline" ariaLabel={`Modalidad de ${place.name}`} defaultValue={place.modalidad || ''} options={selectOptions(MODALIDADES)} onChange={(value) => void updatePlace(place.id, { modalidad: value })} />
+                    </td>
+                    <td data-label="Estado"><div className="ad-estado">
+                      <button type="button" role="switch" aria-checked={active} aria-label={`${active ? 'Desactivar' : 'Activar'} ${place.name}`} className={`ad-switch${active ? ' is-on' : ''}`} onClick={() => togglePlaceActive(place.id, !active)}><i /></button>
+                      <span>{active ? 'Activo' : 'Inactivo'}</span>
+                    </div></td>
+                    <td data-label="Acciones" className="ad-acc">
+                      <button type="button" className="ad-icon" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }} aria-label={`Editar dirección e imagen de ${place.name}`} data-tip="Editar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
+                      </button>
+                      <button type="button" className="ad-icon ad-icon--bad" onClick={() => deletePlace(place.id)} aria-label={`Eliminar ${place.name}`} data-tip="Eliminar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="ad-vacio"><span><i className="fa fa-search" aria-hidden="true" /></span><b>{places.length ? 'No encontramos espacios' : 'No hay lugares registrados'}</b><p>{places.length ? 'Prueba con otra búsqueda o quita algunos filtros.' : 'Cuando se publiquen espacios, aparecerán aquí.'}</p>{hasFilters && <button className="ad-btn ad-btn--ghost" type="button" onClick={clearFilters}>Limpiar filtros</button>}</div>
+      )}
+
+      <footer className="ad-pie">
+        <span>Mostrando {visiblePlaces.length} de {filteredPlaces.length} {filteredPlaces.length === 1 ? 'espacio' : 'espacios'}</span>
+        {pageCount > 1 && <nav className="ad-pager" aria-label="Paginación de espacios">
+          <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="Página anterior">‹</button>
+          {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+            <button key={pageNumber} type="button" className={currentPage === pageNumber ? 'is-on' : ''} aria-current={currentPage === pageNumber ? 'page' : undefined} onClick={() => setPage(pageNumber)}>{pageNumber}</button>
+          ))}
+          <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)} aria-label="Página siguiente">›</button>
+        </nav>}
+      </footer>
+    </div>
+
+    {selectedIds.size > 0 && <div className="ad-bulk" role="status">
+      <b>{selectedIds.size} {selectedIds.size === 1 ? 'seleccionado' : 'seleccionados'}</b>
+      <button type="button" className="ad-btn ad-btn--ghost" onClick={() => void setSelectedPlacesActive(true)}>Activar</button>
+      <button type="button" className="ad-btn ad-btn--ghost" onClick={() => void setSelectedPlacesActive(false)}>Desactivar</button>
+      {deletePlaces && <button type="button" className="ad-btn ad-btn--danger" onClick={() => deletePlaces([...selectedIds])}>Eliminar</button>}
+      <button type="button" className="ad-icon" onClick={() => setSelectedIds(new Set())} aria-label="Quitar selección"><i className="fa fa-times" aria-hidden="true" /></button>
+    </div>}
     {editingId !== null && (
       <div
         className="admin-image-modal"

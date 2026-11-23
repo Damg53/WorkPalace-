@@ -212,17 +212,25 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
 
   const renderPlaceCard = (place: Place) => {
     const isFavorite = favorites.some((favorite) => favorite.place_id === place.id)
+    const placeName = place.name || place.tipo
+    const reviewCount = Number(place.review_count ?? 0)
+    const availableFrom = formatAvailableFrom(place.available_from)
 
     return (
       <div
         key={place.id}
         className="feature-card place-card"
       >
-        {place.image_url && (
-          <div className="place-image-wrapper">
+        <div className="place-image-wrapper">
+          {place.image_url ? (
             <img src={place.image_url} alt={place.name} className="place-image" />
-          </div>
-        )}
+          ) : (
+            <div className="place-image-placeholder">
+              <span className="fa fa-picture-o" aria-hidden="true" />
+              <span>Espacio sin foto</span>
+            </div>
+          )}
+        </div>
         {userId != null && (
           <button
             type="button"
@@ -234,10 +242,22 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
               ? 'Guardando favorito'
               : isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
           >
-            <i
-              className={`fa ${pendingFavoriteId === place.id ? 'fa-spinner fa-spin' : isFavorite ? 'fa-heart' : 'fa-heart-o'}`}
-              aria-hidden="true"
-            />
+            {pendingFavoriteId === place.id ? (
+              <svg className="place-favorite-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" strokeDasharray="34 22" />
+              </svg>
+            ) : (
+              <svg className="place-favorite-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"
+                  fill={isFavorite ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
             <span className="place-favorite-tooltip" aria-hidden="true">
               {pendingFavoriteId === place.id
                 ? 'Guardando...'
@@ -246,11 +266,10 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
           </button>
         )}
         <div className="place-card-heading">
-          <h3 style={{
-            margin: 0,
-            fontSize: '1.35rem',
-            fontWeight: 700
-          }}>{place.tipo}</h3>
+          <div className="place-card-heading__copy">
+            <h3>{placeName}</h3>
+            <span className="place-card__type">{place.tipo}</span>
+          </div>
           <span className={`place-availability${place.active ? '' : ' is-unavailable'}`}>
             {place.active ? 'Disponible' : 'No disponible'}
           </span>
@@ -260,17 +279,22 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
           {[place.barrio, place.ciudad].filter(Boolean).join(', ') || 'Ubicación por confirmar'}
         </p>
         <p className="place-card__trust">
-          {Number(place.review_count) > 0
-            ? `★ ${Number(place.average_rating).toFixed(1)} · ${place.review_count} reseñas verificadas`
+          {reviewCount > 0
+            ? <><span aria-hidden="true">★</span> {Number(place.average_rating).toFixed(1)} · {reviewCount} {reviewCount === 1 ? 'reseña verificada' : 'reseñas verificadas'}</>
             : 'Aún sin reseñas'}
-          {place.owner_name ? ` · Publicado por ${place.owner_name}` : ''}
         </p>
+        {!place.active && (
+          <p className="place-card__unavailable">
+            {place.unavailable_reason || 'No disponible temporalmente'}
+            {availableFrom && ` · Disponible nuevamente el ${availableFrom}`}
+          </p>
+        )}
         <div className="place-card-actions">
           <button
             type="button"
-            className="btn btn-secondary"
-            style={{ padding: '0.5rem 1.1rem', fontSize: '0.95rem', border: '1px solid #667eea', background: '#fff', color: '#333', borderRadius: '7px', fontWeight: 500, cursor: 'pointer' }}
+            className="place-details-button"
             onClick={() => setSelectedPlace(place)}
+            aria-label={`Ver detalles de ${placeName}`}
           >
             Detalles
           </button>
@@ -280,15 +304,12 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
             onClick={() => onReserve(place.id)}
             disabled={!place.active}
           >
-            {place.active ? 'Reserva ya' : 'Ocupado'}
+            {place.active ? 'Reservar' : 'Ocupado'}
           </button>
         </div>
-        <span style={{ fontSize: '0.85rem', color: '#888' }}>
-          Confirma los datos y simula tu pago para reservar.
-        </span>
       </div>
     )
-  };
+  }
 
   return (
     <>
@@ -434,13 +455,18 @@ const PlacesList: React.FC<PlacesListProps> = ({ userId, places, loading, error,
         </div>
       )}
       {loading ? (
-        <p className="settings-loading">Cargando espacios disponibles...</p>
+        <div className="places-loading" role="status">
+          <span className="places-loading__spinner" aria-hidden="true" />
+          Cargando espacios disponibles...
+        </div>
       ) : (
         <div className="features-grid places-grid">
           {places.length === 0 ? (
-            <p style={{ padding: '1.5rem 0', color: '#666' }}>
-              No hay espacios registrados aún en la base de datos.
-            </p>
+            <div className="places-empty-state">
+              <span className="fa fa-search" aria-hidden="true" />
+              <h3>No encontramos espacios</h3>
+              <p>Prueba ajustar la búsqueda o los filtros para ver otras opciones.</p>
+            </div>
           ) : (
             places.map((place) => renderPlaceCard(place))
           )}

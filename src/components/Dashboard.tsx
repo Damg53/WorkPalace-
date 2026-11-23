@@ -1,9 +1,10 @@
-import Sidebar from './Sidebar'
 import '../App.css'
 import './Dashboard.css'
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { API_BASE_URL, cancelReservation } from '../services/api'
+import PageHeader from './PageHeader'
+import WorkPalaceSelect from './WorkPalaceSelect'
+import { type CSSProperties, useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { API_BASE_URL, API_UNAVAILABLE_MESSAGE, cancelReservation } from '../services/api'
 import { formatReadableTime } from '../utils/dateFormatting'
 
 interface DashboardProps {
@@ -58,10 +59,115 @@ interface NotificationItem {
   detail: string
   tone: string
   is_read: boolean
+  created_at: string
+}
+
+interface PlaceCardData {
+  id: number
+  name: string
+  ciudad: string | null
+  tipo: string | null
+  precio_hora: number | string | null
+  average_rating: number | string | null
+  review_count: number
+  image_url: string | null
+  active?: boolean
+}
+
+interface FavoriteSpace {
+  id: number
+  place_id: number
+  place_name: string
+  place_city: string | null
+  tipo?: string | null
+  precio_hora?: number | string | null
+  average_rating?: number | string | null
+  review_count?: number
+  image_url?: string | null
 }
 
 const API = API_BASE_URL
 const PREFERENCES_KEY = 'workpalace-user-preferences'
+const notificationTimeFormatter = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'America/Bogota',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+const notificationDateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Bogota',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+const favoritePriceFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0,
+})
+
+function notificationGroup(createdAt: string) {
+  const date = new Date(createdAt)
+  if (Number.isNaN(date.getTime())) return 'Anteriores'
+  const todayKey = notificationDateKeyFormatter.format(new Date())
+  const notificationKey = notificationDateKeyFormatter.format(date)
+  const daysAgo = (Date.parse(`${todayKey}T00:00:00Z`) - Date.parse(`${notificationKey}T00:00:00Z`)) / 86400000
+  if (daysAgo <= 0) return 'Hoy'
+  if (daysAgo === 1) return 'Ayer'
+  if (daysAgo < 7) return 'Esta semana'
+  return 'Anteriores'
+}
+
+function notificationAge(createdAt: string) {
+  const timestamp = new Date(createdAt).getTime()
+  if (Number.isNaN(timestamp)) return ''
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000))
+  if (elapsedMinutes < 1) return 'Ahora'
+  if (elapsedMinutes < 60) return `hace ${elapsedMinutes} min`
+  const elapsedHours = Math.floor(elapsedMinutes / 60)
+  if (elapsedHours < 24) return `hace ${elapsedHours} h`
+  const elapsedDays = Math.floor(elapsedHours / 24)
+  return elapsedDays === 1 ? 'Ayer' : `hace ${elapsedDays} días`
+}
+
+function placeAccent(tipo: string | null) {
+  const normalized = (tipo || '').toLowerCase()
+  if (normalized.includes('cocin')) return ['#f0803c', '#e0457b']
+  if (normalized.includes('taller')) return ['#2fa37a', '#3b73ff']
+  if (normalized.includes('foto')) return ['#7c6cff', '#e0457b']
+  return ['#3b73ff', '#7c6cff']
+}
+
+function PlaceArtwork({ place }: { place: PlaceCardData }) {
+  if (place.image_url) {
+    return <img src={place.image_url} alt="" loading="lazy" />
+  }
+  const type = (place.tipo || '').toLowerCase()
+  return (
+    <svg viewBox="0 0 200 120" fill="#fff" aria-hidden="true">
+      {type.includes('cocin') ? (
+        <><rect x="55" y="62" width="90" height="38" rx="8" /><rect x="48" y="54" width="104" height="9" rx="4" /><rect x="92" y="46" width="16" height="8" rx="4" /></>
+      ) : type.includes('grab') ? (
+        [18, 34, 52, 28, 62, 40, 24].map((height, index) => (
+          <rect key={index} x={40 + index * 17} y={60 - height / 2} width="9" height={height} rx="4.5" />
+        ))
+      ) : type.includes('taller') ? (
+        <><rect x="40" y="82" width="120" height="14" rx="3" /><circle cx="100" cy="46" r="24" fill="none" stroke="#fff" strokeWidth="6" strokeDasharray="7 5" /></>
+      ) : (
+        <><rect x="45" y="36" width="110" height="64" rx="12" /><circle cx="100" cy="68" r="22" fill="none" stroke="#fff" strokeWidth="5" /><circle cx="148" cy="48" r="4" /></>
+      )}
+    </svg>
+  )
+}
+
+function NotificationIcon({ tone }: { tone: string }) {
+  if (tone === 'success') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+  }
+  if (tone === 'warning') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+  }
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 9h18" /></svg>
+}
 
 function loadUserPreferences() {
   try {
@@ -151,7 +257,18 @@ function getCancellationPolicy(r: Reserva) {
   return { label: 'Sin reembolso', detail: 'La cancelación está sujeta a condiciones del espacio y la fecha.', refund: '0%' }
 }
 
-export default function Dashboard({ user, onLogout, isDark, setIsDark }: DashboardProps) {
+export default function Dashboard({ user }: DashboardProps) {
+  const location = useLocation()
+  const dashboardView = location.hash === '#favorites-and-notifications' ? 'favorites' : 'reservations'
+  useEffect(() => {
+    const targetId = location.hash.slice(1)
+    if (!targetId) return
+    const frameId = window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [location.hash])
+
   const todayIso = isoDateOnly(new Date())
   const [reservas, setReservas] = useState<Reserva[]>([])
   const [loading, setLoading] = useState(true)
@@ -163,19 +280,22 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   const [selectedReservation, setSelectedReservation] = useState<Reserva | null>(null)
   const [reservationToCancel, setReservationToCancel] = useState<Reserva | null>(null)
   const [preferences] = useState(loadUserPreferences)
-  const [favoriteSpaces, setFavoriteSpaces] = useState<Array<{ id: number; place_id: number; place_name: string; place_city: string | null }>>([])
+  const [favoriteSpaces, setFavoriteSpaces] = useState<FavoriteSpace[]>([])
   const [notificationItems, setNotificationItems] = useState<NotificationItem[]>([])
+  const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all')
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [clearingNotifications, setClearingNotifications] = useState(false)
+  const [restoringNotifications, setRestoringNotifications] = useState(false)
+  const [notificationToast, setNotificationToast] = useState<{ message: string; restoreItems: NotificationItem[] } | null>(null)
   const [showClearNotificationsDialog, setShowClearNotificationsDialog] = useState(false)
-  const [suggestedPlaces, setSuggestedPlaces] = useState<Array<{ id: number; name: string; ciudad: string | null }>>([])
+  const [suggestedPlaces, setSuggestedPlaces] = useState<PlaceCardData[]>([])
   const [reviewingReservation, setReviewingReservation] = useState<number | null>(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [submittingReview, setSubmittingReview] = useState(false)
 
-  const prioritizeSuggestedPlaces = (places: Array<{ id: number; name: string; ciudad?: string | null; active?: boolean; precio_hora?: number | null }>, userCity: string) => {
+  const prioritizeSuggestedPlaces = (places: PlaceCardData[], userCity: string) => {
     const normalizedCity = userCity.trim().toLowerCase()
 
     return [...places]
@@ -216,19 +336,15 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         ])
 
         if (favoritesRes.ok) {
-          const favoritesData = await favoritesRes.json()
+          const favoritesData = await favoritesRes.json() as { favorites?: FavoriteSpace[] }
           setFavoriteSpaces(favoritesData.favorites || [])
         }
 
         if (placesRes.ok) {
-          const placesData = await placesRes.json()
+          const placesData = await placesRes.json() as { places?: PlaceCardData[] }
           const places = Array.isArray(placesData.places) ? placesData.places : []
           const ranked = prioritizeSuggestedPlaces(places, preferences.city || '')
-          setSuggestedPlaces(ranked.map((place) => ({
-            id: Number(place.id),
-            name: String(place.name),
-            ciudad: place.ciudad || null,
-          })))
+          setSuggestedPlaces(ranked)
         }
       } catch (error) {
         console.error('Error cargando datos complementarios del panel:', error)
@@ -283,7 +399,13 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     }
   }, [user.id])
 
-  const toggleFavorite = async (place: { id: number; name: string; ciudad: string | null }) => {
+  useEffect(() => {
+    if (!notificationToast) return
+    const timeoutId = window.setTimeout(() => setNotificationToast(null), 5500)
+    return () => window.clearTimeout(timeoutId)
+  }, [notificationToast])
+
+  const toggleFavorite = async (place: PlaceCardData) => {
     if (!user.id) return
 
     const exists = favoriteSpaces.some((item) => item.place_id === place.id)
@@ -321,6 +443,11 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
           place_id: data.favorite.place_id,
           place_name: data.favorite.place_name,
           place_city: data.favorite.place_city,
+          tipo: place.tipo,
+          precio_hora: place.precio_hora,
+          average_rating: place.average_rating,
+          review_count: place.review_count,
+          image_url: place.image_url,
         },
         ...prev,
       ])
@@ -353,6 +480,25 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
     }
   }
 
+  const markAllNotificationsRead = async () => {
+    if (!user.id || !notificationItems.some((item) => !item.is_read)) return
+
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/notifications/read`, {
+        method: 'PUT',
+        headers: { 'x-user-id': String(user.id) },
+      })
+      const data = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(data.error || 'No se pudieron marcar las notificaciones como leídas.')
+
+      setNotificationItems((current) => current.map((item) => ({ ...item, is_read: true })))
+      setNotificationError(null)
+      window.dispatchEvent(new Event('workpalace-notifications-updated'))
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'No se pudieron marcar las notificaciones como leídas.')
+    }
+  }
+
   const clearNotifications = async () => {
     if (!user.id || clearingNotifications || notificationItems.length === 0) return
 
@@ -362,7 +508,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         method: 'DELETE',
         headers: { 'x-user-id': String(user.id) },
       })
-      const data: { error?: string } = await response.json().catch(() => ({}))
+      const data: { error?: string; notifications?: NotificationItem[] } = await response.json().catch(() => ({}))
       if (!response.ok) {
         throw new Error(
           response.status === 503
@@ -374,11 +520,65 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
       setNotificationItems([])
       setNotificationError(null)
       setShowClearNotificationsDialog(false)
+      const removedItems = data.notifications || []
+      if (removedItems.length > 0) {
+        setNotificationToast({ message: `${removedItems.length} notificaciones eliminadas`, restoreItems: removedItems })
+      }
       window.dispatchEvent(new Event('workpalace-notifications-updated'))
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : 'No se pudieron limpiar las notificaciones.')
     } finally {
       setClearingNotifications(false)
+    }
+  }
+
+  const deleteNotification = async (notificationId: number) => {
+    if (!user.id) return
+
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: { 'x-user-id': String(user.id) },
+      })
+      const data = await response.json() as { notification?: NotificationItem; error?: string }
+      if (!response.ok || !data.notification) {
+        throw new Error(data.error || 'No se pudo eliminar la notificación.')
+      }
+
+      setNotificationItems((current) => current.filter((item) => item.id !== notificationId))
+      setNotificationError(null)
+      setNotificationToast({ message: 'Notificación eliminada', restoreItems: [data.notification] })
+      window.dispatchEvent(new Event('workpalace-notifications-updated'))
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'No se pudo eliminar la notificación.')
+    }
+  }
+
+  const restoreNotifications = async () => {
+    if (!user.id || !notificationToast || restoringNotifications) return
+
+    setRestoringNotifications(true)
+    try {
+      const response = await fetch(`${API}/api/users/${user.id}/notifications/restore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(user.id),
+        },
+        body: JSON.stringify({ notifications: notificationToast.restoreItems }),
+      })
+      const data = await response.json() as { notifications?: NotificationItem[]; error?: string }
+      if (!response.ok) throw new Error(data.error || 'No se pudieron restaurar las notificaciones.')
+
+      setNotificationItems((current) => [...current, ...(data.notifications || [])]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
+      setNotificationError(null)
+      setNotificationToast(null)
+      window.dispatchEvent(new Event('workpalace-notifications-updated'))
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'No se pudieron restaurar las notificaciones.')
+    } finally {
+      setRestoringNotifications(false)
     }
   }
 
@@ -430,7 +630,7 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         const rows = (data.reservations || []).map(mapReservation)
         setReservas(rows)
       } catch {
-        if (!cancelled) setError('Error de conexión. ¿Está el servidor en marcha?')
+        if (!cancelled) setError(API_UNAVAILABLE_MESSAGE)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -508,6 +708,44 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   const nextReservation = [...reservas]
     .filter((r) => r.estado === 'pendiente' || r.estado === 'confirmada')
     .sort((a, b) => new Date(a.checkInRaw).getTime() - new Date(b.checkInRaw).getTime())[0]
+  const pageHeader = dashboardView === 'favorites'
+    ? {
+        eyebrow: 'Tu cuenta',
+        title: 'Favoritos y notificaciones',
+        description: 'Consulta tus espacios guardados y mantente al tanto de la actividad de tus reservas.',
+        badge: 'Actividad personal',
+      }
+    : {
+        eyebrow: 'Área personal',
+        title: `Hola, ${user.fullName || user.username}`,
+        description: 'Consulta tus reservas, revisa su estado y organiza tu próxima visita.',
+        badge: 'Mis reservas',
+      }
+  const favoriteListings = favoriteSpaces.map((favorite): PlaceCardData => {
+    return {
+      id: favorite.place_id,
+      name: favorite.place_name,
+      ciudad: favorite.place_city,
+      tipo: favorite.tipo ?? null,
+      precio_hora: favorite.precio_hora ?? null,
+      average_rating: favorite.average_rating ?? null,
+      review_count: favorite.review_count ?? 0,
+      image_url: favorite.image_url ?? null,
+    }
+  })
+  const unsavedSuggestions = suggestedPlaces.filter((place) => (
+    !favoriteSpaces.some((favorite) => favorite.place_id === place.id)
+  ))
+  const unreadNotificationCount = notificationItems.filter((item) => !item.is_read).length
+  const visibleNotificationItems = notificationItems
+    .filter((item) => notificationFilter === 'all' || !item.is_read)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const notificationGroups = ['Hoy', 'Ayer', 'Esta semana', 'Anteriores']
+    .map((label) => ({
+      label,
+      items: visibleNotificationItems.filter((item) => notificationGroup(item.created_at) === label),
+    }))
+    .filter((group) => group.items.length > 0)
 
   const handleCancelReservation = async (reservaId: number) => {
     setCancelling(reservaId)
@@ -724,13 +962,13 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
                     >
                       <label>
                         Tu calificación
-                        <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
-                          <option value={5}>★★★★★ · Excelente</option>
-                          <option value={4}>★★★★ · Muy bueno</option>
-                          <option value={3}>★★★ · Bueno</option>
-                          <option value={2}>★★ · Regular</option>
-                          <option value={1}>★ · Malo</option>
-                        </select>
+                        <WorkPalaceSelect value={String(reviewRating)} onChange={(value) => setReviewRating(Number(value))} ariaLabel="Tu calificación" options={[
+                          { value: '5', label: '★★★★★ · Excelente' },
+                          { value: '4', label: '★★★★ · Muy bueno' },
+                          { value: '3', label: '★★★ · Bueno' },
+                          { value: '2', label: '★★ · Regular' },
+                          { value: '1', label: '★ · Malo' },
+                        ]} />
                       </label>
                       <label>
                         Cuéntale a otras personas (opcional)
@@ -765,14 +1003,13 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
   }
 
   return (
-    <div className="with-sidebar">
-      <Sidebar user={user} isDark={isDark} setIsDark={setIsDark} onLogout={onLogout} />
-
-      {/* Hero-like welcome */}
-      <section className="hero">
-        <h1>Hola, {user.username}</h1>
-        <p>Bienvenido a tu panel de control</p>
-      </section>
+    <div className="with-sidebar" data-dashboard-view={dashboardView}>
+      <PageHeader
+        eyebrow={pageHeader.eyebrow}
+        title={pageHeader.title}
+        description={pageHeader.description}
+        badge={pageHeader.badge}
+      />
 
       <section className="features" id="user-overview">
         <div className="features-container">
@@ -805,108 +1042,231 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
         </div>
       </section>
 
-      <section className="features" id="favorites-and-notifications">
-        <div className="features-container user-two-column">
-          <div className="user-box">
-            <div className="section-title-row section-title-row--tight">
-              <h2 className="section-title">Favoritos</h2>
+      <section className="ac" id="favorites-and-notifications">
+        <section className="ac-col" aria-labelledby="favorites-title">
+          <header className="ac-head">
+            <h2 id="favorites-title">Favoritos</h2>
+            <div className="ac-head__acc">
+              <span className="ac-count">{favoriteListings.length}</span>
             </div>
-            <div className="mini-list">
-              {favoriteSpaces.length === 0 ? (
-                <div className="reservation-empty-state">Aún no tienes favoritos guardados.</div>
-              ) : (
-                favoriteSpaces.map((space) => (
-                  <div className="mini-list-item" key={`${space.place_id}-${space.place_name}`}>
-                    <div>
-                      <strong>{space.place_name}</strong>
-                      <span>{space.place_city || 'Ciudad no indicada'}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="reservation-card__ghost"
-                      onClick={() => toggleFavorite({ id: space.place_id, name: space.place_name, ciudad: space.place_city || null })}
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+          </header>
 
-            {suggestedPlaces.length > 0 && (
-              <div className="suggested-list" style={{ marginTop: '1rem' }}>
-                <p className="reservation-empty-state__eyebrow">Sugeridos</p>
-                {suggestedPlaces.map((place) => {
-                  const isSaved = favoriteSpaces.some((item) => item.place_id === place.id)
+          {favoriteListings.length > 0 ? (
+            <ul className="ac-lista">
+              {favoriteListings.map((place) => {
+                const [accent, accentAlt] = placeAccent(place.tipo)
+                const price = Number(place.precio_hora)
+                const rating = Number(place.average_rating)
+                return (
+                  <li
+                    className="ac-fav"
+                    key={place.id}
+                    style={{ '--a': accent, '--b': accentAlt } as CSSProperties}
+                  >
+                    <span className="ac-fav__art"><PlaceArtwork place={place} /></span>
+                    <div className="ac-fav__info">
+                      <b>{place.name}</b>
+                      <small>
+                        {place.ciudad || 'Ciudad no indicada'} ·{' '}
+                        {rating > 0 ? (
+                          <span className="ac-star">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L2.9 9.4l6.3-.9L12 2.8Z" /></svg>
+                            {rating.toFixed(1)}
+                          </span>
+                        ) : 'Aún sin reseñas'}
+                      </small>
+                      <small className="ac-fav__precio">
+                        {Number.isFinite(price) && price > 0 ? `${favoritePriceFormatter.format(price)} por hora` : 'Precio por consultar'}
+                      </small>
+                    </div>
+                    <div className="ac-fav__acc">
+                      <Link className="ac-btn ac-btn--solid" to={`/checkout/${place.id}`}>Reservar</Link>
+                      <button
+                        type="button"
+                        className="ac-heart is-on"
+                        aria-label={`Quitar ${place.name} de favoritos`}
+                        aria-pressed="true"
+                        onClick={() => void toggleFavorite(place)}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z" /></svg>
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <div className="ac-vacio ac-vacio--fav">
+              <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z" /></svg></span>
+              <b>Aún no tienes favoritos</b>
+              <p>Guarda los espacios que te gustan para reservarlos más rápido.</p>
+            </div>
+          )}
+
+          {unsavedSuggestions.length > 0 && (
+            <>
+              <h3 className="ac-sub">Sugeridos para ti</h3>
+              <ul className="ac-lista">
+                {unsavedSuggestions.map((place) => {
+                  const [accent, accentAlt] = placeAccent(place.tipo)
+                  const price = Number(place.precio_hora)
+                  const rating = Number(place.average_rating)
                   return (
-                    <div className="mini-list-item" key={place.id}>
-                      <div>
-                        <strong>{place.name}</strong>
-                        <span>{place.ciudad || 'Ciudad no indicada'}</span>
+                    <li
+                      className="ac-fav"
+                      key={place.id}
+                      style={{ '--a': accent, '--b': accentAlt } as CSSProperties}
+                    >
+                      <span className="ac-fav__art"><PlaceArtwork place={place} /></span>
+                      <div className="ac-fav__info">
+                        <b>{place.name}</b>
+                        <small>
+                          {place.ciudad || 'Ciudad no indicada'} ·{' '}
+                          {rating > 0 ? `${rating.toFixed(1)} ★` : 'Aún sin reseñas'}
+                        </small>
+                        <small className="ac-fav__precio">
+                          {Number.isFinite(price) && price > 0 ? `${favoritePriceFormatter.format(price)} por hora` : 'Precio por consultar'}
+                        </small>
                       </div>
                       <button
                         type="button"
-                        className="reservation-card__ghost"
-                        onClick={() => toggleFavorite(place)}
+                        className="ac-save"
+                        aria-label={`Guardar ${place.name} en favoritos`}
+                        onClick={() => void toggleFavorite(place)}
                       >
-                        {isSaved ? 'Guardado' : 'Guardar'}
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z" /></svg>
+                        Guardar
                       </button>
-                    </div>
+                    </li>
                   )
                 })}
-              </div>
-            )}
+              </ul>
+            </>
+          )}
+        </section>
+
+        <section className="ac-col ac-col--not" aria-labelledby="notifications-title">
+          <header className="ac-head">
+            <h2 id="notifications-title">Notificaciones</h2>
+            <div className="ac-head__acc">
+              {unreadNotificationCount > 0 && (
+                <span className="ac-count ac-count--new">
+                  {unreadNotificationCount} {unreadNotificationCount === 1 ? 'nueva' : 'nuevas'}
+                </span>
+              )}
+              <button
+                type="button"
+                className="ac-text"
+                disabled={unreadNotificationCount === 0}
+                onClick={() => void markAllNotificationsRead()}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 12 5 5L18 6M13 17l1 1 8-9" /></svg>
+                Marcar todo como leído
+              </button>
+              <button
+                type="button"
+                className="ac-text ac-text--bad"
+                disabled={notificationItems.length === 0 || clearingNotifications}
+                onClick={() => setShowClearNotificationsDialog(true)}
+              >
+                Limpiar
+              </button>
+            </div>
+          </header>
+
+          {notificationError && <p className="ac-error" role="alert">{notificationError}</p>}
+
+          <div className="ac-tabs" role="tablist" aria-label="Filtrar notificaciones">
+            <span aria-hidden="true" className={notificationFilter === 'unread' ? 'is-unread' : ''} />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={notificationFilter === 'all'}
+              onClick={() => setNotificationFilter('all')}
+            >
+              Todas
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={notificationFilter === 'unread'}
+              onClick={() => setNotificationFilter('unread')}
+            >
+              Sin leer{unreadNotificationCount > 0 && <em>{unreadNotificationCount}</em>}
+            </button>
           </div>
 
-          <div className="user-box">
-            <div className="section-title-row section-title-row--tight notification-heading">
-              <h2 className="section-title">Notificaciones</h2>
-              {notificationItems.length > 0 && (
-                <button
-                  type="button"
-                  className="notification-clear-button"
-                  onClick={() => setShowClearNotificationsDialog(true)}
-                  disabled={clearingNotifications}
-                >
-                  Limpiar
-                </button>
-              )}
+          {notificationGroups.length > 0 ? (
+            <div className="ac-grupos" key={notificationFilter}>
+              {notificationGroups.map((group) => (
+                <div key={group.label}>
+                  <h3 className="ac-sub">{group.label}</h3>
+                  <ul className="ac-lista">
+                    {group.items.map((item, index) => {
+                      const tone = ['success', 'warning', 'info'].includes(item.tone) ? item.tone : 'info'
+                      return (
+                        <li
+                          key={item.id}
+                          className={`ac-n${item.is_read ? '' : ' is-new'}`}
+                          data-tone={tone}
+                          style={{ '--n': index } as CSSProperties}
+                        >
+                          <span className="ac-n__ico"><NotificationIcon tone={tone} /></span>
+                          <div className="ac-n__body">
+                            <div className="ac-n__top">
+                              <b>{item.title}</b>
+                              <time dateTime={item.created_at}>{notificationAge(item.created_at) || notificationTimeFormatter.format(new Date(item.created_at))}</time>
+                            </div>
+                            <p>{item.detail}</p>
+                            {item.reservation_id != null ? (
+                              <button type="button" className="ac-link" onClick={() => void openNotificationReservation(item)}>
+                                Ver reserva
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                              </button>
+                            ) : !item.is_read && (
+                              <button type="button" className="ac-link" onClick={() => void markNotificationRead(item.id)}>
+                                Marcar como leída
+                              </button>
+                            )}
+                          </div>
+                          {!item.is_read && (
+                            <button
+                              type="button"
+                              className="ac-n__dot"
+                              aria-label={`Marcar como leída: ${item.title}`}
+                              onClick={() => void markNotificationRead(item.id)}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            className="ac-n__x"
+                            aria-label={`Eliminar notificación: ${item.title}`}
+                            onClick={() => void deleteNotification(item.id)}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12" /></svg>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ))}
             </div>
-            <div className="notification-list">
-              {notificationError && (
-                <p className="notification-error" role="alert">{notificationError}</p>
-              )}
-              {notificationItems.length === 0 ? (
-                <div className="reservation-empty-state">No tienes notificaciones.</div>
-              ) : (
-                notificationItems.map((item) => (
-                  <div className={`notification-item notification-item--${item.tone}`} key={item.id}>
-                    <div style={{ width: '100%' }}>
-                      <strong>{item.title}</strong>
-                      <span>{item.detail}</span>
-                    </div>
-                    {item.reservation_id != null ? (
-                      <button
-                        type="button"
-                        className="reservation-card__ghost"
-                        onClick={() => openNotificationReservation(item)}
-                      >
-                        Ver reserva
-                      </button>
-                    ) : !item.is_read && (
-                      <button
-                        type="button"
-                        className="reservation-card__ghost"
-                        onClick={() => markNotificationRead(item.id)}
-                      >
-                        Leer
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
+          ) : (
+            <div className="ac-vacio">
+              <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" /></svg></span>
+              <b>{notificationFilter === 'unread' ? 'No tienes nada sin leer' : 'Estás al día'}</b>
+              <p>{notificationFilter === 'unread' ? 'Cuando llegue algo nuevo, lo verás aquí.' : 'Te avisaremos cuando haya novedades de tus reservas.'}</p>
             </div>
-          </div>
+          )}
+        </section>
+        <div className={`ac-toast${notificationToast ? ' is-on' : ''}`} role="status" aria-live="polite">
+          <span>{notificationToast?.message}</span>
+          {notificationToast && (
+            <button type="button" onClick={() => void restoreNotifications()} disabled={restoringNotifications}>
+              {restoringNotifications ? 'Restaurando...' : 'Deshacer'}
+            </button>
+          )}
         </div>
       </section>
 
@@ -918,14 +1278,16 @@ export default function Dashboard({ user, onLogout, isDark, setIsDark }: Dashboa
             <div className="reservations-actions">
               <label className="reservations-filter">
                 <span>Estado</span>
-                <select
+                <WorkPalaceSelect
+                  className="wp-select--reservation"
                   value={availableFilter}
-                  onChange={(e) => setAvailableFilter(e.target.value as ('todas' | EstadoReserva))}
-                >
-                  <option value="todas">Todas</option>
-                  <option value="pendiente">Pendiente</option>
-                  <option value="confirmada">Confirmada</option>
-                </select>
+                  onChange={(value) => setAvailableFilter(value as ('todas' | EstadoReserva))}
+                  options={[
+                    { value: 'todas', label: 'Todas' },
+                    { value: 'pendiente', label: 'Pendiente', color: '#f0a951' },
+                    { value: 'confirmada', label: 'Confirmada', color: '#3b73ff' },
+                  ]}
+                />
               </label>
             </div>
           </div>

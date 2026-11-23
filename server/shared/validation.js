@@ -10,6 +10,11 @@ const PROFANITY_TERMS = [
   'malparidos', 'marica', 'maricas', 'maricón', 'maricones', 'mierda',
   'mierdas', 'pendeja', 'pendejas', 'pendejo', 'pendejos', 'perra',
   'perras', 'puta', 'putas', 'puto', 'putos', 'verga', 'vergas',
+  'epstein', 'cunny', 'retrasado', 'mongolo', 'chota', 'poronga', 'orto', 'ojete', 'loli', 'lolicon',
+  'slut', 'whore', 'sex', 'mamaburras', 'caremonda', 'jopo', 'rolo', 'femboy', 'trava', 'trolazo',
+  'boludo', 'pelotudo', 'ahuevado', 'saramambiche', 'mamahuevo', 'pinga', 'retard', 'faggot', 'sissy',
+  'nigger', 'nigga', 'idiot', 'kill yourself', 'kys', 'mongoloid', 'pajeet', 'motherfucker', 'cuck',
+  'dildo', 'fleshlight', 'penis', 'pussy',
 ];
 
 export const containsProfanity = (value) => {
