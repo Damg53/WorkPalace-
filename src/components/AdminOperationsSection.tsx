@@ -18,6 +18,7 @@ interface Props {
   deleteCoupon: (id: number) => Promise<void>
   createBlock: (payload: { placeId: number; startsAt: string; startsAtTime: string; endsAt: string; endsAtTime: string; reason: string }) => Promise<void>
   deleteBlock: (id: number) => Promise<void>
+  onFeedback: (message: string, isError?: boolean) => void
 }
 
 const emptyCoupon = { code: '', label: '', discount: 10, maxUses: '', startsAt: '', endsAt: '', endsAtTime: emptyTimeInput('PM') }
@@ -33,13 +34,11 @@ const auditDetail = (log: AdminAuditLog) => {
   return 'Sin detalles adicionales'
 }
 
-export default function AdminOperationsSection({ coupons, blocks, auditLogs, places, clearAuditLogs, createCoupon, toggleCoupon, deleteCoupon, createBlock, deleteBlock }: Props) {
+export default function AdminOperationsSection({ coupons, blocks, auditLogs, places, clearAuditLogs, createCoupon, toggleCoupon, deleteCoupon, createBlock, deleteBlock, onFeedback }: Props) {
   const [couponForm, setCouponForm] = useState(emptyCoupon)
   const [reactivatingCouponId, setReactivatingCouponId] = useState<number | null>(null)
   const [couponValidity, setCouponValidity] = useState({ endsAt: '', endsAtTime: emptyTimeInput('PM') })
   const [blockForm, setBlockForm] = useState(emptyBlock)
-  const [message, setMessage] = useState('')
-  const [messageIsError, setMessageIsError] = useState(false)
   const [couponFeedback, setCouponFeedback] = useState<{ text: string; isError: boolean } | null>(null)
   const [blockError, setBlockError] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -50,10 +49,7 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
     return () => window.clearTimeout(timer)
   }, [confirmClear])
 
-  const showMessage = (text: string, isError = false) => {
-    setMessage(text)
-    setMessageIsError(isError)
-  }
+  const showMessage = (text: string, isError = false) => onFeedback(text, isError)
   const showCouponFeedback = (text: string, isError = true) => setCouponFeedback({ text, isError })
 
   const submitCoupon = async (event: React.FormEvent) => {
@@ -93,9 +89,9 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
     try {
       await createCoupon({ ...couponForm, code, label, discount, maxUses, endsAtTime })
       setCouponForm(emptyCoupon)
-      showCouponFeedback('Cupón creado correctamente.', false)
+      onFeedback('Cupón creado correctamente.')
     } catch (error) {
-      showCouponFeedback(error instanceof Error ? error.message : 'No se pudo crear el cupón.')
+      onFeedback(error instanceof Error ? error.message : 'No se pudo crear el cupón.', true)
     }
   }
 
@@ -142,6 +138,15 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
       showMessage('Cupón activado con la nueva vigencia.')
     } catch (error) {
       showMessage(error instanceof Error ? error.message : 'No se pudo activar el cupón.', true)
+    }
+  }
+
+  const deactivateCoupon = async (couponId: number) => {
+    try {
+      await toggleCoupon(couponId, false)
+      showMessage('Cupón desactivado correctamente.')
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : 'No se pudo desactivar el cupón.', true)
     }
   }
 
@@ -235,7 +240,7 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
                     </div>
                     <div>
                       {coupon.active
-                        ? <button className="btn btn-secondary" onClick={() => void toggleCoupon(coupon.id, false).catch((error) => showMessage(error instanceof Error ? error.message : 'No se pudo desactivar el cupón.', true))}>Desactivar</button>
+                        ? <button type="button" className="btn btn-secondary" onClick={() => void deactivateCoupon(coupon.id)}>Desactivar</button>
                         : <button className="btn btn-secondary" onClick={() => { setReactivatingCouponId(coupon.id); setCouponValidity({ endsAt: '', endsAtTime: emptyTimeInput('PM') }) }}>Activar</button>}
                       <button type="button" className="place-action-button place-action-button--delete" onClick={() => deleteCoupon(coupon.id)}>Eliminar</button>
                     </div>
@@ -361,7 +366,6 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
           <p className="pg-vacio">Aún no hay actividad. Los cambios del panel aparecerán aquí.</p>
         )}
       </article>
-      {message && <p className="pg-msg pg-global-message" data-t={messageIsError ? 'error' : 'ok'} role={messageIsError ? 'alert' : 'status'}>{message}</p>}
     </section>
   )
 }

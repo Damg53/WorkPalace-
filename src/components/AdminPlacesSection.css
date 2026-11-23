@@ -382,6 +382,10 @@
   opacity: 0.68;
 }
 
+.ad-tabla tbody tr.is-off td[data-label="Activa"] {
+  opacity: 1;
+}
+
 .ad-tabla input[type="checkbox"] {
   width: 17px;
   height: 17px;
@@ -505,43 +509,29 @@
   white-space: nowrap;
 }
 
-.ad-estado {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--d-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.ad-estado .ad-switch.is-on + span {
-  color: var(--d-ok);
-}
-
 .ad-switch {
   position: relative;
-  width: 40px;
-  height: 24px;
+  width: 44px;
+  height: 26px;
   flex: none;
   padding: 0;
   border: 0;
   border-radius: 99px;
   background: var(--d-line);
   cursor: pointer;
-  transition: background 0.25s;
+  transition: background 0.3s;
 }
 
 .ad-switch i {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s var(--d-ease);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.4s var(--d-ease);
 }
 
 .ad-switch.is-on {
@@ -549,7 +539,55 @@
 }
 
 .ad-switch.is-on i {
-  transform: translateX(16px);
+  transform: translateX(18px);
+}
+
+.ad-switch:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.ad-toast {
+  position: fixed;
+  z-index: 90;
+  bottom: 24px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 20px;
+  transform: translate(-50%, 160%);
+  border: 1px solid var(--d-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--d-surface) 92%, transparent);
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.7);
+  color: var(--d-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.5s var(--d-ease), opacity 0.3s;
+}
+
+.ad-toast.is-on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.ad-toast svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--d-ok);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.ad-toast.is-error svg {
+  stroke: var(--d-bad);
 }
 
 .ad-acc {
@@ -593,6 +631,28 @@
   border-color: var(--d-bad);
   background: color-mix(in srgb, var(--d-bad) 12%, transparent);
   color: var(--d-bad);
+}
+
+.ad-icon[data-tip]:hover::after,
+.ad-icon[data-tip]:focus-visible::after {
+  position: absolute;
+  z-index: 100;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: min(200px, calc(100vw - 24px));
+  padding: 4px 10px;
+  transform: translateX(-50%);
+  border-radius: 7px;
+  background: var(--d-text);
+  color: var(--d-bg);
+  content: attr(data-tip);
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: normal;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .ad-acc .ad-icon + .ad-icon {

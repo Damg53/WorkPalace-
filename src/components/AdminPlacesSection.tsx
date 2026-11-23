@@ -7,8 +7,8 @@ import './AdminPlacesSection.css'
 
 interface Props {
   places: AdminPlace[]
-  updatePlace: (id: number, payload: Partial<AdminPlace>) => void
-  togglePlaceActive: (id: number, active: boolean) => void
+  updatePlace: (id: number, payload: Partial<AdminPlace>) => Promise<boolean>
+  togglePlaceActive: (id: number, active: boolean) => Promise<boolean>
   deletePlace: (id: number) => void
   deletePlaces?: (ids: number[]) => void
   createPlace: (place: Omit<AdminPlace, 'id' | 'active'>) => Promise<void>
@@ -312,6 +312,8 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const [editingAddress, setEditingAddress] = useState('')
   const [editingUrl, setEditingUrl] = useState('')
   const [formError, setFormError] = useState('')
+  const [activeToast, setActiveToast] = useState<{ message: string; isError: boolean } | null>(null)
+  const [updatingActiveIds, setUpdatingActiveIds] = useState<Set<number>>(() => new Set())
   const [createStep, setCreateStep] = useState(0)
   const [maxCreateStep, setMaxCreateStep] = useState(0)
   const [query, setQuery] = useState('')
@@ -374,6 +376,61 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [])
 
+  useEffect(() => {
+    if (!activeToast) return
+    const timer = window.setTimeout(() => setActiveToast(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [activeToast])
+
+  useEffect(() => {
+    const placeIds = new Set(places.map((place) => place.id))
+    setSelectedIds((current) => {
+      const next = new Set([...current].filter((id) => placeIds.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [places])
+
+  async function savePlace(placeId: number, payload: Partial<AdminPlace>) {
+    try {
+      const saved = await updatePlace(placeId, payload)
+      setActiveToast({
+        message: saved ? 'Cambios del espacio guardados correctamente.' : 'No se pudieron guardar los cambios del espacio.',
+        isError: !saved,
+      })
+      return saved
+    } catch (error) {
+      setActiveToast({
+        message: error instanceof Error ? error.message : 'No se pudieron guardar los cambios del espacio.',
+        isError: true,
+      })
+      return false
+    }
+  }
+
+  async function changePlaceActive(place: AdminPlace, active: boolean) {
+    setUpdatingActiveIds((current) => new Set(current).add(place.id))
+    try {
+      const saved = await togglePlaceActive(place.id, active)
+      setActiveToast({
+        message: saved
+          ? `${place.name} ${active ? 'activado' : 'desactivado'}`
+          : 'No se pudo actualizar el estado del espacio.',
+        isError: !saved,
+      })
+    } catch (error) {
+      setActiveToast({
+        message: error instanceof Error ? error.message : 'No se pudo actualizar el estado del espacio.',
+        isError: true,
+      })
+    } finally {
+      setUpdatingActiveIds((current) => {
+        const next = new Set(current)
+        next.delete(place.id)
+        return next
+      })
+    }
+  }
+
   function changeQuery(value: string) {
     setQuery(value)
     setPage(1)
@@ -413,7 +470,14 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   }
 
   async function setSelectedPlacesActive(active: boolean) {
-    await Promise.all([...selectedIds].map((id) => updatePlace(id, { active })))
+    const results = await Promise.all([...selectedIds].map((id) => togglePlaceActive(id, active)))
+    const updatedCount = results.filter(Boolean).length
+    setActiveToast({
+      message: updatedCount === results.length
+        ? `${updatedCount} espacios ${active ? 'activados' : 'desactivados'} correctamente.`
+        : `${updatedCount} de ${results.length} espacios se pudieron actualizar.`,
+      isError: updatedCount !== results.length,
+    })
     setSelectedIds(new Set())
   }
 
@@ -485,6 +549,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       setCreateStep(0)
       setMaxCreateStep(0)
       setShowForm(false)
+      setActiveToast({ message: 'Espacio creado correctamente.', isError: false })
     } catch {
       // El hook informa los errores de red al panel principal.
     }
@@ -716,7 +781,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                 <th aria-sort={sort.key === 'precio_hora' ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
                   <button type="button" className={`ad-sort${sort.key === 'precio_hora' ? ' is-on' : ''}`} onClick={() => toggleSort('precio_hora')}>Precio base <span>{sort.key === 'precio_hora' ? (sort.direction === 1 ? '↑' : '↓') : ''}</span></button>
                 </th>
-                <th>Modalidad</th><th>Estado</th><th className="ad-acc-th">Acciones</th>
+                <th>Modalidad</th><th>Activa</th><th className="ad-acc-th">Acciones</th>
               </tr>
             </thead>
             <tbody key={`${currentPage}-${normalizedQuery}-${statusFilter}-${typeFilter}-${cityFilter}-${sort.key}-${sort.direction}`}>
@@ -736,14 +801,14 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                         <span className="ad-tile">{place.name.trim().charAt(0).toUpperCase() || '?'}</span>
                         <div>
                           <input className="ad-name" aria-label={`Nombre de ${place.name}`} defaultValue={place.name} onBlur={(event) => {
-                            if (event.target.value.trim() && event.target.value.trim() !== place.name) void updatePlace(place.id, { name: event.target.value.trim() })
+                            if (event.target.value.trim() && event.target.value.trim() !== place.name) void savePlace(place.id, { name: event.target.value.trim() })
                           }} />
                           <small>#{place.id}</small>
                         </div>
                       </div>
                     </td>
                     <td data-label="Tipo">
-                      <WorkPalaceSelect className="wp-select--inline wp-select--inline-wide" ariaLabel={`Tipo de ${place.name}`} defaultValue={place.tipo || ''} options={selectOptions(TIPOS)} onChange={(value) => void updatePlace(place.id, { tipo: value })} />
+                      <WorkPalaceSelect className="wp-select--inline wp-select--inline-wide" ariaLabel={`Tipo de ${place.name}`} defaultValue={place.tipo || ''} options={selectOptions(TIPOS)} onChange={(value) => void savePlace(place.id, { tipo: value })} />
                     </td>
                     <td data-label="Barrio">
                       <WorkPalaceSelect
@@ -754,7 +819,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                           ...(place.barrio && !(BARRIOS[place.ciudad || 'Medellín'] || []).includes(place.barrio) ? [place.barrio] : []),
                           ...(BARRIOS[place.ciudad || 'Medellín'] || []),
                         ], 'Sin barrio')}
-                        onChange={(value) => void updatePlace(place.id, { barrio: value })}
+                        onChange={(value) => void savePlace(place.id, { barrio: value })}
                       />
                     </td>
                     <td data-label="Ciudad">
@@ -766,18 +831,17 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                           ...(place.ciudad && !CIUDADES.includes(place.ciudad) ? [place.ciudad] : []),
                           ...CIUDADES,
                         ], 'Sin ciudad')}
-                        onChange={(value) => void updatePlace(place.id, { ciudad: value })}
+                        onChange={(value) => void savePlace(place.id, { ciudad: value })}
                       />
                     </td>
-                    <td data-label="Capacidad"><span className="ad-cap"><i className="fa fa-users" aria-hidden="true" /><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => updatePlace(place.id, { capacidad: value })} /></span></td>
+                    <td data-label="Capacidad"><span className="ad-cap"><i className="fa fa-users" aria-hidden="true" /><CapacidadCellInput value={place.capacidad || ''} onSave={(value) => { void savePlace(place.id, { capacidad: value }) }} /></span></td>
                     <td data-label="Precio base"><strong className="ad-precio">{place.precio_hora == null ? 'A convenir' : placePriceFormatter.format(Number(place.precio_hora))}</strong><small>{place.modalidad || 'Modalidad no definida'}</small></td>
                     <td data-label="Modalidad">
-                      <WorkPalaceSelect className="wp-select--inline" ariaLabel={`Modalidad de ${place.name}`} defaultValue={place.modalidad || ''} options={selectOptions(MODALIDADES)} onChange={(value) => void updatePlace(place.id, { modalidad: value })} />
+                      <WorkPalaceSelect className="wp-select--inline" ariaLabel={`Modalidad de ${place.name}`} defaultValue={place.modalidad || ''} options={selectOptions(MODALIDADES)} onChange={(value) => void savePlace(place.id, { modalidad: value })} />
                     </td>
-                    <td data-label="Estado"><div className="ad-estado">
-                      <button type="button" role="switch" aria-checked={active} aria-label={`${active ? 'Desactivar' : 'Activar'} ${place.name}`} className={`ad-switch${active ? ' is-on' : ''}`} onClick={() => togglePlaceActive(place.id, !active)}><i /></button>
-                      <span>{active ? 'Activo' : 'Inactivo'}</span>
-                    </div></td>
+                    <td data-label="Activa">
+                      <button type="button" role="switch" aria-checked={active} aria-label={`${active ? 'Desactivar' : 'Activar'} ${place.name}`} disabled={updatingActiveIds.has(place.id)} className={`ad-switch${active ? ' is-on' : ''}`} onClick={() => void changePlaceActive(place, !active)}><i /></button>
+                    </td>
                     <td data-label="Acciones" className="ad-acc">
                       <button type="button" className="ad-icon" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }} aria-label={`Editar dirección e imagen de ${place.name}`} data-tip="Editar">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
@@ -854,8 +918,8 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               className="btn btn-primary"
               type="button"
               onClick={async () => {
-                await updatePlace(editingId, { direccion: editingAddress.trim() || null, image_url: editingUrl })
-                setEditingId(null)
+                const saved = await savePlace(editingId, { direccion: editingAddress.trim() || null, image_url: editingUrl })
+                if (saved) setEditingId(null)
               }}
             >
               Guardar cambios
@@ -864,5 +928,13 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
         </section>
       </div>
     )}
+    <div className={`ad-toast${activeToast ? ' is-on' : ''}${activeToast?.isError ? ' is-error' : ''}`} role={activeToast?.isError ? 'alert' : 'status'}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {activeToast?.isError
+          ? <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          : <path d="M20 6 9 17l-5-5" />}
+      </svg>
+      {activeToast?.message}
+    </div>
   </section>
 }

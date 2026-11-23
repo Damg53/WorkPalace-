@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import AdminUsersSection from './AdminUsersSection'
 import AdminReservationsSection from './AdminReservationsSection'
 import AdminPlacesSection from './AdminPlacesSection'
@@ -19,7 +20,13 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const location = useLocation()
   const activeSection = location.hash.slice(1) || 'dashboard'
   const data = useAdminData(user.id)
-  const { users, reservations, places, error } = data
+  const { users, reservations, places, error, actionFeedback, setActionFeedback } = data
+
+  useEffect(() => {
+    if (!actionFeedback) return
+    const timer = window.setTimeout(() => setActionFeedback(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [actionFeedback, setActionFeedback])
 
   const sectionHeader = {
     dashboard: {
@@ -68,7 +75,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         {activeSection === 'users' && <AdminUsersSection users={users} userId={user.id} updateRole={data.updateRole} toggleUserActive={data.toggleUserActive} deleteUsers={data.deleteUsers} requestPasswordReset={data.requestPasswordReset} />}
         {activeSection === 'reservations' && <AdminReservationsSection reservations={reservations} updateReservation={data.updateReservation} deleteReservations={data.deleteReservations} />}
         {activeSection === 'places' && <AdminPlacesSection places={places} updatePlace={data.updatePlace} togglePlaceActive={data.togglePlaceActive} deletePlace={data.deletePlace} deletePlaces={data.deletePlaces} createPlace={data.createPlace} />}
-        {activeSection === 'operations' && <AdminOperationsSection coupons={data.coupons} blocks={data.blocks} auditLogs={data.auditLogs} places={places} clearAuditLogs={data.clearAuditLogs} createCoupon={data.createCoupon} toggleCoupon={data.toggleCoupon} deleteCoupon={data.deleteCoupon} createBlock={data.createBlock} deleteBlock={data.deleteBlock} />}
+        {activeSection === 'operations' && <AdminOperationsSection coupons={data.coupons} blocks={data.blocks} auditLogs={data.auditLogs} places={places} clearAuditLogs={data.clearAuditLogs} createCoupon={data.createCoupon} toggleCoupon={data.toggleCoupon} deleteCoupon={data.deleteCoupon} createBlock={data.createBlock} deleteBlock={data.deleteBlock} onFeedback={(message, isError = false) => setActionFeedback({ message, isError, id: Date.now() })} />}
         <div className="admin-footer"><p>&copy; 2026 WorkPalace. Acceso restringido a administradores.</p></div>
       </div>
       {data.confirmation && (
@@ -80,14 +87,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           }}
         >
           <section
-            className="admin-cancel-dialog"
+            className="admin-cancel-dialog admin-cancel-dialog--confirm"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="admin-confirm-title"
             aria-describedby="admin-confirm-message"
           >
             <div className="admin-cancel-dialog__icon" aria-hidden="true">
-              <i className="fa fa-trash-o" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                <path d="M12 9v4M12 17h.01" />
+              </svg>
             </div>
             <h3 id="admin-confirm-title">{data.confirmation.title}</h3>
             <p id="admin-confirm-message">{data.confirmation.message}</p>
@@ -112,6 +122,18 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           </section>
         </div>
       )}
+      <div
+        className={`ad-toast${actionFeedback ? ' is-on' : ''}${actionFeedback?.isError ? ' is-error' : ''}`}
+        role={actionFeedback?.isError ? 'alert' : 'status'}
+        aria-hidden={!actionFeedback}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          {actionFeedback?.isError
+            ? <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+            : <path d="M20 6 9 17l-5-5" />}
+        </svg>
+        {actionFeedback?.message}
+      </div>
     </div>
   )
 }

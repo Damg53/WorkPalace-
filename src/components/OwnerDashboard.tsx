@@ -524,15 +524,23 @@ export default function OwnerDashboard({ user }: OwnerDashboardProps) {
                 throw createError
               }
             }}
-            updatePlace={(id, payload) => {
-              void savePlace(`${API}/api/owner/places/${id}`, 'PUT', payload).catch((updateError: unknown) => {
+            updatePlace={async (id, payload) => {
+              try {
+                await savePlace(`${API}/api/owner/places/${id}`, 'PUT', payload)
+                return true
+              } catch (updateError) {
                 setError(updateError instanceof Error ? updateError.message : 'No se pudo actualizar el espacio.')
-              })
+                return false
+              }
             }}
-            togglePlaceActive={(id, active) => {
-              void savePlace(`${API}/api/owner/places/${id}`, 'PUT', { active }).catch((updateError: unknown) => {
+            togglePlaceActive={async (id, active) => {
+              try {
+                await savePlace(`${API}/api/owner/places/${id}`, 'PUT', { active })
+                return true
+              } catch (updateError) {
                 setError(updateError instanceof Error ? updateError.message : 'No se pudo actualizar el estado del espacio.')
-              })
+                return false
+              }
             }}
             deletePlace={openPlaceDeleteDialog}
           />
@@ -666,14 +674,17 @@ export default function OwnerDashboard({ user }: OwnerDashboardProps) {
             }}
           >
             <section
-              className="admin-cancel-dialog"
+              className="admin-cancel-dialog admin-cancel-dialog--confirm"
               role="alertdialog"
               aria-modal="true"
               aria-labelledby="owner-delete-title"
               aria-describedby="owner-delete-message"
             >
               <div className="admin-cancel-dialog__icon" aria-hidden="true">
-                <i className="fa fa-trash-o" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
               </div>
               <h3 id="owner-delete-title">Eliminar espacio</h3>
               <p id="owner-delete-message">
