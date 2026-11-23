@@ -42,14 +42,22 @@ function createOperation(method, path, summary, tag, options = {}) {
   const responses = {
     [successStatus]: response(options.successDescription || 'Solicitud procesada correctamente.'),
   };
+  if (options.successSchema) {
+    responses[successStatus].content = {
+      'application/json': { schema: options.successSchema },
+    };
+  }
 
   if (options.auth) {
-    responses[400] = response('Falta un identificador de usuario válido.');
-    responses[403] = response('No autorizado para realizar esta operación.');
+    Object.assign(responses, options.authResponses || {
+      400: response('Falta un identificador de usuario válido.'),
+      403: response('No autorizado para realizar esta operación.'),
+    });
   }
   if (options.body) responses[400] = errorResponse;
   if (options.notFound) responses[404] = response('No se encontró el recurso solicitado.');
   if (options.conflict) responses[409] = response('La operación entra en conflicto con el estado actual.');
+  if (options.additionalResponses) Object.assign(responses, options.additionalResponses);
   responses[500] = response('Error interno del servidor.');
 
   const operation = {
@@ -107,6 +115,9 @@ const bodySchemas = {
     token: stringField('Token de un solo uso enviado por correo.'),
     password: stringField('Nueva contraseña (6 a 128 caracteres).'),
   }, ['token', 'password']),
+  passwordResetValidate: objectBody({
+    token: stringField('Token de un solo uso enviado por correo.'),
+  }, ['token']),
   otpVerify: objectBody({
     challengeId: stringField('Identificador del desafío OTP.'),
     code: stringField('Código de verificación de seis dígitos.'),
@@ -156,24 +167,27 @@ const bodySchemas = {
     discount: integerField('Porcentaje de descuento.'),
     maxUses: integerField('Máximo de usos.'),
     startsAt: dateField('Fecha de inicio.'),
-    endsAt: dateField('Fecha de finalización.'),
-    endsAtTime: timeField('Hora de vencimiento en formato HH:MM.'),
-    active: booleanField('Indica si el cupón está activo.'),
+    endsAt: dateField('Fecha de finalización. Requerida al activar un cupón.'),
+    endsAtTime: timeField('Hora de vencimiento en hora de Colombia (HH:MM). Requerida al activar un cupón.'),
+    active: booleanField('Indica si el cupón está activo. Al activarlo se debe indicar una fecha y hora de vencimiento futuras.'),
   }),
   blockCreate: objectBody({
     placeId: integerField('ID del espacio.'),
-    startsAt: stringField('Fecha de inicio del bloqueo (AAAA-MM-DD).'),
-    endsAt: stringField('Fecha de finalización del bloqueo (AAAA-MM-DD).'),
+    startsAt: dateField('Fecha de inicio del bloqueo (AAAA-MM-DD).'),
+    startsAtTime: timeField('Hora de inicio del bloqueo en formato HH:MM de 24 horas.'),
+    endsAt: dateField('Fecha de finalización del bloqueo (AAAA-MM-DD).'),
+    endsAtTime: timeField('Hora de finalización del bloqueo en formato HH:MM de 24 horas.'),
     reason: { type: 'string', minLength: 1, maxLength: 500, description: 'Motivo obligatorio del bloqueo.' },
-  }, ['placeId', 'startsAt', 'endsAt', 'reason']),
+  }, ['placeId', 'startsAt', 'startsAtTime', 'endsAt', 'endsAtTime', 'reason']),
   reservationCreate: objectBody({
     placeId: integerField('ID del espacio.'),
     checkIn: stringField('Fecha de inicio (AAAA-MM-DD).'),
     checkOut: stringField('Fecha de finalización (AAAA-MM-DD).'),
     checkInTime: stringField('Hora de inicio opcional en formato HH:MM; permite reservar desde el minuto elegido.'),
     checkOutTime: stringField('Hora de salida correspondiente a la duración en horas.'),
+    reservationMode: stringField('Modalidad: hour, halfDay (4 horas entre 07:00 y 18:00), fullDay (8 horas entre 07:00 y 09:00), day, night (18:00 a 08:00 del día siguiente), week, fortnight, month, appointment o flexible. Citas y flexible comienzan cada 30 minutos y duran una hora.'),
     phone: stringField('Celular colombiano de 10 dígitos que comienza por 3.'),
-    huespedes: integerField('Cantidad de huéspedes.'),
+    huespedes: integerField('Cantidad de unidades o duración en horas cuando la modalidad tiene horario.'),
     couponCode: stringField('Código del cupón (opcional).'),
     payment: {
       type: 'object',
@@ -240,6 +254,12 @@ const endpoints = [
   ['post', '/api/signup', 'Registrar un usuario', 'Autenticación', { body: true, bodySchema: bodySchemas.signup, successStatus: 201 }],
   ['post', '/api/login', 'Iniciar sesión', 'Autenticación', { body: true, bodySchema: bodySchemas.login }],
   ['post', '/api/forgot-password', 'Solicitar restablecimiento de contraseña', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordResetRequest }],
+  ['post', '/api/reset-password/validate', 'Validar un enlace de restablecimiento', 'Autenticación', {
+    body: true,
+    bodySchema: bodySchemas.passwordResetValidate,
+    successDescription: 'El token existe, no ha sido usado y sigue vigente.',
+    successSchema: objectBody({ valid: booleanField('Indica si el enlace es válido.') }, ['valid']),
+  }],
   ['post', '/api/reset-password', 'Restablecer contraseña con un token', 'Autenticación', { body: true, bodySchema: bodySchemas.passwordReset }],
   ['post', '/api/login/otp/verify', 'Verificar código de Microsoft Authenticator', 'Autenticación', { body: true, bodySchema: bodySchemas.otpVerify }],
   ['post', '/api/users/:id/totp/setup', 'Iniciar configuración de Microsoft Authenticator', 'Usuarios', { body: true, bodySchema: bodySchemas.totpSetup, conflict: true }],
@@ -256,7 +276,16 @@ const endpoints = [
   ['post', '/api/users/:id/favorites', 'Agregar un espacio a favoritos', 'Usuarios', { auth: 'user', body: true, bodySchema: bodySchemas.favorite, successStatus: 201 }],
   ['delete', '/api/users/:id/favorites/:placeId', 'Eliminar un espacio de favoritos', 'Usuarios', { auth: 'user', successStatus: 204, notFound: true }],
   ['get', '/api/users/:id/notifications', 'Listar notificaciones de un usuario', 'Usuarios', { auth: 'user' }],
+  ['delete', '/api/users/:id/notifications', 'Eliminar todas las notificaciones de un usuario', 'Usuarios', { auth: 'user' }],
+  ['delete', '/api/users/:id/notifications/:notificationId', 'Eliminar una notificación', 'Usuarios', { auth: 'user', notFound: true }],
+  ['post', '/api/users/:id/notifications/restore', 'Restaurar notificaciones eliminadas', 'Usuarios', { auth: 'user', body: true }],
+  ['put', '/api/users/:id/notifications/read', 'Marcar todas las notificaciones como leídas', 'Usuarios', { auth: 'user' }],
   ['put', '/api/users/:id/notifications/:notificationId/read', 'Marcar una notificación como leída', 'Usuarios', { auth: 'user', notFound: true }],
+  ['delete', '/api/admin/audit', 'Eliminar el registro de auditoría', 'Administración', {
+    auth: 'admin',
+    successDescription: 'Cantidad de registros eliminados.',
+    successSchema: objectBody({ deleted: integerField('Cantidad de registros eliminados.') }, ['deleted']),
+  }],
   ['get', '/api/admin/coupons', 'Listar cupones', 'Administración', { auth: 'admin' }],
   ['post', '/api/admin/coupons', 'Crear un cupón', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.couponCreate, successStatus: 201, conflict: true }],
   ['put', '/api/admin/coupons/:id', 'Actualizar un cupón', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.couponUpdate, notFound: true }],
@@ -269,12 +298,28 @@ const endpoints = [
   ['post', '/api/reservations', 'Crear una reserva', 'Reservas', { auth: 'user', body: true, bodySchema: bodySchemas.reservationCreate, successStatus: 201, notFound: true, conflict: true }],
   ['delete', '/api/reservations/:id', 'Cancelar una reserva propia', 'Reservas', { auth: 'user', notFound: true }],
   ['get', '/api/available-reservations', 'Listar reservas disponibles', 'Reservas'],
+  ['get', '/api/owner/reservations/pending-count', 'Contar solicitudes pendientes del propietario', 'Propietario', { auth: 'owner' }],
+  ['get', '/api/admin/reservations/pending-count', 'Contar solicitudes pendientes', 'Administración', { auth: 'admin' }],
   ['get', '/api/admin/reservations', 'Listar todas las reservas', 'Administración', { auth: 'admin' }],
   ['put', '/api/admin/reservations/:id', 'Actualizar una reserva', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.reservationUpdate, notFound: true }],
   ['delete', '/api/admin/reservations/:id', 'Eliminar una reserva', 'Administración', { auth: 'admin', successStatus: 204, notFound: true }],
   ['get', '/api/places', 'Listar espacios', 'Espacios', {
     query: [{ name: 'date', description: 'Fecha para consultar disponibilidad (AAAA-MM-DD).' }],
     description: 'Envía el header x-user-id para ver espacios; sin él la API devuelve una lista vacía.',
+  }],
+  ['get', '/api/public/places', 'Listar espacios públicos destacados', 'Espacios', {
+    description: 'Devuelve hasta ocho espacios publicados activos, sin requerir autenticación. No incluye datos personales de propietarios ni información de reservas.',
+  }],
+  ['get', '/api/realtime/places', 'Preparar una consulta de espacios en tiempo real', 'Espacios', {
+    auth: 'user',
+    authResponses: { 401: response('Se requiere un identificador de usuario válido.') },
+    additionalResponses: { 503: response('Neon Realtime no está configurado.') },
+    query: [{ name: 'date', description: 'Fecha para consultar disponibilidad (AAAA-MM-DD).' }],
+    description: 'Devuelve la URL y la consulta sellada para suscribirse a los espacios disponibles en la fecha indicada.',
+    successSchema: objectBody({
+      url: stringField('URL del servicio Neon Realtime.'),
+      query: stringField('Consulta sellada para la suscripción.'),
+    }, ['url', 'query']),
   }],
   ['get', '/api/places/:id/reviews', 'Listar reseñas verificadas de un espacio', 'Espacios', { notFound: true }],
   ['post', '/api/places/:id/reviews', 'Crear una reseña para una reserva completada propia', 'Espacios', { auth: 'user', body: true, bodySchema: bodySchemas.reviewCreate, successStatus: 201, conflict: true }],
@@ -283,9 +328,11 @@ const endpoints = [
   ['put', '/api/owner/places/:id', 'Editar un espacio propio', 'Propietarios', { auth: 'owner', body: true, bodySchema: bodySchemas.placeUpdate, notFound: true }],
   ['delete', '/api/owner/places/:id', 'Eliminar un espacio propio sin reservas', 'Propietarios', { auth: 'owner', successStatus: 204, notFound: true, conflict: true }],
   ['get', '/api/owner/reservations', 'Listar reservas de espacios propios', 'Propietarios', { auth: 'owner' }],
+  ['get', '/api/owner/dashboard-data', 'Obtener métricas y reseñas del propietario', 'Propietarios', { auth: 'owner' }],
   ['put', '/api/owner/reservations/:id', 'Gestionar una reserva de espacio propio', 'Propietarios', { auth: 'owner', body: true, bodySchema: bodySchemas.ownerReservationUpdate, notFound: true, conflict: true }],
   ['get', '/api/admin/places', 'Listar espacios para administración', 'Administración', { auth: 'admin' }],
   ['post', '/api/admin/places', 'Crear un espacio', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.placeCreate, successStatus: 201 }],
+  ['delete', '/api/admin/places', 'Eliminar varios espacios seleccionados', 'Administración', { auth: 'admin', body: true }],
   ['put', '/api/admin/places/:id', 'Actualizar un espacio', 'Administración', { auth: 'admin', body: true, bodySchema: bodySchemas.placeUpdate, notFound: true }],
   ['delete', '/api/admin/places/:id', 'Eliminar un espacio', 'Administración', { auth: 'admin', successStatus: 204, notFound: true }],
 ];

@@ -3,6 +3,16 @@ import pool from '../../db.js';
 const COUPONS = new Set(['BACANO10', 'BIENVENIDO15', 'SEMANA10', 'MES20', 'WORKPALACE5', 'BOF']);
 const COUPON_DISCOUNTS = { BACANO10: 10, BIENVENIDO15: 15, SEMANA10: 10, MES20: 20, WORKPALACE5: 5, BOF: 90 };
 
+export async function deactivateExpiredCoupons() {
+  await pool.query(
+    `UPDATE coupons SET active = FALSE, updated_at = CURRENT_TIMESTAMP
+     WHERE active = TRUE
+       AND ends_at IS NOT NULL
+       AND ends_at + COALESCE(ends_at_time, TIME '23:59:59')
+         < CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota'`
+  );
+}
+
 export const isValidCardExpiry = (value) => {
   const match = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(String(value || ''));
   if (!match) return false;

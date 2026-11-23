@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import PlacesList from './PlacesList'
 import PlacesFilter from './PlacesFilter'
-import Sidebar from './Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { createRealtimeClient, type SealedLiveQuery } from '@neon/realtime/client'
 import { API_BASE_URL } from '../services/api'
+import PageHeader from './PageHeader'
+import './PlacesPage.css'
 
 const API = API_BASE_URL
 
@@ -50,7 +51,7 @@ interface PlacesPageProps {
   onLogout: () => void
 }
 
-const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogout }) => {
+const PlacesPage: React.FC<PlacesPageProps> = ({ user }) => {
   const navigate = useNavigate()
   const [places, setPlaces] = useState<Place[]>([])
   const [filtered, setFiltered] = useState<Place[]>([])
@@ -217,14 +218,15 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
   }
 
   return (
-    <div className="with-sidebar">
-      <Sidebar user={user} isDark={isDark} setIsDark={setIsDark} onLogout={onLogout} />
-      <section className="features" id="explore-spaces">
-        <div className="features-container">
-          <h2 className="section-title">Explora espacios disponibles</h2>
-          <p style={{ marginBottom: '1.5rem', maxWidth: 720 }}>
-            Aquí verás todos los espacios publicados, incluso si están temporalmente ocupados. Cuando no estén disponibles, te mostramos el motivo y la fecha estimada en que vuelven a estar libres.
-          </p>
+    <div className="with-sidebar explore-page">
+      <section className="explore-section" id="explore-spaces">
+        <div className="explore-container">
+          <PageHeader
+            eyebrow="Descubre WorkPalace"
+            title="Encuentra el espacio ideal"
+            description="Compara espacios, precios y ubicaciones. La disponibilidad se muestra en cada publicación."
+            badge="Disponibilidad actualizada"
+          />
           <PlacesFilter
             onFilter={handleFilter}
             tipos={tipos}
@@ -232,6 +234,13 @@ const PlacesPage: React.FC<PlacesPageProps> = ({ user, isDark, setIsDark, onLogo
             barrios={barrios}
             modalidades={modalidades}
           />
+          <div className="explore-results-heading">
+            <div>
+              <span>Catálogo</span>
+              <h2>Espacios publicados</h2>
+            </div>
+            <p aria-live="polite">{loadingSpaces ? 'Cargando espacios…' : `${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`}</p>
+          </div>
           <PlacesList
             userId={user.id}
             places={filtered}

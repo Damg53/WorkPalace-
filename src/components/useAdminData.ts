@@ -71,16 +71,26 @@ export function useAdminData(userId?: number) {
 
   async function updateRole(id: number, role: string) {
     const response = await fetch(`${API}/api/users/${id}/role`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ role }) })
-    if (!response.ok) return setError('Error al actualizar rol')
+    if (!response.ok) {
+      const message = 'Error al actualizar rol'
+      setError(message)
+      throw new Error(message)
+    }
     const data = await response.json()
     setUsers((current) => current.map((item) => item.id === data.user.id ? data.user : item))
+    setError('')
   }
 
   async function toggleUserActive(id: number, active: boolean) {
     const response = await fetch(`${API}/api/users/${id}/active`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ active }) })
-    if (!response.ok) return setError('Error al actualizar estado del usuario')
+    if (!response.ok) {
+      const message = 'Error al actualizar estado del usuario'
+      setError(message)
+      throw new Error(message)
+    }
     const data = await response.json()
     setUsers((current) => current.map((item) => item.id === id ? { ...item, ...data.user, active } : item))
+    setError('')
   }
 
   async function deleteUser(id: number) {
@@ -96,6 +106,33 @@ export function useAdminData(userId?: number) {
     })
   }
 
+  async function deleteUsers(ids: number[]) {
+    try {
+      for (const id of ids) {
+        const response = await fetch(`${API}/api/users/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error(`No se pudo eliminar el usuario #${id}.`)
+      }
+      setUsers((current) => current.filter((item) => !ids.includes(item.id)))
+      setError('')
+    } catch (deleteError) {
+      await loadData()
+      const message = deleteError instanceof Error ? deleteError.message : 'No se pudieron eliminar los usuarios.'
+      setError(message)
+      throw new Error(message)
+    }
+  }
+
+  async function requestPasswordReset(email: string) {
+    const response = await fetch(`${API}/api/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'No se pudo solicitar el restablecimiento.')
+    setError('')
+  }
+
   async function updateReservation(id: number, payload: Partial<AdminReservation>): Promise<boolean> {
     try {
       const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(payload) })
@@ -104,7 +141,7 @@ export function useAdminData(userId?: number) {
         setError(data.error || 'Error al actualizar reserva')
         return false
       }
-      setReservations((current) => current.map((item) => item.id === data.reservation.id ? data.reservation : item))
+      setReservations((current) => current.map((item) => item.id === data.reservation.id ? { ...item, ...data.reservation } : item))
       setError('')
       return true
     } catch (updateError) {
@@ -124,6 +161,25 @@ export function useAdminData(userId?: number) {
         window.location.reload()
       },
     })
+  }
+
+  async function deleteReservations(ids: number[]) {
+    try {
+      for (const id of ids) {
+        const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) {
+          const data = await response.json()
+          throw new Error(data.error || `No se pudo eliminar la reserva #${id}.`)
+        }
+      }
+      setReservations((current) => current.filter((reservation) => !ids.includes(reservation.id)))
+      setError('')
+    } catch (deleteError) {
+      await loadData()
+      const message = deleteError instanceof Error ? deleteError.message : 'No se pudieron eliminar las reservas.'
+      setError(message)
+      throw new Error(message)
+    }
   }
 
   async function updatePlace(id: number, payload: Partial<AdminPlace>) {
@@ -151,6 +207,27 @@ export function useAdminData(userId?: number) {
     })
   }
 
+  function deletePlaces(ids: number[]) {
+    const selectedIds = [...new Set(ids)]
+    if (selectedIds.length === 0) return
+
+    setConfirmation({
+      title: selectedIds.length === 1 ? 'Eliminar espacio seleccionado' : `Eliminar ${selectedIds.length} espacios`,
+      message: `Se eliminarán permanentemente ${selectedIds.length === 1 ? 'el espacio seleccionado' : 'los espacios seleccionados'}. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar espacios',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/places`, {
+          method: 'DELETE',
+          headers: adminHeaders,
+          body: JSON.stringify({ ids: selectedIds }),
+        })
+        const data = await response.json() as { error?: string }
+        if (!response.ok) throw new Error(data.error || 'No se pudieron eliminar los espacios seleccionados.')
+        window.location.reload()
+      },
+    })
+  }
+
   async function createPlace(place: Omit<AdminPlace, 'id' | 'active'>) {
     const response = await fetch(`${API}/api/admin/places`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(place) })
     const data = await response.json()
@@ -165,10 +242,10 @@ export function useAdminData(userId?: number) {
     setCoupons((current) => [data.coupon, ...current])
   }
 
-  async function toggleCoupon(id: number, active: boolean) {
-    const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ active }) })
+  async function toggleCoupon(id: number, active: boolean, validity?: { endsAt: string; endsAtTime: string }) {
+    const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ active, ...validity }) })
     const data = await response.json()
-    if (!response.ok) return setError(data.error || 'Error al actualizar cupón')
+    if (!response.ok) throw new Error(data.error || 'Error al actualizar cupón')
     setCoupons((current) => current.map((item) => item.id === id ? data.coupon : item))
   }
 
@@ -181,6 +258,20 @@ export function useAdminData(userId?: number) {
         const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'DELETE', headers: adminHeaders })
         if (!response.ok && response.status !== 204) throw new Error('Error al eliminar cupón')
         setCoupons((current) => current.filter((item) => item.id !== id))
+      },
+    })
+  }
+
+  function clearAuditLogs() {
+    setConfirmation({
+      title: 'Limpiar actividad reciente',
+      message: 'Se eliminará permanentemente todo el historial de actividad administrativa. Esta acción no se puede deshacer.',
+      confirmLabel: 'Limpiar historial',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/audit`, { method: 'DELETE', headers: adminHeaders })
+        const data = await response.json() as { error?: string }
+        if (!response.ok) throw new Error(data.error || 'No se pudo limpiar la actividad reciente.')
+        setAuditLogs([])
       },
     })
   }
@@ -199,7 +290,7 @@ export function useAdminData(userId?: number) {
     }
   }
 
-  async function createBlock(payload: { placeId: number; startsAt: string; endsAt: string; reason: string }) {
+  async function createBlock(payload: { placeId: number; startsAt: string; startsAtTime: string; endsAt: string; endsAtTime: string; reason: string }) {
     const response = await fetch(`${API}/api/admin/blocks`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(payload) })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Error al crear bloqueo')
@@ -214,9 +305,10 @@ export function useAdminData(userId?: number) {
 
   return {
     users, reservations, places, coupons, blocks, auditLogs, error,
+    refreshData: loadData,
     confirmation, confirmingAction, setConfirmation, confirmPendingAction,
-    updateRole, toggleUserActive, deleteUser, updateReservation, deleteReservation,
-    updatePlace, togglePlaceActive, deletePlace, createPlace, createCoupon,
-    toggleCoupon, deleteCoupon, createBlock, deleteBlock,
+    updateRole, toggleUserActive, deleteUser, deleteUsers, requestPasswordReset, updateReservation, deleteReservation, deleteReservations,
+    updatePlace, togglePlaceActive, deletePlace, deletePlaces, createPlace, createCoupon,
+    toggleCoupon, deleteCoupon, createBlock, deleteBlock, clearAuditLogs,
   }
 }

@@ -29,6 +29,21 @@ export async function saveCachedProfileImage(userId: number, image: Blob): Promi
   database.close()
 }
 
+export async function removeCachedProfileImage(userId: number): Promise<void> {
+  const database = await openDatabase()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readwrite')
+      transaction.objectStore(STORE_NAME).delete(userId)
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error ?? new Error('No se pudo quitar la copia local de la foto.'))
+      transaction.onabort = () => reject(transaction.error ?? new Error('Se canceló la eliminación local de la foto.'))
+    })
+  } finally {
+    database.close()
+  }
+}
+
 export async function loadCachedProfileImage(userId: number): Promise<string | null> {
   const database = await openDatabase()
   const image = await new Promise<Blob | undefined>((resolve, reject) => {

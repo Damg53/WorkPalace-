@@ -3,7 +3,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #333333;
-  background-color: #f3f4f6;
+  background-color: #ecebf2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -103,7 +103,7 @@ html[data-theme="light"] {
 }
 
 html[data-theme="light"] body {
-  background-color: #f3f4f6;
+  background-color: #ecebf2;
   color: #333333;
 }
 

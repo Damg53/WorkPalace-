@@ -9,7 +9,7 @@ export interface ContactPerson {
   tint: 'teal' | 'amber' | 'blue' | 'purple' | 'rose' | 'green' | 'cyan'
   email: string
   whatsapp: string
-  github: string
+  github?: string
   instagram: string
   phone: string
 }
@@ -42,11 +42,11 @@ const DEFAULT_PEOPLE: ContactPerson[] = [
     role: 'Backend',
     initials: 'KL',
     tint: 'purple',
-    email: '',
-    whatsapp: '',
-    github: 'https://github.com/',
-    instagram: 'https://www.instagram.com',
-    phone: '',
+    email: 'andree.marin2005@gmail.com',
+    whatsapp: '573016029690',
+    github: 'https://github.com/Andre3-kal',
+    instagram: 'https://www.instagram.com/el_kale/',
+    phone: '+57 301 6029690',
   },
 ]
 
@@ -207,10 +207,12 @@ export default function ContactDock({ people = DEFAULT_PEOPLE }: ContactDockProp
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.4-4.2A8 8 0 1 1 9 18.4L4 20Z" /><path d="M8.9 9.1c-.3-.6.1-1.3.7-1.3h.6c.3 0 .6.2.7.5l.4 1c.1.3 0 .6-.2.8l-.4.4c.4 1 1.2 1.8 2.2 2.2l.4-.4c.2-.2.5-.3.8-.2l1 .4c.3.1.5.4.5.7v.6c0 .6-.7 1-1.3.7-2.7-.9-4.8-3-5.7-5.7Z" /></svg>
             <span className="dock-tooltip">WhatsApp</span><span className="dock-dot" />
           </a>
-          <a ref={(el) => { itemRefs.current[2] = el }} className="dock-item" style={{ ['--tint' as string]: tintVar('amber') }} href={channelHrefs.github} target="_blank" rel="noopener noreferrer" aria-label="Ver GitHub" onClick={(e) => bounce(e.currentTarget)} onTouchStart={(e) => handleTouchOpen(e.currentTarget)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.4c0-.9.3-1.5.7-1.8-2.5-.3-5.2-1.3-5.2-5.6 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.5.1-3 0 0 .9-.3 3.1 1.1a10.7 10.7 0 0 1 5.6 0c2.1-1.4 3.1-1.1 3.1-1.1.6 1.5.2 2.7.1 3 .7.8 1.1 1.8 1.1 3 0 4.3-2.7 5.3-5.2 5.6.4.4.8 1.1.8 2.2V19" /></svg>
-            <span className="dock-tooltip">GitHub</span><span className="dock-dot" />
-          </a>
+          {active.github && (
+            <a ref={(el) => { itemRefs.current[2] = el }} className="dock-item" style={{ ['--tint' as string]: tintVar('amber') }} href={channelHrefs.github} target="_blank" rel="noopener noreferrer" aria-label="Ver GitHub" onClick={(e) => bounce(e.currentTarget)} onTouchStart={(e) => handleTouchOpen(e.currentTarget)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.4c0-.9.3-1.5.7-1.8-2.5-.3-5.2-1.3-5.2-5.6 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.5.1-3 0 0 .9-.3 3.1 1.1a10.7 10.7 0 0 1 5.6 0c2.1-1.4 3.1-1.1 3.1-1.1.6 1.5.2 2.7.1 3 .7.8 1.1 1.8 1.1 3 0 4.3-2.7 5.3-5.2 5.6.4.4.8 1.1.8 2.2V19" /></svg>
+              <span className="dock-tooltip">GitHub</span><span className="dock-dot" />
+            </a>
+          )}
           <a ref={(el) => { itemRefs.current[3] = el }} className="dock-item" style={{ ['--tint' as string]: tintVar('amber') }} href={channelHrefs.instagram} target="_blank" rel="noopener noreferrer" aria-label="Ver Instagram" onClick={(e) => bounce(e.currentTarget)} onTouchStart={(e) => handleTouchOpen(e.currentTarget)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="0.8" fill="currentColor" stroke="none" /></svg>
             <span className="dock-tooltip">Instagram</span><span className="dock-dot" />

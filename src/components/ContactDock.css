@@ -146,12 +146,12 @@ html[data-theme="light"] .contact-dock-page {
   --paper: #333333;
   --paper-dim: #666666;
   --shadow-color: rgba(51, 51, 51, 0.18);
-  background: #ffffff;
+  background: #f6f5fb;
 }
 
 /* Match the "Acerca de WorkPalace" background in dark mode. */
 html[data-theme="dark"] .contact-dock-page {
-  background: #1a1a1a;
+  background: #15141c;
 }
 
 html[data-theme="light"] .contact-dock-page .contact-dock-grain {

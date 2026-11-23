@@ -1,52 +1,403 @@
 .owner-dashboard {
-  min-height: 60vh;
+  --owner-card: #f5f4f9;
+  --owner-line: #dbdbe5;
+  --owner-text: #24263a;
+  --owner-muted: #70758e;
+  --owner-brand: #5668ee;
+  width: 100%;
+  min-height: 100vh;
+  padding: clamp(24px, 4vw, 48px);
+  color: var(--owner-text);
+}
+
+html[data-theme="dark"] .owner-dashboard {
+  --owner-card: #20202d;
+  --owner-line: #343449;
+  --owner-text: #f0eff7;
+  --owner-muted: #aaa9bf;
+  --owner-brand: #91a0ff;
+  background:
+    radial-gradient(700px 360px at 100% 0, rgba(91, 83, 190, 0.12), transparent 70%),
+    #171720;
+}
+
+.owner-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 28px 30px;
+  border: 1px solid var(--owner-line);
+  border-radius: 20px;
+  background: var(--owner-card);
+  box-shadow: 0 12px 30px rgba(37, 43, 61, 0.06);
+}
+
+.owner-page-eyebrow,
+.owner-card-eyebrow {
+  color: var(--owner-brand);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.owner-page-heading h1 {
+  margin: 8px 0 6px;
+  color: var(--owner-text);
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  line-height: 1.15;
+}
+
+.owner-page-heading p {
+  margin: 0;
+  color: var(--owner-muted);
+  font-size: 0.98rem;
+}
+
+.owner-dashboard-live {
+  flex: none;
+  padding: 8px 12px;
+  border: 1px solid var(--owner-line);
+  border-radius: 999px;
+  color: var(--owner-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .owner-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.owner-summary article {
+.owner-monthly-metrics {
   display: grid;
-  gap: 0.4rem;
-  padding: 1.1rem 1.25rem;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 12px;
-  background: var(--filter-bg, #fff);
-  color: var(--text-color, #252b3d);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.owner-summary span {
-  color: #68708c;
+.owner-monthly-card {
+  cursor: default;
+}
+
+.owner-stat-card.owner-monthly-card strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.35rem, 2.2vw, 2rem);
+}
+
+.owner-stat-card.owner-monthly-card small {
+  display: block;
+  line-height: 1.45;
+}
+
+.owner-stat-card {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--owner-line);
+  border-radius: 16px;
+  background: var(--owner-card);
+  color: var(--owner-text);
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.owner-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--owner-brand) 50%, var(--owner-line));
+  box-shadow: 0 12px 24px rgba(37, 43, 61, 0.08);
+}
+
+.owner-stat-card > span {
+  color: var(--owner-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.owner-stat-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.owner-stat-card small {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--owner-brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.owner-stat-card--pending strong { color: #d48a34; }
+html[data-theme="dark"] .owner-stat-card--pending strong { color: #f1b35e; }
+
+.owner-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 20px;
+}
+
+.owner-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.owner-agenda-list,
+.owner-listing-issues,
+.owner-review-list {
+  display: grid;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.owner-agenda-item,
+.owner-listing-issue,
+.owner-review-item {
+  min-width: 0;
+  padding: 13px 0;
+  border-top: 1px solid var(--owner-line);
+}
+
+.owner-agenda-item {
+  display: grid;
+  grid-template-columns: minmax(105px, auto) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.owner-agenda-date,
+.owner-agenda-item > div,
+.owner-review-item > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.owner-agenda-date strong,
+.owner-agenda-item > div > strong,
+.owner-listing-issue strong,
+.owner-review-item > div > strong {
+  color: var(--owner-text);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.owner-agenda-date span,
+.owner-agenda-item > div > span,
+.owner-agenda-item > div > small,
+.owner-listing-issue span,
+.owner-review-item > div > span,
+.owner-review-item p,
+.owner-review-total {
+  margin: 0;
+  color: var(--owner-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.owner-listing-issue {
+  display: grid;
+  gap: 5px;
+}
+
+.owner-review-total {
+  margin-bottom: 6px;
+}
+
+.owner-review-rating,
+.owner-review-stars {
+  color: #b77617;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.owner-review-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+}
+
+.owner-review-item p {
+  grid-column: 1 / -1;
+}
+
+.owner-overview-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 22px;
+  border: 1px solid var(--owner-line);
+  border-radius: 18px;
+  background: var(--owner-card);
+  box-shadow: 0 12px 30px rgba(37, 43, 61, 0.05);
+}
+
+.owner-overview-card__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.owner-overview-card__heading h2 {
+  margin: 5px 0 0;
+  color: var(--owner-text);
+  font-size: 1.1rem;
+}
+
+.owner-overview-count {
+  display: grid;
+  min-width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0 9px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--owner-brand) 13%, transparent);
+  color: var(--owner-brand);
   font-size: 0.9rem;
+  font-weight: 800;
 }
 
-.owner-summary strong {
-  font-size: 1.6rem;
+.owner-empty-state {
+  margin: 0 0 18px;
+  color: var(--owner-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
-[data-theme="dark"] .owner-summary article {
-  border-color: rgba(130, 146, 255, 0.24);
-  background: #25252b;
-  color: #edf2ff;
+.owner-pending-list,
+.owner-space-list {
+  display: grid;
+  margin-bottom: 14px;
 }
 
-[data-theme="dark"] .owner-summary span {
-  color: #b7bfd6;
+.owner-pending-item,
+.owner-space-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid var(--owner-line);
 }
+
+.owner-pending-item > div,
+.owner-space-item > div {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+}
+
+.owner-pending-item strong,
+.owner-space-item strong {
+  overflow: hidden;
+  color: var(--owner-text);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-pending-item > div > span,
+.owner-space-item > div > span {
+  overflow: hidden;
+  color: var(--owner-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-pending-item__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(235, 166, 73, 0.13);
+  color: #bd7620;
+  font-weight: 800;
+}
+
+.owner-pending-status {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(235, 166, 73, 0.13);
+  color: #ad6d1d;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+html[data-theme="dark"] .owner-pending-status,
+html[data-theme="dark"] .owner-pending-item__icon {
+  color: #f1b35e;
+}
+
+.owner-space-status {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: #35b87a;
+  box-shadow: 0 0 0 4px rgba(53, 184, 122, 0.12);
+}
+
+.owner-space-status.is-inactive {
+  background: #9295a7;
+  box-shadow: 0 0 0 4px rgba(146, 149, 167, 0.12);
+}
+
+.owner-space-state {
+  flex: none;
+  color: var(--owner-muted);
+  font-size: 0.72rem;
+}
+
+.owner-card-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--owner-line);
+  color: var(--owner-brand);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.owner-card-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .owner-dashboard__error {
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  background: #fee2e2;
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid #f1b4b4;
+  border-radius: 12px;
+  background: #fff1f1;
   color: #991b1b;
 }
 
+.owner-dashboard__loading {
+  margin: 0 0 18px;
+  color: var(--owner-muted);
+  font-size: 0.9rem;
+}
+
 .owner-reservations {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 
 .owner-reservation-list {
@@ -60,7 +411,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border-top: 1px solid rgba(130, 146, 255, 0.16);
+  border-top: 1px solid var(--owner-line);
 }
 
 .owner-reservation > div:first-child {
@@ -70,7 +421,7 @@
 }
 
 .owner-reservation > div:first-child span {
-  color: #9299b7;
+  color: var(--owner-muted);
   font-size: 0.85rem;
 }
 
@@ -81,21 +432,131 @@
   gap: 0.5rem;
 }
 
+@media (max-width: 900px) {
+  .owner-overview-grid { grid-template-columns: 1fr; }
+  .owner-insights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 760px) {
-  .owner-summary {
-    grid-template-columns: 1fr;
-  }
+  .owner-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .owner-insights-grid { grid-template-columns: 1fr; }
+  .owner-reservation { grid-template-columns: 1fr auto; }
+  .owner-reservation__actions { grid-column: 1 / -1; justify-content: stretch; }
+  .owner-reservation__actions > button { flex: 1 1 0; }
+}
 
-  .owner-reservation {
-    grid-template-columns: 1fr auto;
-  }
+@media (max-width: 560px) {
+  .owner-dashboard { padding: 20px 14px 36px; }
+  .owner-page-heading { align-items: flex-start; flex-direction: column; padding: 22px 18px; }
+  .owner-dashboard-live { display: none; }
+  .owner-overview-card { padding: 18px; }
+  .owner-pending-item { gap: 9px; }
+  .owner-pending-status { padding: 4px 6px; font-size: 0.62rem; }
+  .owner-summary,
+  .owner-monthly-metrics { grid-template-columns: 1fr; }
+  .owner-agenda-item { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
 
-  .owner-reservation__actions {
-    grid-column: 1 / -1;
-    justify-content: stretch;
-  }
+.owner-dashboard {
+  --owner-soft: #f4f6fb;
+  background: linear-gradient(180deg, #ecebf2, #e7e6ee);
+}
 
-  .owner-reservation__actions > button {
-    flex: 1 1 0;
-  }
+html[data-theme="dark"] .owner-dashboard {
+  --owner-soft: #29293a;
+}
+
+.owner-dashboard .owner-page-heading {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(420px 220px at 100% 0, color-mix(in srgb, var(--owner-brand) 13%, transparent), transparent 74%),
+    var(--owner-card);
+}
+
+.owner-dashboard .owner-page-heading::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--owner-brand), #8674ff);
+  content: "";
+}
+
+.owner-dashboard .owner-page-heading > div { position: relative; z-index: 1; }
+
+.owner-dashboard .owner-dashboard-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--owner-soft);
+  color: var(--owner-muted);
+}
+
+.owner-dashboard-live > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #35b87a;
+  box-shadow: 0 0 0 4px rgba(53, 184, 122, 0.12);
+}
+
+.owner-dashboard .owner-stat-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--owner-card);
+  box-shadow: 0 8px 24px rgba(37, 43, 61, 0.045);
+}
+
+.owner-dashboard .owner-stat-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--owner-brand), #8674ff);
+  content: "";
+}
+
+.owner-dashboard .owner-stat-card strong { color: var(--owner-text); }
+.owner-dashboard .owner-stat-card small { color: var(--owner-brand); }
+.owner-dashboard .owner-stat-card--pending strong { color: #d48a34; }
+html[data-theme="dark"] .owner-dashboard .owner-stat-card--pending strong { color: #f1b35e; }
+
+.owner-dashboard .owner-overview-card {
+  box-shadow: 0 10px 26px rgba(37, 43, 61, 0.045);
+}
+
+.owner-dashboard .owner-reservation-list { gap: 10px; }
+
+.owner-dashboard .owner-reservation {
+  border: 1px solid var(--owner-line);
+  border-radius: 15px;
+  background: var(--owner-card);
+  box-shadow: 0 6px 18px rgba(37, 43, 61, 0.04);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.owner-dashboard .owner-reservation:hover {
+  border-color: color-mix(in srgb, var(--owner-brand) 45%, var(--owner-line));
+  box-shadow: 0 10px 24px rgba(37, 43, 61, 0.07);
+}
+
+.owner-dashboard .owner-reservation > div:first-child > strong { color: var(--owner-text); }
+.owner-dashboard .owner-reservation__actions .btn { min-height: 40px; }
+
+.owner-dashboard .users-section {
+  border: 1px solid var(--owner-line);
+  border-radius: 18px;
+  background: var(--owner-card);
+  color: var(--owner-text);
+  box-shadow: 0 10px 26px rgba(37, 43, 61, 0.045);
+}
+
+.owner-dashboard .users-section h2 { color: var(--owner-text); }
+
+.owner-dashboard .admin-section-message,
+.owner-dashboard .admin-empty-state { color: var(--owner-muted); }
+
+html[data-theme="dark"] .owner-dashboard__error {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.2);
+  color: #fecaca;
 }

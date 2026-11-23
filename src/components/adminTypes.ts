@@ -48,7 +48,9 @@ export interface AdminBlock {
   place_id: number
   place_name?: string
   starts_at: string
+  starts_at_time: string | null
   ends_at: string
+  ends_at_time: string | null
   reason: string | null
 }
 

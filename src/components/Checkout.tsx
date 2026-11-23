@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './Checkout.css'
-import { API_BASE_URL } from '../services/api'
+import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api'
 import { formatAvailableFrom } from '../utils/dateFormatting'
+import { to12HourTime, to24HourTime } from '../utils/timeInput'
+import TimeInput from './TimeInput'
 
 const API = API_BASE_URL
 
@@ -23,7 +25,11 @@ interface Place {
   ciudad: string | null
   modalidad: string | null
   precio_hora: number | null
+  owner_active?: boolean
   active?: boolean
+  has_block?: boolean
+  has_partial_block?: boolean
+  has_reservation?: boolean
   unavailable_reason?: string | null
   available_from?: string | null
 }
@@ -40,6 +46,12 @@ const MODES: { id: Mode; label: string; unit: [string, string]; max: number }[] 
   { id: 'appointment', label: 'Solo por cita', unit: ['cita', 'citas'], max: 1 },
   { id: 'flexible', label: 'Flexible', unit: ['reserva', 'reservas'], max: 1 },
 ]
+
+const FIXED_SCHEDULES: Partial<Record<Mode, { startTime?: string; minStartTime?: string; maxStartTime?: string; minuteStep?: number; durationHours: number }>> = {
+  halfDay: { minStartTime: '07:00', maxStartTime: '18:00', minuteStep: 30, durationHours: 4 },
+  fullDay: { minStartTime: '07:00', maxStartTime: '09:00', minuteStep: 30, durationHours: 8 },
+  night: { startTime: '18:00', durationHours: 14 },
+}
 
 const PAYS: { id: Pay; label: string; hint: string }[] = [
   { id: 'card', label: 'Tarjeta', hint: 'Crédito o débito' },
@@ -61,6 +73,8 @@ const timeToMinutes = (value: string) => {
   return hours * 60 + minutes
 }
 
+const isValidTimeValue = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
+
 const minutesToTime = (minutes: number) => {
   const normalized = ((minutes % 1440) + 1440) % 1440
   return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`
@@ -69,7 +83,7 @@ const minutesToTime = (minutes: number) => {
 const hourLabel = (minutes: number) => {
   const normalized = ((minutes % 1440) + 1440) % 1440
   const hours = Math.floor(normalized / 60)
-  return `${hours % 12 || 12}:${String(normalized % 60).padStart(2, '0')} ${hours < 12 ? 'am' : 'pm'}`
+  return `${hours % 12 || 12}:${String(normalized % 60).padStart(2, '0')} ${hours < 12 ? 'AM' : 'PM'}`
 }
 
 const toDate = (iso: string, plus = 0) => {
@@ -126,6 +140,15 @@ const nextAvailableDateTime = (now: Date) => {
   }
 }
 
+const nextAvailableDateTimeAtInterval = (now: Date, interval: number) => {
+  const nextAvailable = nextAvailableDateTime(now)
+  const roundedMinutes = Math.ceil(timeToMinutes(nextAvailable.time) / interval) * interval
+  if (roundedMinutes >= 1440) {
+    return { date: addDaysToDateInput(nextAvailable.date, 1), time: '00:00' }
+  }
+  return { date: nextAvailable.date, time: minutesToTime(roundedMinutes) }
+}
+
 const isValidCardExpiry = (value: string) => {
   const match = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(value)
   if (!match) return false
@@ -168,11 +191,6 @@ const getModeOptionsFromPlace = (modalidad: string | null | undefined): Mode[] =
   return modes.length > 0 ? modes : ['hour']
 }
 
-const resolveModeFromPlace = (modalidad: string | null | undefined): Mode => {
-  const modes = getModeOptionsFromPlace(modalidad)
-  return modes[0] ?? 'hour'
-}
-
 export default function Checkout({ user, isDark }: CheckoutProps) {
   const { placeId } = useParams()
   const navigate = useNavigate()
@@ -183,7 +201,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const [mode, setMode] = useState<Mode>('hour')
   const [availableModes, setAvailableModes] = useState<Mode[]>(['hour', 'day', 'week', 'fortnight', 'month'])
   const [date, setDate] = useState(() => bogotaDateTime(new Date()).date)
-  const [startTime, setStartTime] = useState(() => nextAvailableDateTime(new Date()).time)
+  const [startTimeInput, setStartTimeInput] = useState(() => to12HourTime(nextAvailableDateTime(new Date()).time))
   const [clock, setClock] = useState(() => new Date())
   const [qty, setQty] = useState(3)
   const [name, setName] = useState(user.fullName || user.username || '')
@@ -201,6 +219,8 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const [couponChecking, setCouponChecking] = useState(false)
   const [terms, setTerms] = useState(false)
   const [status, setStatus] = useState<'idle' | 'paying' | 'done' | 'rejected'>('idle')
+  const startTime = to24HourTime(startTimeInput)
+  const setStartTime = (value: string) => setStartTimeInput(to12HourTime(value))
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(new Date()), 30_000)
@@ -236,19 +256,28 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
           return
         }
 
-        if (!found.active) {
+        const modesForPlace = getModeOptionsFromPlace(found.modalidad)
+        const timedMode = modesForPlace.find((candidate) => ['hour', 'halfDay', 'fullDay', 'night', 'appointment', 'flexible'].includes(candidate))
+        const supportsTimedReservations = Boolean(timedMode)
+        const reservationMayHaveAnotherAvailableSlot = found.owner_active
+          && ((found.has_reservation && !found.has_block) || found.has_partial_block)
+          && supportsTimedReservations
+        if (!found.active && !reservationMayHaveAnotherAvailableSlot) {
           setPlace(found)
           setError(getUnavailableMessage(found))
           return
         }
 
-        const initialMode = resolveModeFromPlace(found.modalidad)
+        const initialMode = (found.has_partial_block && timedMode ? timedMode : modesForPlace[0]) ?? 'hour'
         setPlace(found)
         setMode(initialMode)
-        setAvailableModes(getModeOptionsFromPlace(found.modalidad))
+        setAvailableModes(modesForPlace)
         setQty(initialMode === 'hour' ? 3 : 1)
+        if (initialMode === 'halfDay' || initialMode === 'fullDay') {
+          setStartTimeInput(to12HourTime('07:00'))
+        }
         const todayInBogota = bogotaDateTime(new Date()).date
-        if (initialMode !== 'hour' && date <= todayInBogota) {
+        if (initialMode !== 'hour' && initialMode !== 'appointment' && initialMode !== 'flexible' && date <= todayInBogota) {
           setDate(addDaysToDateInput(todayInBogota, 1))
         }
       } catch (_e) {
@@ -276,26 +305,55 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const cfg = MODES.find((m) => m.id === mode) ?? MODES[0]
   const maxQty = cfg.max
   const earliest = nextAvailableDateTime(clock)
+  const earliestAppointment = nextAvailableDateTimeAtInterval(clock, 30)
   const todayInBogota = bogotaDateTime(clock).date
-  const minimumDate = mode === 'hour' ? earliest.date : addDaysToDateInput(todayInBogota, 1)
-  const minimumTime = date === earliest.date ? earliest.time : '00:00'
-  const startMinutes = timeToMinutes(startTime)
-  const endMinutes = startMinutes + qty * 60
+  const appointmentMode = mode === 'appointment' || mode === 'flexible'
+  const fixedSchedule = FIXED_SCHEDULES[mode]
+  const timeBasedMode = mode === 'hour' || appointmentMode || Boolean(fixedSchedule)
+  const minimumDate = mode === 'hour'
+    ? earliest.date
+    : appointmentMode
+      ? earliestAppointment.date
+      : addDaysToDateInput(todayInBogota, 1)
+  const minimumTime = mode === 'hour'
+    ? date === earliest.date ? earliest.time : '00:00'
+    : appointmentMode && date === earliestAppointment.date
+      ? earliestAppointment.time
+      : fixedSchedule?.minStartTime ?? '00:00'
+  const maximumTime = fixedSchedule?.maxStartTime
+  const timeMinuteStep = appointmentMode ? 30 : fixedSchedule?.minuteStep ?? 1
+  const reservationStartTime = fixedSchedule?.startTime ?? (isValidTimeValue(startTime) ? startTime : minimumTime)
+  const reservationHours = mode === 'hour' ? qty : fixedSchedule?.durationHours ?? (appointmentMode ? 1 : qty)
+  const billableQuantity = timeBasedMode ? reservationHours : qty
+  const startMinutes = timeToMinutes(reservationStartTime)
+  const endMinutes = startMinutes + reservationHours * 60
   const endDate = addDaysToDateInput(date, Math.floor(endMinutes / 1440))
 
   useEffect(() => {
-    const minDate = mode === 'hour' ? earliest.date : addDaysToDateInput(todayInBogota, 1)
+    const minDate = mode === 'hour'
+      ? earliest.date
+      : appointmentMode
+        ? earliestAppointment.date
+        : addDaysToDateInput(todayInBogota, 1)
     if (date < minDate) setDate(minDate)
-    if (mode === 'hour' && date === earliest.date && startTime < earliest.time) {
+    if (mode === 'hour' && date === earliest.date && isValidTimeValue(startTime) && startTime < earliest.time) {
       setStartTime(earliest.time)
+    } else if (appointmentMode && date === earliestAppointment.date && isValidTimeValue(startTime) && startTime < earliestAppointment.time) {
+      setStartTime(earliestAppointment.time)
     }
-  }, [clock, date, earliest.date, earliest.time, mode, startTime, todayInBogota])
+  }, [appointmentMode, clock, date, earliest.date, earliest.time, earliestAppointment.date, earliestAppointment.time, mode, startTime, todayInBogota])
 
   const changeMode = (m: Mode) => {
     setMode(m)
     setQty(m === 'hour' ? 3 : 1)
+    if (m === 'appointment' || m === 'flexible') {
+      const currentTime = isValidTimeValue(startTime) ? timeToMinutes(startTime) : timeToMinutes(earliestAppointment.time)
+      setStartTime(minutesToTime(Math.ceil(currentTime / 30) * 30))
+    } else if (m === 'halfDay' || m === 'fullDay') {
+      setStartTime('07:00')
+    }
     const todayInBogota = bogotaDateTime(new Date()).date
-    if (m !== 'hour' && date <= todayInBogota) {
+    if (m !== 'hour' && m !== 'appointment' && m !== 'flexible' && date <= todayInBogota) {
       setDate(addDaysToDateInput(todayInBogota, 1))
     }
   }
@@ -315,7 +373,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   } as const
 
   const { subtotal, discount, fee, total } = useMemo(() => {
-    const subtotalValue = rateMap[mode] * qty
+    const subtotalValue = rateMap[mode] * billableQuantity
     const discountValue = applied
       ? Math.round(subtotalValue * (couponDiscount / 100))
       : 0
@@ -326,25 +384,22 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
       fee: feeValue,
       total: subtotalValue - discountValue + feeValue,
     }
-  }, [applied, couponDiscount, mode, qty, rateMap])
+  }, [applied, billableQuantity, couponDiscount, mode, rateMap])
 
   const slot = useMemo(() => {
-    if (mode === 'hour') {
-      const endDay = addDaysToDateInput(date, Math.floor((timeToMinutes(startTime) + qty * 60) / 1440))
+    if (timeBasedMode) {
       return {
-        title: endDay === date ? dateLabel(toDate(date)) : `${dateLabel(toDate(date))} al ${dateLabel(toDate(endDay))}`,
-        sub: `${hourLabel(timeToMinutes(startTime))} a ${hourLabel(timeToMinutes(startTime) + qty * 60)}${endDay === date ? '' : ' (día siguiente)'}`,
+        title: endDate === date ? dateLabel(toDate(date)) : `${dateLabel(toDate(date))} al ${dateLabel(toDate(endDate))}`,
+        sub: `${hourLabel(startMinutes)} a ${hourLabel(endMinutes)}${endDate === date ? '' : ' (día siguiente)'}`,
       }
     }
 
-    const days = mode === 'day' || mode === 'halfDay' || mode === 'fullDay' || mode === 'night' || mode === 'appointment' || mode === 'flexible'
-      ? qty
-      : mode === 'week' ? qty * 7 : mode === 'fortnight' ? qty * 15 : qty * 30
+    const days = mode === 'day' ? qty : mode === 'week' ? qty * 7 : mode === 'fortnight' ? qty * 15 : qty * 30
     return {
       title: `${dateLabel(toDate(date))} al ${dateLabel(toDate(date, days - 1))}`,
       sub: `${days} ${days === 1 ? 'día' : 'días'} completos`,
     }
-  }, [date, mode, qty, startTime])
+  }, [date, endDate, endMinutes, mode, qty, startMinutes, timeBasedMode])
 
   const emailOk = /^\S+@\S+\.\S+$/.test(email)
   const phoneOk = /^3\d{9}$/.test(phone)
@@ -358,19 +413,30 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
       setError('Debes seleccionar una fecha válida.')
       return
     }
-    if (mode === 'hour' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) {
+    if (mode === 'hour' && !isValidTimeValue(startTime)) {
       setError('Debes seleccionar una hora de inicio válida.')
+      return
+    }
+    if (appointmentMode && (!isValidTimeValue(startTime) || Number(startTime.slice(3)) % 30 !== 0)) {
+      setError('Selecciona una hora de inicio válida en intervalos de 30 minutos.')
+      return
+    }
+    if (fixedSchedule?.minStartTime && (!isValidTimeValue(startTime)
+      || startTime < fixedSchedule.minStartTime
+      || startTime > (fixedSchedule.maxStartTime ?? '23:59')
+      || Number(startTime.slice(3)) % (fixedSchedule.minuteStep ?? 1) !== 0)) {
+      setError('Selecciona una hora dentro del horario permitido para esta jornada.')
       return
     }
     if (!phoneOk) {
       setError('Ingresa un celular colombiano de 10 dígitos que empiece por 3.')
       return
     }
-    if (mode === 'hour' && Date.parse(`${date}T${startTime}:00-05:00`) <= Date.now()) {
+    if (timeBasedMode && Date.parse(`${date}T${reservationStartTime}:00-05:00`) <= Date.now()) {
       setError('Selecciona una hora de inicio futura.')
       return
     }
-    if (mode !== 'hour' && date <= bogotaDateTime(new Date()).date) {
+    if (mode !== 'hour' && !appointmentMode && date <= bogotaDateTime(new Date()).date) {
       setError('Las reservas por días deben iniciar desde mañana.')
       return
     }
@@ -396,15 +462,16 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
         body: JSON.stringify({
           placeId: place.id,
           checkIn: date,
-          checkOut: mode === 'hour'
+          checkOut: timeBasedMode
             ? endDate
             : addDaysToDateInput(date, qty),
-          ...(mode === 'hour' ? {
-            checkInTime: startTime,
+          reservationMode: mode,
+          ...(timeBasedMode ? {
+            checkInTime: reservationStartTime,
             checkOutTime: minutesToTime(endMinutes),
           } : {}),
           phone,
-          huespedes: qty,
+          huespedes: billableQuantity,
           couponCode: applied,
           payment: {
             method: pay,
@@ -425,7 +492,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
       setStatus('done')
       setTimeout(() => navigate('/dashboard', { replace: true }), 5000)
     } catch (_e) {
-      setError('Compra rechazada: no se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.')
+      setError(API_UNAVAILABLE_MESSAGE)
       setStatus('idle')
     }
   }
@@ -575,8 +642,11 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
                   required
                   onChange={(event) => {
                     setDate(event.target.value)
-                    if (event.target.value === earliest.date && startTime < earliest.time) {
+                    if (mode === 'hour' && event.target.value === earliest.date && isValidTimeValue(startTime) && startTime < earliest.time) {
                       setStartTime(earliest.time)
+                    }
+                    if (appointmentMode && event.target.value === earliestAppointment.date && isValidTimeValue(startTime) && startTime < earliestAppointment.time) {
+                      setStartTime(earliestAppointment.time)
                     }
                   }}
                 />
@@ -585,16 +655,39 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
               {mode === 'hour' && (
                 <label className="ck-field">
                   <span>Hora de llegada</span>
-                  <input
-                    type="time"
-                    value={startTime}
-                    min={minimumTime}
-                    max="23:59"
-                    step="60"
+                  <TimeInput
+                    className="ck-time-input"
+                    value={startTimeInput}
+                    minTime={minimumTime}
                     required
-                    onChange={(event) => setStartTime(event.target.value)}
+                    onChange={setStartTimeInput}
                   />
                 </label>
+              )}
+              {(appointmentMode || (fixedSchedule?.minStartTime !== undefined)) && (
+                <label className="ck-field">
+                  <span>{appointmentMode
+                    ? 'Hora de inicio (intervalos de 30 minutos)'
+                    : mode === 'halfDay'
+                      ? `Hora de inicio (${hourLabel(timeToMinutes('07:00'))} a ${hourLabel(timeToMinutes('18:00'))}, cada 30 min)`
+                      : `Hora de inicio (${hourLabel(timeToMinutes('07:00'))} a ${hourLabel(timeToMinutes('09:00'))}, cada 30 min)`}</span>
+                  <TimeInput
+                    className="ck-time-input"
+                    value={startTimeInput}
+                    minTime={minimumTime}
+                    maxTime={maximumTime}
+                    minuteStep={timeMinuteStep}
+                    allowedPeriods={mode === 'fullDay' ? ['AM'] : undefined}
+                    required
+                    onChange={setStartTimeInput}
+                  />
+                </label>
+              )}
+              {fixedSchedule && (
+                <div className="ck-field">
+                  <span>Horario establecido</span>
+                  <output className="ck-time-summary">{hourLabel(startMinutes)} a {hourLabel(endMinutes)}{endDate === date ? '' : ' (día siguiente)'}</output>
+                </div>
               )}
 
               <div className="ck-field">
@@ -758,7 +851,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
 
             <dl className="ck-lines">
               <div>
-                <dt>{cop(rateMap[mode])} × {qty} {qty === 1 ? cfg.unit[0] : cfg.unit[1]}</dt>
+                <dt>{cop(rateMap[mode])} × {billableQuantity} {timeBasedMode ? 'horas' : qty === 1 ? cfg.unit[0] : cfg.unit[1]}</dt>
                 <dd>{cop(subtotal)}</dd>
               </div>
               {applied && (

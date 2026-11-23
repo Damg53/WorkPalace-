@@ -120,6 +120,37 @@ router.put('/api/admin/places/:id', requireAdmin, async (req, res) => {
   }
 });
 
+router.delete('/api/admin/places', requireAdmin, async (req, res) => {
+  const ids = req.body?.ids;
+  if (
+    !Array.isArray(ids)
+    || ids.length === 0
+    || ids.length > 5000
+    || ids.some((id) => !Number.isInteger(id) || id < 1 || id > 2147483647)
+  ) {
+    return res.status(400).json({ error: 'La lista de espacios seleccionados no es válida.' });
+  }
+
+  try {
+    const uniqueIds = [...new Set(ids)];
+    const result = await pool.query(
+      'DELETE FROM places WHERE id = ANY($1::int[]) RETURNING id',
+      [uniqueIds]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontraron los espacios seleccionados.' });
+    }
+
+    res.json({ deletedIds: result.rows.map((row) => row.id) });
+  } catch (error) {
+    console.error('Error eliminando espacios seleccionados:', error);
+    if (error.code === '23503') {
+      return res.status(409).json({ error: 'No se pueden eliminar espacios que tienen registros asociados.' });
+    }
+    res.status(500).json({ error: 'No se pudieron eliminar los espacios seleccionados.' });
+  }
+});
+
 router.delete('/api/admin/places/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;

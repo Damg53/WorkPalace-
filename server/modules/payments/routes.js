@@ -39,18 +39,34 @@ router.post('/api/admin/coupons', requireAdmin, async (req, res) => {
     const startsAt = req.body?.startsAt == null || req.body.startsAt === '' ? null : req.body.startsAt;
     const endsAt = req.body?.endsAt == null || req.body.endsAt === '' ? null : req.body.endsAt;
     const endsAtTime = req.body?.endsAtTime == null || req.body.endsAtTime === '' ? null : req.body.endsAtTime;
-    if (!/^[A-Z0-9_-]{3,50}$/.test(code) || !label || !Number.isInteger(discount) || discount < 1 || discount > 100) {
-      return res.status(400).json({ error: 'Código, descripción y descuento válido son requeridos' });
+    if (!code) return res.status(400).json({ error: 'Escribe el código del cupón.' });
+    if (!/^[A-Z0-9_-]{3,50}$/.test(code)) {
+      return res.status(400).json({ error: 'El código debe tener entre 3 y 50 caracteres y usar solo letras, números, guion o guion bajo.' });
     }
-    if ((startsAt !== null && !isValidDate(startsAt)) || (endsAt !== null && !isValidDate(endsAt)) ||
-        (startsAt && endsAt && startsAt > endsAt)) {
-      return res.status(400).json({ error: 'El rango de fechas del cupón no es válido.' });
+    if (!label) return res.status(400).json({ error: 'Escribe la descripción del cupón.' });
+    if (!Number.isInteger(discount) || discount < 1 || discount > 100) {
+      return res.status(400).json({ error: 'El descuento debe ser un número entero entre 1 y 100.' });
     }
-    if (endsAtTime !== null && (!endsAt || !isValidTime(endsAtTime))) {
-      return res.status(400).json({ error: 'La hora de vencimiento debe ser válida y requiere una fecha de vencimiento.' });
+    if (maxUses !== null && (!Number.isSafeInteger(maxUses) || maxUses < 1)) {
+      return res.status(400).json({ error: 'Los usos máximos deben ser un número entero mayor que cero.' });
+    }
+    if (startsAt !== null && !isValidDate(startsAt)) {
+      return res.status(400).json({ error: 'La fecha “Desde” no es válida.' });
+    }
+    if (endsAt !== null && !isValidDate(endsAt)) {
+      return res.status(400).json({ error: 'La fecha “Hasta” no es válida.' });
+    }
+    if (startsAt && endsAt && startsAt > endsAt) {
+      return res.status(400).json({ error: 'La fecha “Desde” no puede ser posterior a la fecha “Hasta”.' });
+    }
+    if (endsAtTime !== null && !endsAt) {
+      return res.status(400).json({ error: 'Selecciona la fecha “Hasta” para poder indicar la hora de vencimiento.' });
+    }
+    if (endsAtTime !== null && !isValidTime(endsAtTime)) {
+      return res.status(400).json({ error: 'La hora de vencimiento no es válida.' });
     }
     if (startsAt && startsAt === endsAt && endsAtTime === '00:00') {
-      return res.status(400).json({ error: 'La hora de vencimiento debe ser posterior al inicio del cupón.' });
+      return res.status(400).json({ error: 'La hora de vencimiento debe ser posterior al inicio del día.' });
     }
     const result = await pool.query(
       `INSERT INTO coupons (code, label, discount, max_uses, starts_at, ends_at, ends_at_time, active)
@@ -59,7 +75,7 @@ router.post('/api/admin/coupons', requireAdmin, async (req, res) => {
                  TO_CHAR(starts_at, 'YYYY-MM-DD') AS starts_at,
                  TO_CHAR(ends_at, 'YYYY-MM-DD') AS ends_at,
                  TO_CHAR(ends_at_time, 'HH24:MI') AS ends_at_time, active, created_at`,
-      [code, label, discount, Number.isInteger(maxUses) && maxUses > 0 ? maxUses : null, startsAt, endsAt, endsAtTime]
+      [code, label, discount, maxUses, startsAt, endsAt, endsAtTime]
     );
     await logAdminAction(req, 'create', 'coupon', result.rows[0].id, { code });
     res.status(201).json({ coupon: result.rows[0] });
@@ -78,8 +94,12 @@ router.put('/api/admin/coupons/:id', requireAdmin, async (req, res) => {
     const endsAtTime = typeof rawEndTime === 'string' && rawEndTime ? rawEndTime : null;
     const hasStartDate = Object.hasOwn(req.body || {}, 'startsAt');
     const hasEndDate = Object.hasOwn(req.body || {}, 'endsAt');
+    const isActivating = req.body?.active === true;
     const startDate = req.body?.startsAt == null || req.body.startsAt === '' ? null : req.body.startsAt;
     const endDate = req.body?.endsAt == null || req.body.endsAt === '' ? null : req.body.endsAt;
+    if (isActivating && (!hasEndDate || !endDate || !hasEndTime || !endsAtTime)) {
+      return res.status(400).json({ error: 'Para activar el cupón debes indicar una fecha y hora de vencimiento.' });
+    }
     if ((hasStartDate && startDate !== null && !isValidDate(startDate)) ||
         (hasEndDate && endDate !== null && !isValidDate(endDate)) ||
         (hasStartDate && hasEndDate && startDate && endDate && startDate > endDate)) {
@@ -87,6 +107,9 @@ router.put('/api/admin/coupons/:id', requireAdmin, async (req, res) => {
     }
     if (hasEndTime && rawEndTime != null && rawEndTime !== '' && !isValidTime(rawEndTime)) {
       return res.status(400).json({ error: 'La hora de vencimiento no es válida.' });
+    }
+    if (isActivating && Date.parse(`${endDate}T${endsAtTime}:00-05:00`) <= Date.now()) {
+      return res.status(400).json({ error: 'La fecha y hora de vencimiento deben ser futuras (hora de Colombia).' });
     }
     const currentResult = await pool.query(
       `SELECT TO_CHAR(starts_at, 'YYYY-MM-DD') AS starts_at,

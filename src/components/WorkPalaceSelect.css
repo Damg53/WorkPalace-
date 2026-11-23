@@ -1,0 +1,58 @@
+:root {
+  --wp-select-surface: #fff;
+  --wp-select-border: #dbdbe5;
+  --wp-select-text: #272a3b;
+  --wp-select-muted: #70758b;
+  --wp-select-accent: #596cf0;
+}
+
+html[data-theme="dark"] {
+  --wp-select-surface: #22212f;
+  --wp-select-border: #38384b;
+  --wp-select-text: #f0eff7;
+  --wp-select-muted: #a4a4b9;
+  --wp-select-accent: #aab5ff;
+}
+
+.wp-select-shell,
+.wp-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.wp-select--filter {
+  max-width: 190px;
+}
+
+.wp-select--inline {
+  max-width: 142px;
+}
+
+.wp-select--inline-wide {
+  max-width: 178px;
+}
+
+.wp-select--places-filter {
+  flex: 1 1 120px;
+  min-width: 120px;
+}
+
+.wp-select--reservation {
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-select--admin-filter {
+  max-width: 190px;
+}
+
+.wp-select--availability {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .wp-select--admin-filter {
+    flex: 1 1 45%;
+    max-width: none;
+  }
+}

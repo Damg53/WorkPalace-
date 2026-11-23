@@ -14,13 +14,17 @@ const bogotaDate = () => {
   return `${values.year}-${values.month}-${values.day}`;
 };
 const placesAvailabilityQuery = `SELECT p.id, p.name, p.tipo, p.direccion, p.barrio, p.ciudad, p.capacidad, p.precio_hora, p.modalidad, p.caracteristicas, p.nivel_ruido, p.image_url,
+              p.owner_active,
               COALESCE(NULLIF(split_part(owner.full_name, ' ', 1), ''), owner.username) AS owner_name,
               COALESCE(review_stats.average_rating, 0) AS average_rating,
               COALESCE(review_stats.review_count, 0) AS review_count,
               p.owner_active AND block.id IS NULL AND reservation.id IS NULL AS active,
+              block.id IS NOT NULL AS has_block,
+              COALESCE(block.partial_for_date, FALSE) AS has_partial_block,
+              reservation.id IS NOT NULL AS has_reservation,
               COALESCE(block.reason, CASE WHEN reservation.id IS NOT NULL THEN 'Reserva confirmada' END) AS unavailable_reason,
               CASE
-                WHEN block.id IS NOT NULL THEN TO_CHAR(block.ends_at + INTERVAL '1 day', 'YYYY-MM-DD')
+                WHEN block.id IS NOT NULL THEN TO_CHAR(block.block_ends_at, 'YYYY-MM-DD"T"HH24:MI')
                 WHEN reservation.id IS NOT NULL AND reservation.check_out_time IS NOT NULL
                   THEN TO_CHAR(reservation.available_at, 'YYYY-MM-DD"T"HH24:MI')
                 WHEN reservation.id IS NOT NULL THEN TO_CHAR(reservation.available_at::date, 'YYYY-MM-DD')
@@ -33,11 +37,15 @@ const placesAvailabilityQuery = `SELECT p.id, p.name, p.tipo, p.direccion, p.bar
          WHERE place_id = p.id
        ) review_stats ON TRUE
        LEFT JOIN LATERAL (
-         SELECT id, reason, ends_at
+         SELECT id, reason,
+                CASE WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day' ELSE ends_at + ends_at_time END AS block_ends_at,
+                (starts_at + COALESCE(starts_at_time, TIME '00:00')) > $1::date
+                  OR (CASE WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day' ELSE ends_at + ends_at_time END) < ($1::date + INTERVAL '1 day') AS partial_for_date
          FROM place_blocks
          WHERE place_id = p.id
-           AND $1::date BETWEEN starts_at AND ends_at
-         ORDER BY ends_at ASC, id ASC
+           AND (starts_at + COALESCE(starts_at_time, TIME '00:00')) < ($1::date + INTERVAL '1 day')
+           AND (CASE WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day' ELSE ends_at + ends_at_time END) > $1::date
+         ORDER BY block_ends_at ASC, id ASC
          LIMIT 1
        ) block ON TRUE
        LEFT JOIN LATERAL (
@@ -78,6 +86,35 @@ router.get('/api/places', async (req, res) => {
   } catch (error) {
     console.error('Error obteniendo places:', error);
     res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+router.get('/api/public/places', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.name, p.tipo, p.barrio, p.ciudad, p.precio_hora,
+              LEFT(p.caracteristicas, 300) AS caracteristicas,
+              CASE
+                WHEN length(p.image_url) <= 150000
+                  AND (p.image_url LIKE 'data:image/%' OR p.image_url ~ '^https?://')
+                  THEN p.image_url
+              END AS image_url,
+              COALESCE(review_stats.average_rating, 0) AS average_rating,
+              COALESCE(review_stats.review_count, 0) AS review_count
+       FROM places p
+       LEFT JOIN LATERAL (
+         SELECT ROUND(AVG(rating)::numeric, 1) AS average_rating, COUNT(*)::int AS review_count
+         FROM place_reviews
+         WHERE place_id = p.id
+       ) review_stats ON TRUE
+       WHERE p.owner_active = TRUE
+       ORDER BY review_stats.average_rating DESC NULLS LAST, p.created_at DESC, p.id DESC
+       LIMIT 8`
+    );
+    res.json({ places: result.rows });
+  } catch (error) {
+    console.error('Error obteniendo espacios públicos destacados:', error);
+    res.status(500).json({ error: 'No se pudieron cargar los espacios destacados.' });
   }
 });
 

@@ -4,10 +4,14 @@ const PROFANITY_TERMS = [
   'hijueputas', 'hp', 'idiota', 'malparida', 'malparidas', 'malparido',
   'malparidos', 'marica', 'maricas', 'maricon', 'maricones', 'mierda',
   'mierdas', 'pendeja', 'pendejas', 'pendejo', 'pendejos', 'perra',
-  'perras', 'puta', 'putas', 'puto', 'putos', 'verga', 'vergas','zorra', 'zorras',
-  'culo', 'culos', 'culo', 'culos', 'cagada', 'picha', 'pichas', 'pichula', 'pichulas', 'pichulita', 'pichulitas',
-  'cuca','triple hp','triple hijueeputa','pene','penes','vagina','vaginas','polla','pollas','monda','semen'
-  
+  'perras', 'puta', 'putas', 'puto', 'putos', 'verga', 'vergas', 'zorra', 'zorras',
+  'culo', 'culos', 'picha', 'pichas', 'pichula', 'pichulas', 'pichulita', 'pichulitas',
+  'cuca', 'triple hp', 'triple hijueeputa', 'pene', 'penes', 'vagina', 'vaginas', 'polla', 'pollas', 'monda', 'semen',
+  'epstein', 'cunny', 'retrasado', 'mongolo', 'chota', 'poronga', 'orto', 'ojete', 'loli', 'lolicon',
+  'slut', 'whore', 'sex', 'mamaburras', 'caremonda', 'jopo', 'rolo', 'femboy', 'trava', 'trolazo',
+  'boludo', 'pelotudo', 'ahuevado', 'saramambiche', 'mamahuevo', 'pinga', 'retard', 'faggot', 'sissy',
+  'nigger', 'nigga', 'idiot', 'kill yourself', 'kys', 'mongoloid', 'pajeet', 'motherfucker', 'cuck',
+  'dildo', 'fleshlight', 'penis', 'pussy',
 ]
 
 export function containsProfanity(value: string) {

@@ -1,9 +1,9 @@
-import Sidebar from './Sidebar'
 import AdminUsersSection from './AdminUsersSection'
 import AdminReservationsSection from './AdminReservationsSection'
 import AdminPlacesSection from './AdminPlacesSection'
 import AdminOverviewSection from './AdminOverviewSection'
 import AdminOperationsSection from './AdminOperationsSection'
+import PageHeader from './PageHeader'
 import { useAdminData } from './useAdminData'
 import './AdminDashboard.css'
 import { useLocation } from 'react-router-dom'
@@ -15,7 +15,7 @@ interface AdminDashboardProps {
   setIsDark: (value: boolean) => void
 }
 
-export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: AdminDashboardProps) {
+export default function AdminDashboard({ user }: AdminDashboardProps) {
   const location = useLocation()
   const activeSection = location.hash.slice(1) || 'dashboard'
   const data = useAdminData(user.id)
@@ -46,30 +46,29 @@ export default function AdminDashboard({ user, onLogout, isDark, setIsDark }: Ad
     title: 'Panel de Administración',
     message: 'Gestiona WorkPalace desde un solo lugar.',
   }
+  const sectionBadge = {
+    dashboard: 'Panel de control',
+    users: 'Usuarios',
+    reservations: 'Reservas',
+    places: 'Espacios',
+    operations: 'Operaciones',
+  }[activeSection as 'dashboard' | 'users' | 'reservations' | 'places' | 'operations'] || 'Administración'
 
   return (
-    <div className="admin-container">
-      <Sidebar user={user} isDark={isDark} setIsDark={setIsDark} onLogout={onLogout} />
-      <div className="admin-header">
-        <h1>{sectionHeader.title}</h1>
-        <p>{sectionHeader.message}</p>
-      </div>
+    <div className="admin-container" data-admin-section={activeSection}>
+      <PageHeader
+        eyebrow="WorkPalace · Administración"
+        title={sectionHeader.title}
+        description={sectionHeader.message}
+        badge={sectionBadge}
+      />
       <div className="admin-content">
-        {activeSection === 'dashboard' && <div className="admin-stats">
-          <div className="stat-card"><h3>Total de Usuarios</h3><div className="number">{users.length}</div></div>
-          <div className="stat-card"><h3>Administradores</h3><div className="number">{users.filter((item) => item.role === 'admin').length}</div></div>
-          <div className="stat-card"><h3>Usuarios Regulares</h3><div className="number">{users.filter((item) => item.role === 'user').length}</div></div>
-          <div className="stat-card"><h3>Usuarios activos</h3><div className="number">{users.filter((item) => item.active !== false).length}</div></div>
-          <div className="stat-card"><h3>Reservas totales</h3><div className="number">{reservations.length}</div></div>
-          <div className="stat-card"><h3>Reservas pendientes</h3><div className="number">{reservations.filter((item) => item.estado === 'pendiente').length}</div></div>
-          <div className="stat-card"><h3>Lugares activos</h3><div className="number">{places.filter((item) => item.active !== false).length}</div></div>
-        </div>}
-        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} coupons={data.coupons} />}
+        {activeSection === 'dashboard' && <AdminOverviewSection users={users} reservations={reservations} places={places} coupons={data.coupons} onRefresh={data.refreshData} />}
         {error && <div className="error-banner">⚠️ {error}</div>}
-        {activeSection === 'users' && <AdminUsersSection users={users} updateRole={data.updateRole} toggleUserActive={data.toggleUserActive} deleteUser={data.deleteUser} />}
-        {activeSection === 'reservations' && <AdminReservationsSection reservations={reservations} updateReservation={data.updateReservation} deleteReservation={data.deleteReservation} />}
-        {activeSection === 'places' && <AdminPlacesSection places={places} updatePlace={data.updatePlace} togglePlaceActive={data.togglePlaceActive} deletePlace={data.deletePlace} createPlace={data.createPlace} />}
-        {activeSection === 'operations' && <AdminOperationsSection coupons={data.coupons} blocks={data.blocks} auditLogs={data.auditLogs} places={places} createCoupon={data.createCoupon} toggleCoupon={data.toggleCoupon} deleteCoupon={data.deleteCoupon} createBlock={data.createBlock} deleteBlock={data.deleteBlock} />}
+        {activeSection === 'users' && <AdminUsersSection users={users} userId={user.id} updateRole={data.updateRole} toggleUserActive={data.toggleUserActive} deleteUsers={data.deleteUsers} requestPasswordReset={data.requestPasswordReset} />}
+        {activeSection === 'reservations' && <AdminReservationsSection reservations={reservations} updateReservation={data.updateReservation} deleteReservations={data.deleteReservations} />}
+        {activeSection === 'places' && <AdminPlacesSection places={places} updatePlace={data.updatePlace} togglePlaceActive={data.togglePlaceActive} deletePlace={data.deletePlace} deletePlaces={data.deletePlaces} createPlace={data.createPlace} />}
+        {activeSection === 'operations' && <AdminOperationsSection coupons={data.coupons} blocks={data.blocks} auditLogs={data.auditLogs} places={places} clearAuditLogs={data.clearAuditLogs} createCoupon={data.createCoupon} toggleCoupon={data.toggleCoupon} deleteCoupon={data.deleteCoupon} createBlock={data.createBlock} deleteBlock={data.deleteBlock} />}
         <div className="admin-footer"><p>&copy; 2026 WorkPalace. Acceso restringido a administradores.</p></div>
       </div>
       {data.confirmation && (

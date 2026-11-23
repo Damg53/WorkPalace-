@@ -170,11 +170,16 @@ CREATE TABLE IF NOT EXISTS place_blocks (
   id SERIAL PRIMARY KEY,
   place_id INT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
   starts_at DATE NOT NULL,
+  starts_at_time TIME,
   ends_at DATE NOT NULL,
+  ends_at_time TIME,
   reason VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CHECK (ends_at >= starts_at)
 );
+
+ALTER TABLE place_blocks ADD COLUMN IF NOT EXISTS starts_at_time TIME;
+ALTER TABLE place_blocks ADD COLUMN IF NOT EXISTS ends_at_time TIME;
 
 CREATE INDEX IF NOT EXISTS idx_place_blocks_place_dates ON place_blocks(place_id, starts_at, ends_at);
 
