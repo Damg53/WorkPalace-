@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AdminReservation } from "./adminTypes";
 import "./admin-reservas.css";
@@ -16,7 +16,6 @@ type ReservationUI = {
   huespedes: number;
   estado: ReservationStatus;
   activo: boolean;
-  canEditGuests: boolean;
 };
 type ReservationPayload = Partial<Pick<ReservationUI, "estado" | "huespedes">> & { active?: boolean; cancellationReason?: string };
 type StatusOption = { t: string; c: string };
@@ -36,7 +35,7 @@ const ESTADOS: Record<ReservationStatus, StatusOption> = {
   cancelada: { t: "Cancelada", c: "#ff7a8a" },
 };
 const GRADS = [["#3b73ff", "#7c6cff"], ["#7c6cff", "#e0457b"], ["#2fa37a", "#3b73ff"], ["#f0803c", "#e0457b"], ["#f0a951", "#e0457b"], ["#e0457b", "#7c6cff"]];
-type IconName = "search" | "x" | "eye" | "trash" | "up" | "down" | "left" | "right" | "check" | "plus" | "minus" | "warn" | "pin" | "users";
+type IconName = "search" | "x" | "trash" | "up" | "down" | "left" | "right" | "check" | "warn" | "pin" | "users";
 
 const hash = (s: string) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 const grad = (s: string) => GRADS[hash(s) % GRADS.length];
@@ -44,7 +43,6 @@ const grad = (s: string) => GRADS[hash(s) % GRADS.length];
 /* ---------- Utilidades ---------- */
 const norm = (s: string) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const fDia = new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short" });
-const fLargo = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const fHora = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", hour12: true });
 const duracion = (a: Date | null, b: Date | null) => {
   if (!a || !b) return "—"
@@ -79,7 +77,6 @@ const toReservationUI = (reservation: AdminReservation): ReservationUI => ({
   huespedes: typeof reservation.huespedes === "number" ? reservation.huespedes : 1,
   estado: reservation.estado === "confirmada" || reservation.estado === "completada" || reservation.estado === "cancelada" ? reservation.estado : "pendiente",
   activo: reservation.active !== false,
-  canEditGuests: !reservation.check_in_time,
 })
 const toReservationPayload = (reservation: ReservationUI): ReservationPayload => ({
   estado: reservation.estado,
@@ -102,11 +99,10 @@ function useContar(valor: number, ms = 900) {
 /* ---------- Íconos ---------- */
 const P = {
   search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>, x: <path d="M18 6 6 18M6 6l12 12" />,
-  eye: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>,
   trash: <><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></>,
   users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></>,
   up: <path d="m6 15 6-6 6 6" />, down: <path d="m6 9 6 6 6-6" />, left: <path d="m15 18-6-6 6-6" />, right: <path d="m9 18 6-6-6-6" />,
-  check: <path d="M20 6 9 17l-5-5" />, plus: <path d="M12 5v14M5 12h14" />, minus: <path d="M5 12h14" />,
+  check: <path d="M20 6 9 17l-5-5" />,
   warn: <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>,
   pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" /></>,
 };
@@ -169,67 +165,8 @@ function Elegir({ valor, opciones, onElegir, etiqueta }: { valor: ReservationSta
   );
 }
 
-/* ---------- Panel de detalle ---------- */
-function Panel({ r, onCerrar, onGuardar }: { r: ReservationUI; onCerrar: () => void; onGuardar: (reservation: ReservationUI) => Promise<boolean> }) {
-  const [f, setF] = useState<ReservationUI>(r);
-  const [guardando, setGuardando] = useState(false);
-  const idx = ["pendiente", "confirmada", "completada"].indexOf(f.estado);
-  const cancelada = f.estado === "cancelada";
-  const [a, b] = grad(f.usuario);
-  const enviar = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setGuardando(true)
-    try {
-      await onGuardar(f)
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  return (
-    <>
-      <div className="rs-overlay is-on" onClick={onCerrar} aria-hidden="true" />
-      <form className="rs-panel" onSubmit={enviar} aria-label={`Reserva ${r.id}`}>
-        <header><div><h2>Reserva #{r.id}</h2><small>{ESTADOS[f.estado].t}</small></div><button type="button" className="rs-icon" onClick={onCerrar} aria-label="Cerrar"><Icon n="x" /></button></header>
-        <div className="rs-panel__body">
-          <ol className={`rs-linea ${cancelada ? "is-cancel" : ""}`} style={{ "--p": cancelada ? 0 : Math.max(idx, 0) / 2 } as CSSProperties} aria-label="Progreso de la reserva">
-            <span className="rs-linea__riel" aria-hidden="true"><i /></span>
-            {["Solicitada", "Confirmada", "Completada"].map((t, i) => (
-              <li key={t} className={!cancelada && i < idx ? "is-done" : !cancelada && i === idx ? "is-now" : ""}><span>{!cancelada && i < idx ? <Icon n="check" s={14} /> : i + 1}</span>{t}</li>
-            ))}
-          </ol>
-          {cancelada && <p className="rs-aviso"><Icon n="warn" s={16} />Esta reserva fue cancelada.</p>}
-
-          <div className="rs-resumen">
-            <div className="rs-cli"><span className="rs-av" style={{ background: `linear-gradient(135deg, ${a}, ${b})` }}>{iniciales(f.usuario)}</span><div><b>{f.usuario}</b><small>{f.email}</small></div></div>
-            <dl>
-              <div><dt>Espacio</dt><dd>{f.espacio}</dd></div>
-              <div><dt>Ubicación</dt><dd>{f.ubicacion}</dd></div>
-              <div><dt>Check-in</dt><dd>{f.inicio ? `${fLargo.format(f.inicio)} · ${fHora.format(f.inicio)}` : "Fecha pendiente"}</dd></div>
-              <div><dt>Check-out</dt><dd>{f.fin ? `${fLargo.format(f.fin)} · ${fHora.format(f.fin)}` : "Fecha pendiente"}</dd></div>
-              <div><dt>Duración</dt><dd>{duracion(f.inicio, f.fin)}</dd></div>
-            </dl>
-          </div>
-
-          <div className="rs-campo"><label>Huéspedes
-            <div className="rs-stepper">
-              <button type="button" aria-label="Menos huéspedes" disabled={!f.canEditGuests} onClick={() => setF((x) => ({ ...x, huespedes: Math.max(1, x.huespedes - 1) }))}><Icon n="minus" /></button>
-              <output><b>{f.huespedes}</b> {f.huespedes === 1 ? "persona" : "personas"}</output>
-              <button type="button" aria-label="Más huéspedes" disabled={!f.canEditGuests} onClick={() => setF((x) => ({ ...x, huespedes: x.huespedes + 1 }))}><Icon n="plus" /></button>
-            </div>
-          </label></div>
-          {!f.canEditGuests && <p className="rs-nota">No se puede cambiar la cantidad de huéspedes en una reserva por horas.</p>}
-          <div className="rs-campo"><span className="rs-lbl">Estado</span><Elegir valor={f.estado} opciones={ESTADOS} etiqueta="Estado" onElegir={(k) => setF((x) => ({ ...x, estado: k }))} /></div>
-          <div className="rs-activo"><div><b>Reserva activa</b><small>Si la desactivas, deja de contar en el calendario del espacio.</small></div><Switch activo={f.activo} onChange={(v) => setF((x) => ({ ...x, activo: v }))} etiqueta="Reserva activa" /></div>
-        </div>
-        <footer><button type="button" className="rs-btn rs-btn--ghost" onClick={onCerrar}>Cancelar</button><button type="submit" className="rs-btn rs-btn--solid" disabled={guardando}>{guardando ? <><i className="rs-spin" />Guardando</> : "Guardar cambios"}</button></footer>
-      </form>
-    </>
-  );
-}
-
 /* ---------- Componente principal ---------- */
-type PendingCancellation = { reservation: ReservationUI; closePanel: boolean };
+type PendingCancellation = { reservation: ReservationUI };
 type TimeFilter = "todas" | "proximas" | "pasadas";
 
 export default function AdminReservationsSection({ reservations, updateReservation, deleteReservations }: AdminReservationsSectionProps) {
@@ -241,7 +178,6 @@ export default function AdminReservationsSection({ reservations, updateReservati
   const [orden, setOrden] = useState<SortState>({ col: "inicio", dir: -1 });
   const [pag, setPag] = useState(1);
   const [sel, setSel] = useState<Set<number>>(() => new Set());
-  const [ver, setVer] = useState<ReservationUI | null>(null);
   const [borrar, setBorrar] = useState<number[] | null>(null);
   const [borrando, setBorrando] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -258,7 +194,7 @@ export default function AdminReservationsSection({ reservations, updateReservati
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       if (e.key === "/" && document.activeElement instanceof HTMLElement && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); buscar.current?.focus(); }
-      if (e.key === "Escape") { setVer(null); setBorrar(null); setPendingCancellation(null); }
+      if (e.key === "Escape") { setBorrar(null); setPendingCancellation(null); }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
@@ -325,22 +261,19 @@ export default function AdminReservationsSection({ reservations, updateReservati
       return false;
     }
   };
-  const solicitarGuardar = async (reservation: ReservationUI, closePanel = false): Promise<boolean> => {
+  const solicitarGuardar = async (reservation: ReservationUI): Promise<boolean> => {
     const current = lista.find((item) => item.id === reservation.id);
     if (reservation.estado === "cancelada" && current?.estado !== "cancelada") {
-      setPendingCancellation({ reservation, closePanel });
+      setPendingCancellation({ reservation });
       setCancellationReason("");
       return false;
     }
-    const saved = await persistir(reservation);
-    if (saved && closePanel) setVer(null);
-    return saved;
+    return persistir(reservation);
   };
   const confirmarCancelacion = async () => {
     if (!pendingCancellation || !cancellationReason.trim()) return;
     const saved = await persistir(pendingCancellation.reservation, cancellationReason.trim());
     if (saved) {
-      if (pendingCancellation.closePanel) setVer(null);
       setPendingCancellation(null);
       setCancellationReason("");
     }
@@ -431,7 +364,6 @@ export default function AdminReservationsSection({ reservations, updateReservati
                       <td data-label="Activa"><Switch activo={r.activo} onChange={(active) => { void solicitarGuardar({ ...r, activo: active }); }} etiqueta={`${r.activo ? "Desactivar" : "Activar"} reserva ${r.id}`} /></td>
                       <td data-label="Acciones" className="rs-acc">
                         <div className="rs-action-group">
-                          <button type="button" className="rs-icon" onClick={() => setVer(r)} aria-label={`Ver reserva ${r.id}`} data-tip="Ver detalle"><Icon n="eye" /></button>
                           <button type="button" className="rs-icon rs-icon--bad" onClick={() => setBorrar([r.id])} aria-label={`Eliminar reserva ${r.id}`} data-tip="Eliminar"><Icon n="trash" /></button>
                         </div>
                       </td>
@@ -464,8 +396,6 @@ export default function AdminReservationsSection({ reservations, updateReservati
         <button type="button" className="rs-btn rs-btn--danger" onClick={() => setBorrar([...sel])}>Eliminar</button>
         <button type="button" className="rs-icon" onClick={() => setSel(new Set())} aria-label="Quitar selección"><Icon n="x" /></button>
       </div>
-
-      {ver && <Panel r={ver} onCerrar={() => setVer(null)} onGuardar={(reservation) => solicitarGuardar(reservation, true)} />}
 
       {borrar && (
         <div className="rs-modal" role="dialog" aria-modal="true" aria-label="Confirmar eliminación">

@@ -96,7 +96,7 @@ tr:hover .us-tile { transform: rotate(-6deg) scale(1.08); }
 .us-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(8, 8, 14, 0.6); backdrop-filter: blur(3px); animation: us-fade 0.3s both; } @keyframes us-fade { from { opacity: 0; } }
 .us-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 71; width: min(460px, 100%); display: flex; flex-direction: column; background: var(--d-surface); border-left: 1px solid var(--d-line); box-shadow: -30px 0 60px -30px rgba(0, 0, 0, 0.7); animation: us-slide 0.5s var(--d-ease) both; }
 @keyframes us-slide { from { transform: translateX(100%); } }
-.us-panel header { display: flex; justify-content: space-between; align-items: center; padding: 22px 24px; border-bottom: 1px solid var(--d-line); }
+.us-panel header { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 22px 24px; border-bottom: 1px solid var(--d-line); background: var(--d-surface); }
 .us-panel h2 { font: 700 1.35rem var(--font-display, inherit); } .us-panel header small { color: var(--d-muted); }
 .us-panel__body { flex: 1; overflow-y: auto; display: grid; gap: 20px; align-content: start; padding: 24px; }
 .us-panel footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--d-line); }
@@ -217,8 +217,10 @@ tr:hover .us-email button, .us-email button:focus-visible { opacity: 1; } .us-em
 .admin-container .us .us-action-group .us-icon[data-tip]:hover::after {
   z-index: 100;
   left: 50%;
+  width: max-content;
   max-width: min(200px, calc(100vw - 24px));
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
   text-align: center;
   white-space: normal;
 }

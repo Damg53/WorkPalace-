@@ -1036,6 +1036,16 @@ html[data-theme="light"] .admin-container select option {
   margin-top: 1rem;
 }
 
+.admin-image-dialog__actions .btn-primary {
+  color: #fff;
+  opacity: 1;
+}
+
+[data-theme="dark"] .admin-image-dialog__actions .btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
 [data-theme="light"] .admin-image-dialog {
   border-color: #d8deeb;
   background: #fff;
@@ -1624,6 +1634,78 @@ html[data-theme="light"] .admin-container select option {
   background: #991b1b;
 }
 
+.admin-cancel-dialog--confirm {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(100%, 440px);
+  padding: 32px 28px 24px;
+  border-color: var(--admin-border, #34324a);
+  border-radius: 22px;
+  background: var(--admin-surface, #22212e);
+  color: var(--admin-text, #eceaf5);
+  box-shadow: 0 40px 80px -30px #000;
+  animation: admin-confirm-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  text-align: center;
+}
+
+.admin-cancel-dialog--confirm h3,
+.admin-cancel-dialog--confirm > p {
+  margin: 0;
+}
+
+.admin-cancel-dialog--confirm > p {
+  max-width: 34ch;
+  color: var(--admin-muted, #a6a3bd);
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__icon {
+  width: 58px;
+  height: 58px;
+  margin: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--admin-danger, #ff7a8a) 15%, transparent);
+  color: var(--admin-danger, #ff7a8a);
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions button {
+  min-height: 42px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  font-size: 0.93rem;
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions {
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions button:not(.admin-cancel-dialog__confirm) {
+  border-color: var(--admin-border, #34324a);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--admin-text, #eceaf5);
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions button:not(.admin-cancel-dialog__confirm):hover:not(:disabled) {
+  border-color: var(--admin-muted, #a6a3bd);
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions .admin-cancel-dialog__confirm {
+  border-color: transparent;
+  background: #e5484d;
+}
+
+.admin-cancel-dialog--confirm .admin-cancel-dialog__actions .admin-cancel-dialog__confirm:hover:not(:disabled) {
+  background: #f0585d;
+}
+
 [data-theme="light"] .admin-cancel-dialog {
   border-color: #d1d5db;
   background: #fff;
@@ -1633,6 +1715,35 @@ html[data-theme="light"] .admin-container select option {
 [data-theme="dark"] .admin-cancel-dialog__icon {
   background: rgba(239, 68, 68, 0.18);
   color: #fca5a5;
+}
+
+[data-theme="light"] .admin-cancel-dialog--confirm .admin-cancel-dialog__icon {
+  background: color-mix(in srgb, #dc2626 12%, transparent);
+  color: #b91c1c;
+}
+
+[data-theme="light"] .admin-cancel-dialog--confirm {
+  border-color: #dbdbe5;
+  background: #fff;
+  color: #272a3b;
+}
+
+[data-theme="light"] .admin-cancel-dialog--confirm > p {
+  color: #70758b;
+}
+
+[data-theme="light"] .admin-cancel-dialog--confirm .admin-cancel-dialog__actions button:not(.admin-cancel-dialog__confirm) {
+  border-color: #d1d5db;
+  background: transparent;
+  color: #374151;
+}
+
+[data-theme="light"] .admin-cancel-dialog--confirm .admin-cancel-dialog__actions button:not(.admin-cancel-dialog__confirm):hover:not(:disabled) {
+  border-color: #70758b;
+}
+
+@keyframes admin-confirm-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
 }
 
 [data-theme="light"] .admin-cancel-dialog > p {
@@ -1735,6 +1846,14 @@ html[data-theme="light"] .admin-header h1 {
 
 html[data-theme="light"] .admin-header p {
   color: var(--admin-muted);
+}
+
+.admin-container > .ad-toast {
+  --d-line: var(--admin-border);
+  --d-surface: var(--admin-surface);
+  --d-text: var(--admin-text);
+  --d-ok: #3ccf82;
+  --d-bad: #ff7a8a;
 }
 
 .admin-header__badge {

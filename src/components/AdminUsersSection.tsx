@@ -391,7 +391,7 @@ export default function AdminUsuarios({ users, userId, updateRole, toggleUserAct
                   return (
                     <tr key={u.id} className={`${!u.activo ? "is-off" : ""} ${sel.has(u.id) ? "is-sel" : ""}`} style={{ "--a": a, "--n": i } as CSSProperties}>
                       <td className="us-chk"><input type="checkbox" aria-label={`Seleccionar a ${u.nombre}`} checked={sel.has(u.id)} onChange={() => marcar(u.id)} /></td>
-                      <td data-label="Usuario"><div className="us-user"><Avatar u={u} /><div><b>{u.nombre}{yo && <em className="us-yo">Tú</em>}</b><small className="us-mono">@{u.usuario} · #{u.id}</small></div></div></td>
+                      <td data-label="Usuario"><div className="us-user"><Avatar u={u} /><div><b>{u.nombre}{yo && <em className="us-yo">Tú</em>}</b><small className="us-mono">{u.usuario} · #{u.id}</small></div></div></td>
                       <td data-label="Correo"><Correo email={u.email} /></td>
                       <td data-label="Rol"><Elegir valor={u.rol} opciones={ROLES} etiqueta={`Rol de ${u.nombre}`} onElegir={(k) => cambiarRol(u, k)} /></td>
                       <td data-label="Estado"><div className="us-estado"><Switch activo={u.activo} onChange={(v) => cambiarActivo(u, v)} etiqueta={`${u.activo ? "Desactivar" : "Activar"} la cuenta de ${u.nombre}`} /><span>{u.activo ? "Activa" : "Inactiva"}</span></div></td>

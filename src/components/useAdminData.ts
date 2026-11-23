@@ -8,7 +8,14 @@ interface PendingConfirmation {
   title: string
   message: string
   confirmLabel: string
+  successMessage: string
   action: () => Promise<void>
+}
+
+interface AdminActionFeedback {
+  message: string
+  isError: boolean
+  id: number
 }
 
 export function useAdminData(userId?: number) {
@@ -21,6 +28,7 @@ export function useAdminData(userId?: number) {
   const [error, setError] = useState('')
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null)
   const [confirmingAction, setConfirmingAction] = useState(false)
+  const [actionFeedback, setActionFeedback] = useState<AdminActionFeedback | null>(null)
 
   const adminHeaders = useMemo(() => ({
     'Content-Type': 'application/json',
@@ -98,10 +106,11 @@ export function useAdminData(userId?: number) {
       title: `Eliminar usuario #${id}`,
       message: 'Esto también eliminará sus reservas. Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar usuario',
+      successMessage: 'Usuario eliminado correctamente.',
       action: async () => {
         const response = await fetch(`${API}/api/users/${id}`, { method: 'DELETE', headers: adminHeaders })
         if (!response.ok && response.status !== 204) throw new Error('Error al eliminar usuario')
-        window.location.reload()
+        setUsers((current) => current.filter((item) => item.id !== id))
       },
     })
   }
@@ -155,10 +164,11 @@ export function useAdminData(userId?: number) {
       title: `Eliminar reserva #${id}`,
       message: 'La reserva se eliminará permanentemente.',
       confirmLabel: 'Eliminar reserva',
+      successMessage: 'Reserva eliminada correctamente.',
       action: async () => {
         const response = await fetch(`${API}/api/admin/reservations/${id}`, { method: 'DELETE', headers: adminHeaders })
         if (!response.ok && response.status !== 204) throw new Error('Error al eliminar reserva')
-        window.location.reload()
+        setReservations((current) => current.filter((item) => item.id !== id))
       },
     })
   }
@@ -182,16 +192,30 @@ export function useAdminData(userId?: number) {
     }
   }
 
-  async function updatePlace(id: number, payload: Partial<AdminPlace>) {
-    const response = await fetch(`${API}/api/admin/places/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(payload) })
-    const data = await response.json()
-    if (!response.ok) return setError('Error al actualizar lugar')
-    setPlaces((current) => current.map((item) => item.id === data.place.id ? data.place : item))
+  async function savePlaceUpdate(id: number, payload: Partial<AdminPlace>): Promise<boolean> {
+    try {
+      const response = await fetch(`${API}/api/admin/places/${id}`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(payload) })
+      const data = await response.json() as { place?: AdminPlace; error?: string }
+      const updatedPlace = data.place
+      if (!response.ok || !updatedPlace) {
+        setError(data.error || 'Error al actualizar lugar')
+        return false
+      }
+      setPlaces((current) => current.map((item) => item.id === updatedPlace.id ? updatedPlace : item))
+      setError('')
+      return true
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Error al actualizar lugar')
+      return false
+    }
   }
 
-  async function togglePlaceActive(id: number, active: boolean) {
-    await updatePlace(id, { active })
-    window.location.reload()
+  async function updatePlace(id: number, payload: Partial<AdminPlace>): Promise<boolean> {
+    return savePlaceUpdate(id, payload)
+  }
+
+  async function togglePlaceActive(id: number, active: boolean): Promise<boolean> {
+    return savePlaceUpdate(id, { active })
   }
 
   async function deletePlace(id: number) {
@@ -199,10 +223,11 @@ export function useAdminData(userId?: number) {
       title: `Eliminar lugar #${id}`,
       message: 'El lugar se eliminará permanentemente.',
       confirmLabel: 'Eliminar lugar',
+      successMessage: 'Espacio eliminado correctamente.',
       action: async () => {
         const response = await fetch(`${API}/api/admin/places/${id}`, { method: 'DELETE', headers: adminHeaders })
         if (!response.ok && response.status !== 204) throw new Error('Error al eliminar lugar')
-        window.location.reload()
+        setPlaces((current) => current.filter((item) => item.id !== id))
       },
     })
   }
@@ -215,6 +240,7 @@ export function useAdminData(userId?: number) {
       title: selectedIds.length === 1 ? 'Eliminar espacio seleccionado' : `Eliminar ${selectedIds.length} espacios`,
       message: `Se eliminarán permanentemente ${selectedIds.length === 1 ? 'el espacio seleccionado' : 'los espacios seleccionados'}. Esta acción no se puede deshacer.`,
       confirmLabel: 'Eliminar espacios',
+      successMessage: selectedIds.length === 1 ? 'Espacio eliminado correctamente.' : `${selectedIds.length} espacios eliminados correctamente.`,
       action: async () => {
         const response = await fetch(`${API}/api/admin/places`, {
           method: 'DELETE',
@@ -223,7 +249,7 @@ export function useAdminData(userId?: number) {
         })
         const data = await response.json() as { error?: string }
         if (!response.ok) throw new Error(data.error || 'No se pudieron eliminar los espacios seleccionados.')
-        window.location.reload()
+        setPlaces((current) => current.filter((item) => !selectedIds.includes(item.id)))
       },
     })
   }
@@ -254,6 +280,7 @@ export function useAdminData(userId?: number) {
       title: `Eliminar cupón #${id}`,
       message: 'El cupón se eliminará permanentemente.',
       confirmLabel: 'Eliminar cupón',
+      successMessage: 'Cupón eliminado correctamente.',
       action: async () => {
         const response = await fetch(`${API}/api/admin/coupons/${id}`, { method: 'DELETE', headers: adminHeaders })
         if (!response.ok && response.status !== 204) throw new Error('Error al eliminar cupón')
@@ -267,6 +294,7 @@ export function useAdminData(userId?: number) {
       title: 'Limpiar actividad reciente',
       message: 'Se eliminará permanentemente todo el historial de actividad administrativa. Esta acción no se puede deshacer.',
       confirmLabel: 'Limpiar historial',
+      successMessage: 'Actividad reciente limpiada correctamente.',
       action: async () => {
         const response = await fetch(`${API}/api/admin/audit`, { method: 'DELETE', headers: adminHeaders })
         const data = await response.json() as { error?: string }
@@ -278,11 +306,13 @@ export function useAdminData(userId?: number) {
 
   async function confirmPendingAction() {
     if (!confirmation || confirmingAction) return
+    const pending = confirmation
     setConfirmingAction(true)
     try {
-      await confirmation.action()
+      await pending.action()
       setConfirmation(null)
       setError('')
+      setActionFeedback({ message: pending.successMessage, isError: false, id: Date.now() })
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'No se pudo completar la acción')
     } finally {
@@ -298,13 +328,22 @@ export function useAdminData(userId?: number) {
   }
 
   async function deleteBlock(id: number) {
-    const response = await fetch(`${API}/api/admin/blocks/${id}`, { method: 'DELETE', headers: adminHeaders })
-    if (!response.ok && response.status !== 204) return setError('Error al eliminar bloqueo')
-    setBlocks((current) => current.filter((item) => item.id !== id))
+    const block = blocks.find((item) => item.id === id)
+    setConfirmation({
+      title: 'Quitar bloqueo de disponibilidad',
+      message: `Se eliminará el bloqueo de ${block?.place_name || `el espacio #${block?.place_id ?? id}`}. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Quitar bloqueo',
+      successMessage: 'Bloqueo de disponibilidad eliminado correctamente.',
+      action: async () => {
+        const response = await fetch(`${API}/api/admin/blocks/${id}`, { method: 'DELETE', headers: adminHeaders })
+        if (!response.ok && response.status !== 204) throw new Error('Error al eliminar bloqueo')
+        setBlocks((current) => current.filter((item) => item.id !== id))
+      },
+    })
   }
 
   return {
-    users, reservations, places, coupons, blocks, auditLogs, error,
+    users, reservations, places, coupons, blocks, auditLogs, error, actionFeedback, setActionFeedback,
     refreshData: loadData,
     confirmation, confirmingAction, setConfirmation, confirmPendingAction,
     updateRole, toggleUserActive, deleteUser, deleteUsers, requestPasswordReset, updateReservation, deleteReservation, deleteReservations,
