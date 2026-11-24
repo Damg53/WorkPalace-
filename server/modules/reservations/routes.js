@@ -1,15 +1,18 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import pool from '../../db.js';
 import { requireAdmin } from '../../middleware/admin.js';
 import { syncPlaceReservationState } from '../availability/service.js';
 import { findCoupon, isValidCardExpiry } from '../payments/service.js';
 import { normalizeColombianPhone } from '../../shared/validation.js';
+import { groupReservationSeries } from './series.js';
+import { addDaysToDate, getDailyAppointmentIntervals, getEndDateTime, getNightEndDateTime } from './schedule.js';
 
 const router = Router();
 const RESERVATION_MODES = new Set([
-  'hour', 'halfDay', 'fullDay', 'day', 'night', 'week', 'fortnight', 'month', 'appointment', 'flexible',
+  'hour', 'halfDay', 'fullDay', 'day', 'night', 'week', 'fortnight', 'month', 'appointment',
 ]);
-const TIMED_RESERVATION_MODES = new Set(['hour', 'halfDay', 'fullDay', 'night', 'appointment', 'flexible']);
+const TIMED_RESERVATION_MODES = new Set(['hour', 'halfDay', 'fullDay', 'night', 'appointment']);
 const FIXED_RESERVATION_SCHEDULES = {
   halfDay: { minStartTime: '07:00', maxStartTime: '18:00', minuteStep: 30, durationHours: 4 },
   fullDay: { minStartTime: '07:00', maxStartTime: '09:00', minuteStep: 30, durationHours: 8 },
@@ -37,14 +40,6 @@ function bogotaDate() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function getEndDateTime(startDate, startTime, durationHours) {
-  const totalMinutes = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3)) + durationHours * 60;
-  const date = new Date(`${startDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + Math.floor(totalMinutes / 1440));
-  const endTime = `${String(Math.floor((totalMinutes % 1440) / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
-  return { date: date.toISOString().slice(0, 10), time: endTime };
-}
-
 router.get('/api/reservations', async (req, res) => {
   try {
     const userId = req.header('x-user-id');
@@ -59,6 +54,7 @@ router.get('/api/reservations', async (req, res) => {
       `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.ubicacion, r.check_in, r.check_out,
               TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
               TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time, r.huespedes,
+              r.reservation_mode, r.reservation_series_id,
               r.estado, r.cancellation_reason, r.coupon_code, r.total_amount, r.place_id, r.created_at,
               review.id AS review_id, review.rating AS review_rating, review.comment AS review_comment
        FROM reservations r
@@ -67,7 +63,7 @@ router.get('/api/reservations', async (req, res) => {
        ORDER BY r.check_in DESC`,
       [uid]
     );
-    res.json({ reservations: result.rows });
+    res.json({ reservations: groupReservationSeries(result.rows) });
   } catch (error) {
     console.error('Error obteniendo reservas:', error);
     res.status(500).json({ error: 'Error en el servidor' });
@@ -109,7 +105,6 @@ router.post('/api/reservations', async (req, res) => {
     }
     const allowsSameDayBooking = reservationMode === 'hour'
       || reservationMode === 'appointment'
-      || reservationMode === 'flexible'
       || (reservationMode === undefined && isTimeBased);
     if (!isTimeBased && (checkIn <= bogotaDate() || checkOut <= checkIn)) {
       return res.status(400).json({ error: 'Las reservas por días deben iniciar desde mañana y tener una fecha de salida posterior.' });
@@ -171,11 +166,18 @@ router.post('/api/reservations', async (req, res) => {
       inTransaction = false;
       return res.status(400).json({ error: 'La cantidad de unidades de la reserva no es válida.' });
     }
-    if (reservationMode === 'appointment' || reservationMode === 'flexible') {
-      if (quantity !== 1 || Number(checkInTime.slice(3)) % 30 !== 0) {
+    const isNightReservation = reservationMode === 'night';
+    const isAppointmentReservation = reservationMode === 'appointment';
+    if ((isNightReservation || isAppointmentReservation) && quantity > 30) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'La cantidad de noches o citas no puede superar 30.' });
+    }
+    if (isAppointmentReservation) {
+      if (Number(checkInTime.slice(3)) % 30 !== 0) {
         await client.query('ROLLBACK');
         inTransaction = false;
-        return res.status(400).json({ error: 'Las citas y reservas flexibles deben iniciar cada 30 minutos y durar una hora.' });
+        return res.status(400).json({ error: 'Las citas deben iniciar cada 30 minutos y durar una hora.' });
       }
     }
     const fixedSchedule = FIXED_RESERVATION_SCHEDULES[reservationMode];
@@ -186,13 +188,17 @@ router.post('/api/reservations', async (req, res) => {
         || checkInTime > fixedSchedule.maxStartTime
         || Number(checkInTime.slice(3)) % fixedSchedule.minuteStep !== 0
       );
-    if (fixedSchedule && (invalidFixedStart || quantity !== fixedSchedule.durationHours)) {
+    if (fixedSchedule && (invalidFixedStart || (!isNightReservation && quantity !== fixedSchedule.durationHours))) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(400).json({ error: 'El horario no coincide con la jornada seleccionada.' });
     }
     if (isTimeBased) {
-      const expectedEnd = getEndDateTime(checkIn, checkInTime, quantity);
+      const expectedEnd = isAppointmentReservation
+        ? getEndDateTime(addDaysToDate(checkIn, quantity - 1), checkInTime, 1)
+        : isNightReservation
+          ? getNightEndDateTime(checkIn, quantity)
+          : getEndDateTime(checkIn, checkInTime, quantity);
       if (expectedEnd.date !== checkOut || expectedEnd.time !== checkOutTime) {
         await client.query('ROLLBACK');
         inTransaction = false;
@@ -209,49 +215,60 @@ router.post('/api/reservations', async (req, res) => {
     const discount = coupon ? Math.round(subtotal * (Number(coupon.discount) / 100)) : 0;
     const simulatedTotal = subtotal - discount + Math.round((subtotal - discount) * 0.08);
 
-    const existingReservation = await client.query(
-      `SELECT id FROM reservations
-       WHERE place_id = $1 AND active = TRUE AND estado IN ('pendiente', 'confirmada')
-         AND check_out >= $2::date AND check_in <= $3::date
-         AND (
-           $4::time IS NULL
-           OR check_in_time IS NULL
-           OR check_out_time IS NULL
-           OR (
-             (check_in + check_in_time) < ($3::date + $5::time)
-             AND ($2::date + $4::time) < (check_out + check_out_time)
-           )
-         )
-       LIMIT 1`,
-      [pid, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null]
-    );
-    if (existingReservation.rows.length > 0) {
-      await client.query('ROLLBACK');
-      inTransaction = false;
-      return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
-    }
+    const appointmentIntervals = isAppointmentReservation
+      ? getDailyAppointmentIntervals(checkIn, checkInTime, quantity)
+      : [{
+        checkIn,
+        checkOut,
+        checkInTime: isTimeBased ? checkInTime : null,
+        checkOutTime: isTimeBased ? checkOutTime : null,
+      }];
 
-    const blocked = await client.query(
-      `SELECT id FROM place_blocks
-       WHERE place_id = $1
-         AND (
-           ($4::time IS NULL AND starts_at <= $3::date AND ends_at >= $2::date)
-           OR (
-             $4::time IS NOT NULL
-             AND (starts_at + COALESCE(starts_at_time, TIME '00:00')) < ($3::date + $5::time)
-             AND ($2::date + $4::time) < CASE
-               WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day'
-               ELSE ends_at + ends_at_time
-             END
+    for (const interval of appointmentIntervals) {
+      const existingReservation = await client.query(
+        `SELECT id FROM reservations
+         WHERE place_id = $1 AND active = TRUE AND estado IN ('pendiente', 'confirmada')
+           AND check_out >= $2::date AND check_in <= $3::date
+           AND (
+             $4::time IS NULL
+             OR check_in_time IS NULL
+             OR check_out_time IS NULL
+             OR (
+               (check_in + check_in_time) < ($3::date + $5::time)
+               AND ($2::date + $4::time) < (check_out + check_out_time)
+             )
            )
-         )
-       LIMIT 1`,
-      [pid, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null]
-    );
-    if (blocked.rows.length > 0) {
-      await client.query('ROLLBACK');
-      inTransaction = false;
-      return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
+         LIMIT 1`,
+        [pid, interval.checkIn, interval.checkOut, interval.checkInTime, interval.checkOutTime]
+      );
+      if (existingReservation.rows.length > 0) {
+        await client.query('ROLLBACK');
+        inTransaction = false;
+        return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
+      }
+
+      const blocked = await client.query(
+        `SELECT id FROM place_blocks
+         WHERE place_id = $1
+           AND (
+             ($4::time IS NULL AND starts_at <= $3::date AND ends_at >= $2::date)
+             OR (
+               $4::time IS NOT NULL
+               AND (starts_at + COALESCE(starts_at_time, TIME '00:00')) < ($3::date + $5::time)
+               AND ($2::date + $4::time) < CASE
+                 WHEN ends_at_time IS NULL THEN ends_at + INTERVAL '1 day'
+                 ELSE ends_at + ends_at_time
+               END
+             )
+           )
+         LIMIT 1`,
+        [pid, interval.checkIn, interval.checkOut, interval.checkInTime, interval.checkOutTime]
+      );
+      if (blocked.rows.length > 0) {
+        await client.query('ROLLBACK');
+        inTransaction = false;
+        return res.status(409).json({ error: 'El espacio no está disponible para las fechas seleccionadas.' });
+      }
     }
 
     const ubicacionParts = [];
@@ -259,24 +276,44 @@ router.post('/api/reservations', async (req, res) => {
     if (place.ciudad) ubicacionParts.push(place.ciudad);
     const ubicacion = ubicacionParts.join(', ');
 
-    const insert = await client.query(
-      `INSERT INTO reservations (user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, check_in_time, check_out_time, huespedes, estado, place_id, coupon_code, total_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendiente', $10, $11, $12)
-       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
-                 TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
-                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
-                 huespedes, estado, place_id, coupon_code, total_amount, created_at`,
-      [uid, place.name, place.tipo, ubicacion, checkIn, checkOut, isTimeBased ? checkInTime : null, isTimeBased ? checkOutTime : null, quantity, pid, couponCode, simulatedTotal]
-    );
+    const reservationSeriesId = isAppointmentReservation && quantity > 1 ? randomUUID() : null;
+    const totalPerAppointment = Math.floor(simulatedTotal / appointmentIntervals.length);
+    const extraAmountCount = simulatedTotal % appointmentIntervals.length;
+    const reservations = [];
+    for (const [index, interval] of appointmentIntervals.entries()) {
+      const insert = await client.query(
+        `INSERT INTO reservations (
+           user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
+           check_in_time, check_out_time, huespedes, estado, place_id,
+           coupon_code, total_amount, reservation_mode, reservation_series_id
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendiente', $10, $11, $12, $13, $14)
+         RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
+                   TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
+                   TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
+                   huespedes, estado, place_id, coupon_code, total_amount,
+                   reservation_mode, reservation_series_id, created_at`,
+        [
+          uid, place.name, place.tipo, ubicacion, interval.checkIn, interval.checkOut,
+          interval.checkInTime, interval.checkOutTime, isAppointmentReservation ? 1 : quantity,
+          pid, index === 0 ? couponCode : null,
+          totalPerAppointment + (index < extraAmountCount ? 1 : 0),
+          reservationMode ?? null, reservationSeriesId,
+        ]
+      );
+      reservations.push(insert.rows[0]);
+    }
 
     await client.query(
       `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone)
        VALUES ($1, $2, $3, $4, $5)`,
       [
         uid,
-        insert.rows[0].id,
-        'Solicitud de reserva enviada',
-        `Tu reserva para ${place.name} del ${checkIn}${isTimeBased ? ` a las ${checkInTime}` : ''} al ${checkOut}${isTimeBased ? ` a las ${checkOutTime}` : ''} quedó pendiente de confirmación.`,
+        reservations[0].id,
+        reservationSeriesId ? 'Serie de citas enviada' : 'Solicitud de reserva enviada',
+        reservationSeriesId
+          ? `Tu serie de ${quantity} citas diarias para ${place.name}, a las ${checkInTime}, del ${checkIn} al ${checkOut}, quedó pendiente de confirmación.`
+          : `Tu reserva para ${place.name} del ${checkIn}${isTimeBased ? ` a las ${checkInTime}` : ''} al ${checkOut}${isTimeBased ? ` a las ${checkOutTime}` : ''} quedó pendiente de confirmación.`,
         'info',
       ]
     );
@@ -285,7 +322,7 @@ router.post('/api/reservations', async (req, res) => {
     await client.query('COMMIT');
     inTransaction = false;
 
-    res.status(201).json({ reservation: insert.rows[0] });
+    res.status(201).json({ reservation: reservations[0], reservations });
   } catch (error) {
     if (client && inTransaction) await client.query('ROLLBACK');
     if (error.code === '23505' && error.constraint === 'idx_reservations_user_coupon') {
@@ -379,7 +416,13 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     inTransaction = true;
 
     const previousResult = await client.query(
-      'SELECT id, user_id, hotel, estado, check_in, check_out, check_in_time, check_out_time, huespedes FROM reservations WHERE id = $1 FOR UPDATE',
+      `SELECT id, user_id, hotel, estado, check_in, check_out, check_in_time, check_out_time,
+              huespedes, reservation_series_id, place_id
+       FROM reservations
+       WHERE id = $1
+          OR reservation_series_id = (SELECT reservation_series_id FROM reservations WHERE id = $1)
+       ORDER BY check_in, id
+       FOR UPDATE`,
       [rid]
     );
     if (previousResult.rows.length === 0) {
@@ -387,12 +430,24 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
       inTransaction = false;
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
-    if (estado === 'cancelada' && previousResult.rows[0].estado !== 'cancelada' && !cancellationReason) {
+    const previous = previousResult.rows.find((reservation) => Number(reservation.id) === rid);
+    const reservationIds = previousResult.rows.map((reservation) => reservation.id);
+    const normalizeDate = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    const scheduleChanged =
+      (checkIn && normalizeDate(checkIn) !== normalizeDate(previous.check_in))
+      || (checkOut && normalizeDate(checkOut) !== normalizeDate(previous.check_out))
+      || (typeof huespedes === 'number' && Number(huespedes) !== Number(previous.huespedes));
+    if (reservationIds.length > 1 && scheduleChanged) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(400).json({ error: 'No se pueden editar las fechas o cantidad de una serie de citas desde administración.' });
+    }
+    if (estado === 'cancelada' && previousResult.rows.some((reservation) => reservation.estado !== 'cancelada') && !cancellationReason) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(400).json({ error: 'Selecciona un motivo para cancelar la reserva.' });
     }
-    if (previousResult.rows[0].check_in_time && typeof huespedes === 'number' && huespedes !== previousResult.rows[0].huespedes) {
+    if (previous.check_in_time && typeof huespedes === 'number' && huespedes !== previous.huespedes) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(400).json({ error: 'La duración de una reserva por hora no se puede cambiar desde administración.' });
@@ -415,7 +470,7 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
            WHEN $4 IS NOT NULL THEN NULL
            ELSE cancellation_reason
          END
-       WHERE id = $6
+       WHERE id = ANY($6::int[])
       RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out,
                 TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time,
@@ -426,15 +481,13 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
         typeof huespedes === 'number' ? huespedes : null,
         estado || null,
         active === undefined ? null : !!active,
-        rid,
+        reservationIds,
         cancellationReason || null,
       ]
     );
 
-    const previous = previousResult.rows[0];
-    const updated = result.rows[0];
-    const statusChanged = previous.estado !== updated.estado;
-    const normalizeDate = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    const updated = result.rows.find((reservation) => Number(reservation.id) === rid);
+    const statusChanged = previousResult.rows.some((reservation) => reservation.estado !== updated.estado);
     const detailsChanged =
       normalizeDate(previous.check_in) !== normalizeDate(updated.check_in) ||
       normalizeDate(previous.check_out) !== normalizeDate(updated.check_out) ||
@@ -462,9 +515,9 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
             : 'Reserva actualizada',
           statusChanged
             ? updated.estado === 'cancelada'
-              ? `Tu reserva para ${previous.hotel} fue cancelada por administración. Motivo: ${cancellationReason}`
-              : `Tu reserva para ${previous.hotel} ahora está ${stateLabels[updated.estado] || updated.estado}.`
-            : `Administración actualizó los detalles de tu reserva para ${previous.hotel}.`,
+              ? `Tu ${previous.reservation_series_id ? `serie de ${reservationIds.length} citas para ${previous.hotel}` : `reserva para ${previous.hotel}`} fue cancelada por administración. Motivo: ${cancellationReason}`
+              : `Tu ${previous.reservation_series_id ? `serie de ${reservationIds.length} citas para ${previous.hotel}` : `reserva para ${previous.hotel}`} ahora está ${stateLabels[updated.estado] || updated.estado}.`
+            : `Administración actualizó los detalles de tu ${previous.reservation_series_id ? `serie de citas para ${previous.hotel}` : `reserva para ${previous.hotel}`}.`,
           statusChanged && updated.estado === 'confirmada'
             ? 'success'
             : statusChanged && updated.estado === 'cancelada' ? 'warning' : 'info',
@@ -478,12 +531,12 @@ router.put('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     if (['completada', 'cancelada'].includes(result.rows[0].estado)) {
       await pool.query(
         'UPDATE places SET active = owner_active, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [result.rows[0].place_id]
+        [previous.place_id]
       );
     } else {
-      await syncPlaceReservationState(result.rows[0].place_id);
+      await syncPlaceReservationState(previous.place_id);
     }
-    res.json({ reservation: result.rows[0] });
+    res.json({ reservation: updated, reservations: result.rows });
   } catch (error) {
     if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error actualizando reserva (admin):', error);
@@ -507,7 +560,12 @@ router.delete('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
     inTransaction = true;
     const reservation = await client.query(
-      'SELECT id, user_id, hotel, place_id FROM reservations WHERE id = $1 FOR UPDATE',
+      `SELECT id, user_id, hotel, place_id, reservation_series_id
+       FROM reservations
+       WHERE id = $1
+          OR reservation_series_id = (SELECT reservation_series_id FROM reservations WHERE id = $1)
+       ORDER BY check_in, id
+       FOR UPDATE`,
       [rid]
     );
     if (reservation.rows.length === 0) {
@@ -516,13 +574,17 @@ router.delete('/api/admin/reservations/:id', requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
 
-    const reservationData = reservation.rows[0];
+    const reservationData = reservation.rows.find((row) => Number(row.id) === rid);
+    const reservationIds = reservation.rows.map((row) => row.id);
+    const reservationLabel = reservationData.reservation_series_id
+      ? `serie de ${reservationIds.length} citas para ${reservationData.hotel}`
+      : `reserva para ${reservationData.hotel}`;
     await client.query(
       `INSERT INTO user_notifications (user_id, title, detail, tone)
        VALUES ($1, 'Reserva eliminada', $2, 'warning')`,
-      [reservationData.user_id, `La reserva para ${reservationData.hotel} fue eliminada por administración.`]
+      [reservationData.user_id, `La ${reservationLabel} fue eliminada por administración.`]
     );
-    await client.query('DELETE FROM reservations WHERE id = $1', [rid]);
+    await client.query('DELETE FROM reservations WHERE id = ANY($1::int[])', [reservationIds]);
     await client.query('COMMIT');
     inTransaction = false;
 
@@ -562,7 +624,12 @@ router.delete('/api/reservations/:id', async (req, res) => {
     inTransaction = true;
 
     const reserva = await client.query(
-      'SELECT id, user_id, place_id, hotel, estado FROM reservations WHERE id = $1 FOR UPDATE',
+      `SELECT id, user_id, place_id, hotel, estado, reservation_series_id
+       FROM reservations
+       WHERE id = $1
+          OR reservation_series_id = (SELECT reservation_series_id FROM reservations WHERE id = $1)
+       ORDER BY check_in, id
+       FOR UPDATE`,
       [rid]
     );
     if (reserva.rows.length === 0) {
@@ -571,24 +638,28 @@ router.delete('/api/reservations/:id', async (req, res) => {
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
 
-    const reservationData = reserva.rows[0];
+    const reservationData = reserva.rows.find((row) => Number(row.id) === rid);
     if (reservationData.user_id !== uid) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(403).json({ error: 'No tienes permiso para cancelar esta reserva' });
     }
 
+    const reservationIds = reserva.rows.map((row) => row.id);
+
     // Actualizar estado a cancelada
     const updated = await client.query(
-      "UPDATE reservations SET estado = $1, cancellation_reason = 'Cancelada por el usuario.' WHERE id = $2 RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time, TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, estado, cancellation_reason, created_at",
-      ['cancelada', rid]
+      "UPDATE reservations SET estado = $1, cancellation_reason = 'Cancelada por el usuario.', updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2::int[]) RETURNING id, user_id, hotel, tipo_alojamiento, ubicacion, check_in, check_out, TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time, TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, estado, cancellation_reason, reservation_mode, reservation_series_id, created_at",
+      ['cancelada', reservationIds]
     );
 
     if (reservationData.estado !== 'cancelada') {
       await client.query(
         `INSERT INTO user_notifications (user_id, reservation_id, title, detail, tone)
          VALUES ($1, $2, 'Reserva cancelada', $3, 'warning')`,
-        [uid, rid, `Cancelaste tu reserva para ${reservationData.hotel}.`]
+        [uid, rid, reservationData.reservation_series_id
+          ? `Cancelaste tu serie de ${reservationIds.length} citas para ${reservationData.hotel}.`
+          : `Cancelaste tu reserva para ${reservationData.hotel}.`]
       );
     }
 
@@ -598,7 +669,7 @@ router.delete('/api/reservations/:id', async (req, res) => {
     // Reactivar el lugar si existe
     await syncPlaceReservationState(reservationData.place_id);
 
-    res.json({ reservation: updated.rows[0], message: '✅ Reserva cancelada exitosamente' });
+    res.json({ reservation: updated.rows[0], reservations: updated.rows, message: '✅ Reserva cancelada exitosamente' });
   } catch (error) {
     if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error cancelando reserva:', error);

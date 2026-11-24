@@ -3,6 +3,7 @@ import pool from '../../db.js';
 import { requireOwner } from '../../middleware/admin.js';
 import { syncPlaceReservationState } from '../availability/service.js';
 import { hasProfanityInFields, isValidCapacity, parseNonNegativeInteger } from '../../shared/validation.js';
+import { groupReservationSeries } from '../reservations/series.js';
 
 const router = Router();
 
@@ -171,7 +172,7 @@ router.delete('/api/owner/places/:id', requireOwner, async (req, res) => {
 router.get('/api/owner/reservations/pending-count', requireOwner, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*)::int AS pending_count
+      `SELECT COUNT(DISTINCT COALESCE(r.reservation_series_id::text, 'reservation:' || r.id::text))::int AS pending_count
        FROM reservations r
        JOIN places p ON p.id = r.place_id
        WHERE p.owner_id = $1 AND r.estado = 'pendiente'`,
@@ -187,9 +188,20 @@ router.get('/api/owner/reservations/pending-count', requireOwner, async (req, re
 router.get('/api/owner/reservations', requireOwner, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.check_in, r.check_out,
+      `WITH recent_reservations AS (
+         SELECT COALESCE(r.reservation_series_id::text, 'reservation:' || r.id::text) AS reservation_key,
+                MAX(r.created_at) AS latest_created_at
+         FROM reservations r
+         JOIN places p ON p.id = r.place_id
+         WHERE p.owner_id = $1
+         GROUP BY COALESCE(r.reservation_series_id::text, 'reservation:' || r.id::text)
+         ORDER BY latest_created_at DESC
+         LIMIT 250
+       )
+       SELECT r.id, r.user_id, r.hotel, r.tipo_alojamiento, r.check_in, r.check_out,
               TO_CHAR(r.check_in_time, 'HH24:MI') AS check_in_time,
               TO_CHAR(r.check_out_time, 'HH24:MI') AS check_out_time, r.huespedes,
+              r.reservation_mode, r.reservation_series_id,
               (
                 r.check_out < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
                 OR (
@@ -201,12 +213,14 @@ router.get('/api/owner/reservations', requireOwner, async (req, res) => {
        FROM reservations r
        JOIN places p ON p.id = r.place_id
        JOIN users u ON u.id = r.user_id
+       JOIN recent_reservations recent
+         ON recent.reservation_key = COALESCE(r.reservation_series_id::text, 'reservation:' || r.id::text)
        WHERE p.owner_id = $1
        ORDER BY r.created_at DESC, r.id DESC
-       LIMIT 250`,
+      `,
       [req.ownerUserId]
     );
-    res.json({ reservations: result.rows });
+    res.json({ reservations: groupReservationSeries(result.rows) });
   } catch (error) {
     console.error('Error obteniendo reservas de espacios del propietario:', error);
     res.status(500).json({ error: 'No se pudieron cargar las reservas de tus espacios.' });
@@ -226,7 +240,7 @@ router.get('/api/owner/dashboard-data', requireOwner, async (req, res) => {
            WHERE owner_id = $1 AND COALESCE(owner_active, active) = TRUE
          ),
          monthly_reservations AS (
-           SELECT r.total_amount
+           SELECT r.id, r.reservation_series_id, r.total_amount
            FROM reservations r
            JOIN places p ON p.id = r.place_id
            CROSS JOIN month_bounds b
@@ -236,8 +250,9 @@ router.get('/api/owner/dashboard-data', requireOwner, async (req, res) => {
              AND r.check_in < b.month_end
          ),
          monthly_totals AS (
-           SELECT COUNT(*)::int AS reservation_count,
-                  COUNT(*) FILTER (WHERE total_amount IS NOT NULL)::int AS priced_reservation_count,
+           SELECT COUNT(DISTINCT COALESCE(reservation_series_id::text, 'reservation:' || id::text))::int AS reservation_count,
+                  COUNT(DISTINCT COALESCE(reservation_series_id::text, 'reservation:' || id::text))
+                    FILTER (WHERE total_amount IS NOT NULL)::int AS priced_reservation_count,
                   COALESCE(SUM(total_amount), 0)::text AS reservation_value
            FROM monthly_reservations
          ),
@@ -348,7 +363,8 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
     await client.query('BEGIN');
     inTransaction = true;
     const currentResult = await client.query(
-      `SELECT r.id, r.user_id, r.estado, r.hotel, r.check_out, r.check_out_time, r.place_id,
+      `SELECT r.id, r.user_id, r.estado, r.hotel, r.check_in, r.check_out,
+              r.check_out_time, r.place_id, r.reservation_mode, r.reservation_series_id,
               (
                 r.check_out < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
                 OR (
@@ -357,14 +373,26 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
                 )
               ) AS can_complete
        FROM reservations r JOIN places p ON p.id = r.place_id
-       WHERE r.id = $1 AND p.owner_id = $2 FOR UPDATE OF r`,
+       WHERE p.owner_id = $2
+         AND (
+           r.id = $1
+           OR r.reservation_series_id = (SELECT reservation_series_id FROM reservations WHERE id = $1)
+         )
+       ORDER BY r.check_in, r.id
+       FOR UPDATE OF r`,
       [id, req.ownerUserId]
     );
-    const current = currentResult.rows[0];
+    const reservationGroup = currentResult.rows;
+    const current = reservationGroup.find((reservation) => Number(reservation.id) === id);
     if (!current) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(404).json({ error: 'No se encontró esa reserva en tus espacios.' });
+    }
+    if (new Set(reservationGroup.map((reservation) => reservation.estado)).size > 1) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(409).json({ error: 'La serie tiene estados diferentes y no se puede actualizar como grupo.' });
     }
     const allowed = current.estado === 'pendiente'
       ? ['confirmada', 'cancelada'].includes(estado)
@@ -376,7 +404,7 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
       inTransaction = false;
       return res.status(409).json({ error: 'No se puede cambiar una reserva desde su estado actual.' });
     }
-    if (estado === 'completada' && !current.can_complete) {
+    if (estado === 'completada' && !reservationGroup.every((reservation) => reservation.can_complete)) {
       await client.query('ROLLBACK');
       inTransaction = false;
       return res.status(409).json({ error: 'Solo puedes marcar como completada una reserva cuya fecha de salida ya pasó.' });
@@ -388,15 +416,17 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
       return res.status(400).json({ error: 'El motivo no puede superar 500 caracteres.' });
     }
 
+    const reservationIds = reservationGroup.map((reservation) => reservation.id);
     const updated = await client.query(
       `UPDATE reservations SET estado = $1::varchar,
          cancellation_reason = CASE WHEN $1::varchar = 'cancelada' THEN $2::text ELSE NULL::text END,
          updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3
+       WHERE id = ANY($3::int[])
        RETURNING id, user_id, hotel, estado, check_in, check_out,
                  TO_CHAR(check_in_time, 'HH24:MI') AS check_in_time,
-                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, place_id`,
-      [estado, reason || (estado === 'cancelada' ? 'Cancelada por el anfitrión.' : null), id]
+                 TO_CHAR(check_out_time, 'HH24:MI') AS check_out_time, huespedes, place_id,
+                 reservation_mode, reservation_series_id`,
+      [estado, reason || (estado === 'cancelada' ? 'Cancelada por el anfitrión.' : null), reservationIds]
     );
     const labels = {
       confirmada: 'confirmada por el anfitrión',
@@ -411,15 +441,15 @@ router.put('/api/owner/reservations/:id', requireOwner, async (req, res) => {
         id,
         estado === 'confirmada' ? 'Reserva confirmada por el anfitrión' : estado === 'cancelada' ? 'Reserva cancelada por el anfitrión' : 'Reserva completada',
         estado === 'cancelada' && reason
-          ? `Tu reserva para ${current.hotel} fue cancelada. Motivo: ${reason}`
-          : `Tu reserva para ${current.hotel} quedó ${labels[estado]}.`,
+          ? `Tu ${current.reservation_series_id ? `serie de ${reservationGroup.length} citas para ${current.hotel}` : `reserva para ${current.hotel}`} fue cancelada. Motivo: ${reason}`
+          : `Tu ${current.reservation_series_id ? `serie de ${reservationGroup.length} citas para ${current.hotel}` : `reserva para ${current.hotel}`} quedó ${labels[estado]}.`,
         estado === 'confirmada' || estado === 'completada' ? 'success' : 'warning',
       ]
     );
     await client.query('COMMIT');
     inTransaction = false;
     await syncPlaceReservationState(current.place_id);
-    res.json({ reservation: updated.rows[0] });
+    res.json({ reservation: updated.rows[0], reservations: updated.rows });
   } catch (error) {
     if (client && inTransaction) await client.query('ROLLBACK');
     console.error('Error actualizando reserva del propietario:', error);

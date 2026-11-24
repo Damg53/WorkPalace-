@@ -5,10 +5,12 @@ import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api'
 import { formatAvailableFrom } from '../utils/dateFormatting'
 import { to12HourTime, to24HourTime } from '../utils/timeInput'
 import TimeInput from './TimeInput'
+import PhoneNumberInput from './PhoneNumberInput'
+import { isValidColombianMobile } from '../utils/phoneValidation'
 
 const API = API_BASE_URL
 
-type Mode = 'hour' | 'halfDay' | 'fullDay' | 'day' | 'night' | 'week' | 'fortnight' | 'month' | 'appointment' | 'flexible'
+type Mode = 'hour' | 'halfDay' | 'fullDay' | 'day' | 'night' | 'week' | 'fortnight' | 'month' | 'appointment'
 type Pay = 'card' | 'pse' | 'nequi'
 
 interface CheckoutProps {
@@ -39,13 +41,24 @@ const MODES: { id: Mode; label: string; unit: [string, string]; max: number }[] 
   { id: 'halfDay', label: 'Media jornada (4 horas)', unit: ['jornada', 'jornadas'], max: 1 },
   { id: 'fullDay', label: 'Jornada completa (8 horas)', unit: ['jornada', 'jornadas'], max: 1 },
   { id: 'day', label: 'Por día', unit: ['día', 'días'], max: 30 },
-  { id: 'night', label: 'Por noche', unit: ['noche', 'noches'], max: 1 },
+  { id: 'night', label: 'Por noche', unit: ['noche', 'noches'], max: 30 },
   { id: 'week', label: 'Por semana', unit: ['semana', 'semanas'], max: 8 },
   { id: 'fortnight', label: 'Por 15 días', unit: ['15 días', '15 días'], max: 4 },
   { id: 'month', label: 'Por mes', unit: ['mes', 'meses'], max: 3 },
-  { id: 'appointment', label: 'Solo por cita', unit: ['cita', 'citas'], max: 1 },
-  { id: 'flexible', label: 'Flexible', unit: ['reserva', 'reservas'], max: 1 },
+  { id: 'appointment', label: 'Solo por cita', unit: ['cita', 'citas'], max: 30 },
 ]
+
+const BAR_UNITS: Record<Mode, { singular: string; plural: string }> = {
+  hour: { singular: 'hora', plural: 'horas' },
+  halfDay: { singular: 'jornada', plural: 'jornadas' },
+  fullDay: { singular: 'jornada', plural: 'jornadas' },
+  day: { singular: 'día', plural: 'días' },
+  night: { singular: 'noche', plural: 'noches' },
+  week: { singular: 'semana', plural: 'semanas' },
+  fortnight: { singular: 'quincena', plural: 'quincenas' },
+  month: { singular: 'mes', plural: 'meses' },
+  appointment: { singular: 'cita', plural: 'citas' },
+}
 
 const FIXED_SCHEDULES: Partial<Record<Mode, { startTime?: string; minStartTime?: string; maxStartTime?: string; minuteStep?: number; durationHours: number }>> = {
   halfDay: { minStartTime: '07:00', maxStartTime: '18:00', minuteStep: 30, durationHours: 4 },
@@ -186,7 +199,6 @@ const getModeOptionsFromPlace = (modalidad: string | null | undefined): Mode[] =
   if (normalized.includes('15 días') || normalized.includes('15 dias')) add('fortnight')
   if (normalized.includes('por mes')) add('month')
   if (normalized.includes('solo por cita')) add('appointment')
-  if (normalized.includes('flexible')) add('flexible')
 
   return modes.length > 0 ? modes : ['hour']
 }
@@ -257,7 +269,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
         }
 
         const modesForPlace = getModeOptionsFromPlace(found.modalidad)
-        const timedMode = modesForPlace.find((candidate) => ['hour', 'halfDay', 'fullDay', 'night', 'appointment', 'flexible'].includes(candidate))
+        const timedMode = modesForPlace.find((candidate) => ['hour', 'halfDay', 'fullDay', 'night', 'appointment'].includes(candidate))
         const supportsTimedReservations = Boolean(timedMode)
         const reservationMayHaveAnotherAvailableSlot = found.owner_active
           && ((found.has_reservation && !found.has_block) || found.has_partial_block)
@@ -277,7 +289,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
           setStartTimeInput(to12HourTime('07:00'))
         }
         const todayInBogota = bogotaDateTime(new Date()).date
-        if (initialMode !== 'hour' && initialMode !== 'appointment' && initialMode !== 'flexible' && date <= todayInBogota) {
+        if (initialMode !== 'hour' && initialMode !== 'appointment' && date <= todayInBogota) {
           setDate(addDaysToDateInput(todayInBogota, 1))
         }
       } catch {
@@ -303,11 +315,12 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   }, [status])
 
   const cfg = MODES.find((m) => m.id === mode) ?? MODES[0]
+  const barUnit = BAR_UNITS[mode]
   const maxQty = cfg.max
   const earliest = nextAvailableDateTime(clock)
   const earliestAppointment = nextAvailableDateTimeAtInterval(clock, 30)
   const todayInBogota = bogotaDateTime(clock).date
-  const appointmentMode = mode === 'appointment' || mode === 'flexible'
+  const appointmentMode = mode === 'appointment'
   const fixedSchedule = FIXED_SCHEDULES[mode]
   const timeBasedMode = mode === 'hour' || appointmentMode || Boolean(fixedSchedule)
   const minimumDate = mode === 'hour'
@@ -323,11 +336,28 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const maximumTime = fixedSchedule?.maxStartTime
   const timeMinuteStep = appointmentMode ? 30 : fixedSchedule?.minuteStep ?? 1
   const reservationStartTime = fixedSchedule?.startTime ?? (isValidTimeValue(startTime) ? startTime : minimumTime)
-  const reservationHours = mode === 'hour' ? qty : fixedSchedule?.durationHours ?? (appointmentMode ? 1 : qty)
-  const billableQuantity = timeBasedMode ? reservationHours : qty
+  const reservationHours = mode === 'hour'
+    ? qty
+    : mode === 'night'
+      ? 14 + (qty - 1) * 24
+      : fixedSchedule?.durationHours ?? (appointmentMode ? 1 : qty)
+  const billableQuantity = mode === 'halfDay' || mode === 'fullDay' ? reservationHours : qty
   const startMinutes = timeToMinutes(reservationStartTime)
   const endMinutes = startMinutes + reservationHours * 60
   const endDate = addDaysToDateInput(date, Math.floor(endMinutes / 1440))
+  const appointmentLastEndMinutes = startMinutes + 60
+  const appointmentLastEndDate = addDaysToDateInput(
+    date,
+    qty - 1 + Math.floor(appointmentLastEndMinutes / 1440),
+  )
+  const reservationEndDate = appointmentMode ? appointmentLastEndDate : endDate
+  const reservationEndTime = minutesToTime(appointmentMode ? appointmentLastEndMinutes : endMinutes)
+  const barFillPercent = (qty / maxQty) * 100
+  const barQuantityLabel = `${qty} ${qty === 1 ? barUnit.singular : barUnit.plural}`
+  const barMaximumLabel = `${maxQty} ${maxQty === 1 ? barUnit.singular : barUnit.plural}`
+  const chargeUnit = mode === 'hour' || mode === 'halfDay' || mode === 'fullDay'
+    ? billableQuantity === 1 ? 'hora' : 'horas'
+    : qty === 1 ? cfg.unit[0] : cfg.unit[1]
 
   useEffect(() => {
     const minDate = mode === 'hour'
@@ -346,14 +376,14 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   const changeMode = (m: Mode) => {
     setMode(m)
     setQty(m === 'hour' ? 3 : 1)
-    if (m === 'appointment' || m === 'flexible') {
+    if (m === 'appointment') {
       const currentTime = isValidTimeValue(startTime) ? timeToMinutes(startTime) : timeToMinutes(earliestAppointment.time)
       setStartTime(minutesToTime(Math.ceil(currentTime / 30) * 30))
     } else if (m === 'halfDay' || m === 'fullDay') {
       setStartTime('07:00')
     }
     const todayInBogota = bogotaDateTime(new Date()).date
-    if (m !== 'hour' && m !== 'appointment' && m !== 'flexible' && date <= todayInBogota) {
+    if (m !== 'hour' && m !== 'appointment' && date <= todayInBogota) {
       setDate(addDaysToDateInput(todayInBogota, 1))
     }
   }
@@ -369,7 +399,6 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
     fortnight: baseRate,
     month: baseRate,
     appointment: baseRate,
-    flexible: baseRate,
   } as const
 
   const { subtotal, discount, fee, total } = useMemo(() => {
@@ -387,6 +416,20 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
   }, [applied, billableQuantity, couponDiscount, mode, rateMap])
 
   const slot = useMemo(() => {
+    if (mode === 'night') {
+      return {
+        title: `${dateLabel(toDate(date))} al ${dateLabel(toDate(endDate))}`,
+        sub: `${qty} ${qty === 1 ? 'noche' : 'noches'} · 18:00 a 08:00`,
+      }
+    }
+
+    if (mode === 'appointment' && qty > 1) {
+      return {
+        title: `${dateLabel(toDate(date))} al ${dateLabel(toDate(appointmentLastEndDate))}`,
+        sub: `${qty} citas de 1 hora, una diaria a las ${hourLabel(startMinutes)}`,
+      }
+    }
+
     if (timeBasedMode) {
       return {
         title: endDate === date ? dateLabel(toDate(date)) : `${dateLabel(toDate(date))} al ${dateLabel(toDate(endDate))}`,
@@ -399,10 +442,10 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
       title: `${dateLabel(toDate(date))} al ${dateLabel(toDate(date, days - 1))}`,
       sub: `${days} ${days === 1 ? 'día' : 'días'} completos`,
     }
-  }, [date, endDate, endMinutes, mode, qty, startMinutes, timeBasedMode])
+  }, [appointmentLastEndDate, date, endDate, endMinutes, mode, qty, startMinutes, timeBasedMode])
 
   const emailOk = /^\S+@\S+\.\S+$/.test(email)
-  const phoneOk = /^3\d{9}$/.test(phone)
+  const phoneOk = isValidColombianMobile(phone)
   const expiryOk = isValidCardExpiry(exp)
   const cardOk = pay !== 'card' || (card.replace(/\s/g, '').length === 16 && expiryOk && cvc.length >= 3)
   const canPay = name.trim().length > 2 && emailOk && phoneOk && cardOk && terms
@@ -463,12 +506,12 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
           placeId: place.id,
           checkIn: date,
           checkOut: timeBasedMode
-            ? endDate
+            ? reservationEndDate
             : addDaysToDateInput(date, qty),
           reservationMode: mode,
           ...(timeBasedMode ? {
             checkInTime: reservationStartTime,
-            checkOutTime: minutesToTime(endMinutes),
+            checkOutTime: reservationEndTime,
           } : {}),
           phone,
           huespedes: billableQuantity,
@@ -721,24 +764,11 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
               </label>
               <label className="ck-field">
                 <span>Celular</span>
-                <input
-                  type="tel"
+                <PhoneNumberInput
+                  id="checkout-phone"
                   value={phone}
-                  onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
-                  autoComplete="tel"
-                  inputMode="numeric"
-                  pattern="3[0-9]{9}"
-                  maxLength={10}
-                  required
-                  placeholder="300 123 4567"
-                  aria-invalid={phone.length > 0 && !phoneOk}
-                  aria-describedby={phone.length > 0 && !phoneOk ? 'checkout-phone-error' : undefined}
+                  onChange={setPhone}
                 />
-                {phone.length > 0 && !phoneOk && (
-                  <span className="ck-field-hint" id="checkout-phone-error">
-                    Debe ser un número colombiano de 10 dígitos que empiece por 3.
-                  </span>
-                )}
               </label>
             </div>
           </section>
@@ -826,22 +856,19 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
               <span>{slot.sub}</span>
             </div>
 
-            {mode === 'hour' && (
-              <div className="ck-bar" role="img" aria-label={`Ocupas de ${hourLabel(startMinutes)} a ${hourLabel(endMinutes)}`}>
-                <div className="ck-bar__track">
-                  <i
-                    style={{
-                      left: `${(startMinutes / 1440) * 100}%`,
-                      width: `${(qty * 60 / 1440) * 100}%`,
-                    }}
-                  />
-                </div>
-                <div className="ck-bar__ends">
-                  <span>00:00</span>
-                  <span>24:00</span>
-                </div>
+            <div
+              className="ck-bar"
+              role="img"
+              aria-label={`Cantidad seleccionada: ${barQuantityLabel} de ${barMaximumLabel}`}
+            >
+              <div className="ck-bar__track">
+                <i style={{ left: 0, width: `${barFillPercent}%` }} />
               </div>
-            )}
+              <div className={`ck-bar__ends${maxQty === 1 ? ' ck-bar__ends--single' : ''}`}>
+                <span>1 {barUnit.singular}</span>
+                {maxQty > 1 && <span>{barMaximumLabel}</span>}
+              </div>
+            </div>
           </div>
 
           <div className="ck-ticket__bottom">
@@ -851,7 +878,7 @@ export default function Checkout({ user, isDark }: CheckoutProps) {
 
             <dl className="ck-lines">
               <div>
-                <dt>{cop(rateMap[mode])} × {billableQuantity} {timeBasedMode ? 'horas' : qty === 1 ? cfg.unit[0] : cfg.unit[1]}</dt>
+                <dt>{cop(rateMap[mode])} × {billableQuantity} {chargeUnit}</dt>
                 <dd>{cop(subtotal)}</dd>
               </div>
               {applied && (

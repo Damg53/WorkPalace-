@@ -6,6 +6,7 @@ import { type CSSProperties, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { API_BASE_URL, API_UNAVAILABLE_MESSAGE, cancelReservation } from '../services/api'
 import { formatReadableTime } from '../utils/dateFormatting'
+import { formatReservationQuantity } from '../utils/reservationFormatting'
 
 interface DashboardProps {
   user: { id?: number; username: string; role?: string; fullName?: string; email?: string }
@@ -27,6 +28,8 @@ interface Reserva {
   checkOutRaw: string
   isHourly: boolean
   huespedes: number
+  quantityLabel: string
+  reservationMode: string | null
   estado: EstadoReserva
   cancellationReason: string | null
   placeId: number | null
@@ -44,6 +47,9 @@ interface ReservaApiRecord {
   check_in_time?: string | null
   check_out_time?: string | null
   huespedes: number
+  reservation_mode?: string | null
+  reservation_series_id?: string | null
+  series_count?: number
   estado: string
   cancellation_reason?: string | null
   place_id?: number | null
@@ -220,6 +226,12 @@ function mapReservation(reservation: ReservaApiRecord): Reserva {
     checkOutRaw: reservation.check_out,
     isHourly: Boolean(reservation.check_in_time),
     huespedes: reservation.huespedes,
+    quantityLabel: formatReservationQuantity(
+      reservation.reservation_mode,
+      reservation.huespedes,
+      Boolean(reservation.check_in_time),
+    ),
+    reservationMode: reservation.reservation_mode ?? null,
     estado: reservation.estado as EstadoReserva,
     cancellationReason: reservation.cancellation_reason ?? null,
     placeId: reservation.place_id == null ? null : Number(reservation.place_id),
@@ -828,7 +840,7 @@ export default function Dashboard({ user }: DashboardProps) {
                 <th>Ubicación</th>
                 <th>Check-in</th>
                 <th>Check-out</th>
-                <th>Huéspedes / horas</th>
+                <th>Cantidad / duración</th>
                 <th>Estado</th>
                 {showActions && <th>Acciones</th>}
               </tr>
@@ -850,8 +862,8 @@ export default function Dashboard({ user }: DashboardProps) {
                     <td data-label="Ubicación">{r.ubicacion}</td>
                     <td data-label="Check-in">{r.checkIn}</td>
                     <td data-label="Check-out">{r.checkOut}</td>
-                    <td data-label={r.isHourly ? 'Duración' : 'Huéspedes'}>
-                      {r.huespedes}{r.isHourly ? ' horas' : ''}
+                    <td data-label="Cantidad / duración">
+                      {r.quantityLabel}
                     </td>
                     <td data-label="Estado">
                       <span className={`reservation-badge ${r.estado}`}>
@@ -909,8 +921,8 @@ export default function Dashboard({ user }: DashboardProps) {
                   <strong>{r.ubicacion}</strong>
                 </div>
                 <div>
-                  <span className="reservation-card__label">{r.isHourly ? 'Duración' : 'Huéspedes'}</span>
-                  <strong>{r.huespedes}{r.isHourly ? ' horas' : ''}</strong>
+                  <span className="reservation-card__label">Cantidad / duración</span>
+                  <strong>{r.quantityLabel}</strong>
                 </div>
               </div>
 
@@ -1440,8 +1452,8 @@ export default function Dashboard({ user }: DashboardProps) {
                 <dd>{selectedReservation.checkOut}</dd>
               </div>
               <div>
-                <dt>{selectedReservation.isHourly ? 'Duración' : 'Huéspedes'}</dt>
-                <dd>{selectedReservation.huespedes}{selectedReservation.isHourly ? ' horas' : ''}</dd>
+                <dt>Cantidad / duración</dt>
+                <dd>{selectedReservation.quantityLabel}</dd>
               </div>
             </dl>
 

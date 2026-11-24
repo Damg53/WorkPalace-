@@ -1,0 +1,68 @@
+.wp-phone-input {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.wp-phone-input__prefix {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #647084;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.wp-phone-input__flag {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  flex: none;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #fcd116 0 50%, #003893 50% 75%, #ce1126 75% 100%);
+  box-shadow: 0 0 0 1px #00000012;
+}
+
+.wp-phone-input input.wp-phone-input__control,
+.wp-auth__field .wp-phone-input input.wp-phone-input__control,
+.settings-field .wp-phone-input input.wp-phone-input__control,
+.ck-field .wp-phone-input input.wp-phone-input__control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding-left: 78px;
+}
+
+.wp-auth__field .wp-phone-input input.wp-phone-input__control {
+  border-radius: 10px;
+}
+
+.settings-field .wp-phone-input input.wp-phone-input__control {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.ck-field .wp-phone-input input.wp-phone-input__control {
+  height: 48px;
+}
+
+.wp-phone-input input.wp-phone-input__control:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+html[data-theme="dark"] .wp-phone-input__prefix {
+  color: #c4c9d8;
+}
+
+.ck--dark .wp-phone-input__prefix {
+  color: #c4c9d8;
+}

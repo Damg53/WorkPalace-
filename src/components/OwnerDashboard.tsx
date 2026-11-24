@@ -6,6 +6,7 @@ import WorkPalaceSelect from './WorkPalaceSelect'
 import type { AdminPlace } from './adminTypes'
 import { API_BASE_URL } from '../services/api'
 import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
+import { formatReservationQuantity } from '../utils/reservationFormatting'
 import './OwnerDashboard.css'
 
 interface OwnerDashboardProps {
@@ -24,6 +25,9 @@ interface OwnerReservation {
   check_in_time: string | null
   check_out_time: string | null
   huespedes: number
+  reservation_mode?: string | null
+  reservation_series_id?: string | null
+  series_count?: number
   estado: string
   customer_name: string
   can_complete: boolean
@@ -566,14 +570,14 @@ export default function OwnerDashboard({ user }: OwnerDashboardProps) {
                     <article className="owner-reservation" key={reservation.id}>
                       <div>
                         <strong>{reservation.place_name}</strong>
-                        <span>Reserva #{reservation.id} · {reservation.customer_name}</span>
+                        <span>{reservation.reservation_series_id ? `Serie de ${reservation.series_count ?? reservation.huespedes} citas` : `Reserva #${reservation.id}`} · {reservation.customer_name}</span>
                         <span>
                           {formatReadableDate(reservation.check_in)}
                           {reservation.check_in_time ? ` · ${formatReadableTime(reservation.check_in_time)}` : ''}
                           {' al '}
                           {formatReadableDate(reservation.check_out)}
                           {reservation.check_out_time ? ` · ${formatReadableTime(reservation.check_out_time)}` : ''}
-                          {' · '}{reservation.huespedes}{reservation.check_in_time ? ' horas' : ' unidades'}
+                          {' · '}{formatReservationQuantity(reservation.reservation_mode, reservation.huespedes, Boolean(reservation.check_in_time))}
                         </span>
                       </div>
                       <span className={`reservation-badge ${reservation.estado}`}>{reservation.estado}</span>

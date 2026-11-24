@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS reservations (
   check_in_time TIME,
   check_out_time TIME,
   huespedes INT NOT NULL DEFAULT 1,
+  reservation_mode VARCHAR(30),
+  reservation_series_id UUID,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
   coupon_code VARCHAR(50),
   total_amount BIGINT,
@@ -71,7 +73,10 @@ ALTER TABLE reservations ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50);
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_in_time TIME;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_out_time TIME;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reservation_mode VARCHAR(30);
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reservation_series_id UUID;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);
+CREATE INDEX IF NOT EXISTS idx_reservations_series_id ON reservations(reservation_series_id);
 
 CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);

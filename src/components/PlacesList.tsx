@@ -60,7 +60,6 @@ const getPriceByModality = (precioHora: number | null, modalidad: string | null)
     'Por noche': '/ noche',
     'Por semana': '/ semana',
     'Solo por cita': ' por cita',
-    'Flexible (acordar con el propietario)': '/ tarifa',
   }
 
   return `$${precioHora.toLocaleString('es-CO')}${unidades[modalidad ?? ''] ?? ''}`

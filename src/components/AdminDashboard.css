@@ -962,6 +962,8 @@ html[data-theme="light"] .admin-container select option {
 
 .admin-image-dialog {
   width: min(100%, 720px);
+  min-width: 0;
+  max-width: calc(100vw - 32px);
   max-height: min(90vh, 760px);
   overflow-y: auto;
   padding: 1.4rem;
@@ -980,10 +982,16 @@ html[data-theme="light"] .admin-container select option {
   margin-bottom: 1rem;
 }
 
+.admin-image-dialog__heading > div {
+  min-width: 0;
+  flex: 1;
+}
+
 .admin-image-dialog__heading h3 {
   margin: 0.2rem 0 0;
   color: inherit;
   font-size: 1.3rem;
+  overflow-wrap: anywhere;
 }
 
 .admin-image-dialog__heading p {
@@ -991,6 +999,7 @@ html[data-theme="light"] .admin-container select option {
   color: #aeb6d1;
   font-size: 0.9rem;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .admin-image-dialog__eyebrow {

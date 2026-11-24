@@ -220,7 +220,10 @@ async function createTablesIfNotExist() {
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS total_amount BIGINT;');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_in_time TIME;');
     await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS check_out_time TIME;');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reservation_mode VARCHAR(30);');
+    await pool.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reservation_series_id UUID;');
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_user_coupon ON reservations(user_id, coupon_code);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_series_id ON reservations(reservation_series_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_check_in ON reservations(check_in);');
     console.log('✅ Tabla "reservations" verificada/creada');
@@ -374,6 +377,12 @@ async function createTablesIfNotExist() {
           AND current_reservation.active = TRUE
           AND current_reservation.estado IN ('pendiente', 'confirmada')
       );
+    `);
+
+    await pool.query(`
+      UPDATE places
+      SET modalidad = 'Solo por cita', updated_at = CURRENT_TIMESTAMP
+      WHERE modalidad = 'Flexible (acordar con el propietario)';
     `);
 
   } catch (err) {

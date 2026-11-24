@@ -220,7 +220,6 @@ html[data-theme="light"] .wp-home-hero::before {
 .wp-home-stack__dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 99px; background: var(--home-line); cursor: pointer; transition: width 400ms ease, background 300ms ease; }
 .wp-home-stack__dots button:hover { background: var(--home-muted); }
 .wp-home-stack__dots button.is-active { width: 28px; background: var(--home-violet); }
-.wp-home-stack__offline { position: absolute; top: -18px; right: 10px; z-index: 21; max-width: calc(100% - 20px); padding: 5px 9px; border: 1px solid var(--home-line); border-radius: 99px; background: var(--home-surface); color: var(--home-muted); font-size: 0.68rem; text-align: center; }
 .wp-home-stack__empty { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 28px; border: 1px solid var(--home-line); border-radius: 22px; background: color-mix(in srgb, var(--home-surface) 92%, transparent); text-align: center; box-shadow: 0 26px 50px -26px rgba(0, 0, 0, 0.65); }
 .wp-home-stack__empty > span { color: var(--home-violet); font-size: 3rem; }
 .wp-home-stack__empty p { color: var(--home-muted); font-size: 0.9rem; }
@@ -261,7 +260,6 @@ html[data-theme="light"] .wp-home-hero::before {
 .wp-home-place-card__footer small { color: var(--home-muted); font-family: "Instrument Sans", "Segoe UI", sans-serif; font-size: 0.7rem; font-weight: 500; }
 .wp-home-place-card__link { color: var(--home-amber); font-size: 0.78rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .wp-home-place-card__link:hover span { display: inline-block; transform: translate(2px, -2px); }
-.wp-home-places__offline { margin: -18px 0 18px !important; color: var(--home-muted); font-size: 0.76rem; }
 .wp-home-places__empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border: 1px solid var(--home-line); border-radius: 17px; background: var(--home-surface); color: var(--home-muted); text-align: center; }
 .wp-home-places__empty .wp-home-btn { min-height: 38px; }
 
