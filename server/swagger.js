@@ -185,7 +185,7 @@ const bodySchemas = {
     checkOut: stringField('Fecha de finalización (AAAA-MM-DD).'),
     checkInTime: stringField('Hora de inicio opcional en formato HH:MM; permite reservar desde el minuto elegido.'),
     checkOutTime: stringField('Hora de salida correspondiente a la duración en horas.'),
-    reservationMode: stringField('Modalidad: hour, halfDay (4 horas entre 07:00 y 18:00), fullDay (8 horas entre 07:00 y 09:00), day, night (18:00 a 08:00 del día siguiente), week, fortnight, month, appointment o flexible. Citas y flexible comienzan cada 30 minutos y duran una hora.'),
+    reservationMode: stringField('Modalidad: hour, halfDay (4 horas entre 07:00 y 18:00), fullDay (8 horas entre 07:00 y 09:00), day, night (18:00 y salida a las 08:00 después de la última noche), week, fortnight, month o appointment (de 1 a 30 citas diarias a la misma hora, inicio cada 30 minutos y duración de una hora).'),
     phone: stringField('Celular colombiano de 10 dígitos que comienza por 3.'),
     huespedes: integerField('Cantidad de unidades o duración en horas cuando la modalidad tiene horario.'),
     couponCode: stringField('Código del cupón (opcional).'),

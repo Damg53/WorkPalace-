@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import '../places-filter.css'
 import WorkPalaceSelect from './WorkPalaceSelect'
+import { isIntegerInputValue, preventNonIntegerKey, preventNonIntegerPaste } from '../utils/numericInput'
 
 interface Filters {
   search: string
@@ -39,6 +40,7 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciuda
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
+    if (name !== 'search' && !isIntegerInputValue(value)) return
     const updated = { ...filters, [name]: value }
     setFilters(updated)
     onFilter(updated)
@@ -113,12 +115,15 @@ const PlacesFilter: React.FC<PlacesFilterProps> = ({ onFilter, tipos = [], ciuda
             placeholder="Capacidad"
             value={filters.capacidad}
             onChange={handleChange}
+            onKeyDown={preventNonIntegerKey}
+            onPaste={preventNonIntegerPaste}
             style={{ flex: 1, minWidth: 100 }}
             min={1}
+            step={1}
           />
           <WorkPalaceSelect className="wp-select--places-filter" value={filters.modalidad} options={[{ value: '', label: 'Modalidad' }, ...modalidades.map((modality) => ({ value: modality, label: modality }))]} onChange={(value) => handleSelectChange('modalidad', value)} ariaLabel="Modalidad" />
-          <input type="number" name="precioMin" min={0} placeholder="Precio mínimo" value={filters.precioMin} onChange={handleChange} />
-          <input type="number" name="precioMax" min={0} placeholder="Precio máximo" value={filters.precioMax} onChange={handleChange} />
+          <input type="number" name="precioMin" min={0} step={1} placeholder="Precio mínimo" value={filters.precioMin} onChange={handleChange} onKeyDown={preventNonIntegerKey} onPaste={preventNonIntegerPaste} />
+          <input type="number" name="precioMax" min={0} step={1} placeholder="Precio máximo" value={filters.precioMax} onChange={handleChange} onKeyDown={preventNonIntegerKey} onPaste={preventNonIntegerPaste} />
           <WorkPalaceSelect className="wp-select--places-filter" value={filters.orden} options={[
             { value: 'recomendados', label: 'Orden recomendado' },
             { value: 'precio-asc', label: 'Menor precio' },

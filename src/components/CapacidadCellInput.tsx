@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { isIntegerInputValue, preventNonIntegerKey, preventNonIntegerPaste } from '../utils/numericInput'
 
 interface Props {
   value: string;
@@ -23,9 +24,12 @@ const CapacidadCellInput: React.FC<Props> = ({ value, onSave }) => {
       pattern="[0-9]+"
       required
       inputMode="numeric"
+      onKeyDown={preventNonIntegerKey}
+      onPaste={preventNonIntegerPaste}
       aria-label="Capacidad en unidades"
       value={localValue}
       onChange={e => {
+        if (!isIntegerInputValue(e.target.value)) return
         e.currentTarget.setCustomValidity('')
         setLocalValue(e.target.value)
       }}

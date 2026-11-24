@@ -131,7 +131,6 @@ function usePublicPlaces() {
   const [places, setPlaces] = useState<LandingPlace[]>(initialPlaces)
   const [loading, setLoading] = useState(initialPlaces.length === 0)
   const [loadError, setLoadError] = useState(false)
-  const [usingCachedData, setUsingCachedData] = useState(initialPlaces.length > 0)
   const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
@@ -151,12 +150,10 @@ function usePublicPlaces() {
         const listedPlaces = Array.isArray(data.places) ? data.places.filter(isLandingPlace) : []
         setPlaces(listedPlaces)
         setLoadError(false)
-        setUsingCachedData(false)
         cachePlaces(listedPlaces)
       } catch {
         if (!cancelled) {
           setLoadError(true)
-          setUsingCachedData(true)
         }
       } finally {
         window.clearTimeout(timeout)
@@ -189,7 +186,6 @@ function usePublicPlaces() {
     places,
     loading,
     loadError,
-    usingCachedData,
     retry: () => setRetryKey((current) => current + 1),
   }
 }
@@ -198,11 +194,10 @@ interface PublicPlacesState {
   places: LandingPlace[]
   loading: boolean
   loadError: boolean
-  usingCachedData: boolean
   retry: () => void
 }
 
-function Pila({ places, loadError, usingCachedData, retry }: PublicPlacesState) {
+function Pila({ places, loadError, retry }: PublicPlacesState) {
   const [order, setOrder] = useState<number[]>(() => places.map((place) => place.id))
   const [paused, setPaused] = useState(false)
   const placeIds = places.map((place) => place.id)
@@ -244,7 +239,6 @@ function Pila({ places, loadError, usingCachedData, retry }: PublicPlacesState) 
     >
       {places.length > 0 ? (
         <>
-          {usingCachedData && <p className="wp-home-stack__offline" role="status">Mostrando espacios guardados; la información podría no estar actualizada.</p>}
           {visibleOrder.slice(0, 4).map((id, position) => {
             const place = places.find((item) => item.id === id)
             if (!place) return null
@@ -307,7 +301,7 @@ function Pila({ places, loadError, usingCachedData, retry }: PublicPlacesState) 
   )
 }
 
-function FeaturedPlaces({ places, loading, loadError, usingCachedData, retry }: PublicPlacesState) {
+function FeaturedPlaces({ places, loading, loadError, retry }: PublicPlacesState) {
   return (
     <section className="wp-home-section wp-home-categories" id="features">
       <div className="wp-home-section__heading">
@@ -317,7 +311,6 @@ function FeaturedPlaces({ places, loading, loadError, usingCachedData, retry }: 
         </div>
         <Link to="/signup" className="wp-home-text-link">Explorar espacios <span aria-hidden="true">↗</span></Link>
       </div>
-      {usingCachedData && <p className="wp-home-places__offline" role="status">Mostrando espacios guardados; la información podría no estar actualizada.</p>}
       {places.length > 0 ? (
         <div className="wp-home-places-grid">
           {places.slice(0, 4).map((place) => {

@@ -3,6 +3,7 @@ import type { AdminAuditLog, AdminBlock, AdminCoupon, AdminPlace } from './admin
 import { containsProfanity } from '../utils/contentValidation'
 import { formatReadableDate, formatReadableTime } from '../utils/dateFormatting'
 import { emptyTimeInput, to24HourTime } from '../utils/timeInput'
+import { isIntegerInputValue, preventNonIntegerKey, preventNonIntegerPaste } from '../utils/numericInput'
 import TimeInput from './TimeInput'
 import WorkPalaceSelect from './WorkPalaceSelect'
 import './admin-gestion.css'
@@ -22,6 +23,7 @@ interface Props {
 }
 
 const emptyCoupon = { code: '', label: '', discount: 10, maxUses: '', startsAt: '', endsAt: '', endsAtTime: emptyTimeInput('PM') }
+type CouponForm = Omit<typeof emptyCoupon, 'discount'> & { discount: string }
 const emptyBlock = { placeId: '', startsAt: '', startsAtTime: emptyTimeInput(), endsAt: '', endsAtTime: emptyTimeInput('PM'), reason: '' }
 const actionLabel = (action: string) => ({ create: 'Creado', update: 'Actualizado', delete: 'Eliminado', block: 'Bloqueado' }[action] || action)
 const actionColor = (action: string) => ({ create: '#3ccf82', update: '#f0a951', delete: '#ff7a8a', block: '#3b73ff' }[action] || '#a6a3bd')
@@ -35,7 +37,7 @@ const auditDetail = (log: AdminAuditLog) => {
 }
 
 export default function AdminOperationsSection({ coupons, blocks, auditLogs, places, clearAuditLogs, createCoupon, toggleCoupon, deleteCoupon, createBlock, deleteBlock, onFeedback }: Props) {
-  const [couponForm, setCouponForm] = useState(emptyCoupon)
+  const [couponForm, setCouponForm] = useState<CouponForm>({ ...emptyCoupon, discount: String(emptyCoupon.discount) })
   const [reactivatingCouponId, setReactivatingCouponId] = useState<number | null>(null)
   const [couponValidity, setCouponValidity] = useState({ endsAt: '', endsAtTime: emptyTimeInput('PM') })
   const [blockForm, setBlockForm] = useState(emptyBlock)
@@ -88,7 +90,7 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
 
     try {
       await createCoupon({ ...couponForm, code, label, discount, maxUses, endsAtTime })
-      setCouponForm(emptyCoupon)
+      setCouponForm({ ...emptyCoupon, discount: String(emptyCoupon.discount) })
       onFeedback('Cupón creado correctamente.')
     } catch (error) {
       onFeedback(error instanceof Error ? error.message : 'No se pudo crear el cupón.', true)
@@ -195,11 +197,11 @@ export default function AdminOperationsSection({ coupons, blocks, auditLogs, pla
             </div>
             <div className="pg-f">
               <label htmlFor="admin-coupon-discount">Descuento (%) <i>*</i></label>
-              <input id="admin-coupon-discount" type="number" min="1" max="100" value={couponForm.discount} onChange={(event) => { setCouponFeedback(null); setCouponForm({ ...couponForm, discount: Number(event.target.value) }) }} />
+              <input id="admin-coupon-discount" type="number" min="1" max="100" step="1" value={couponForm.discount} onKeyDown={preventNonIntegerKey} onPaste={preventNonIntegerPaste} onChange={(event) => { if (!isIntegerInputValue(event.target.value)) return; setCouponFeedback(null); setCouponForm({ ...couponForm, discount: event.target.value }) }} required />
             </div>
             <div className="pg-f">
               <label htmlFor="admin-coupon-uses">Usos máximos</label>
-              <input id="admin-coupon-uses" type="number" min="1" placeholder="Sin límite" value={couponForm.maxUses} onChange={(event) => { setCouponFeedback(null); setCouponForm({ ...couponForm, maxUses: event.target.value }) }} />
+              <input id="admin-coupon-uses" type="number" min="1" step="1" placeholder="Sin límite" value={couponForm.maxUses} onKeyDown={preventNonIntegerKey} onPaste={preventNonIntegerPaste} onChange={(event) => { if (!isIntegerInputValue(event.target.value)) return; setCouponFeedback(null); setCouponForm({ ...couponForm, maxUses: event.target.value }) }} />
             </div>
             <div className="pg-f">
               <label htmlFor="admin-coupon-start">Desde</label>

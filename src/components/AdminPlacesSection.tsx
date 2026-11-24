@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import CapacidadCellInput from './CapacidadCellInput'
 import WorkPalaceSelect from './WorkPalaceSelect'
 import type { AdminPlace, NewPlaceForm } from './adminTypes'
 import { containsProfanity } from '../utils/contentValidation'
+import { isIntegerInputValue, preventNonIntegerKey, preventNonIntegerPaste } from '../utils/numericInput'
 import './AdminPlacesSection.css'
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
 
 const TIPOS = ['Coworking', 'Oficina privada', 'Sala de reuniones', 'Auditorio / salón de eventos', 'Aula / salón de clases', 'Estudio de grabación', 'Estudio de fotografía', 'Sala de ensayo', 'Taller de carpintería', 'Taller / maker space', 'Cocina industrial', 'Cocina oculta (dark kitchen)', 'Consultorio', 'Gimnasio / sala de entrenamiento', 'Cancha / espacio deportivo', 'Terraza / rooftop', 'Patio / jardín', 'Bodega / almacén', 'Local comercial', 'Otro']
 const CIUDADES = ['Medellín', 'Bello', 'Envigado', 'Sabaneta', 'Itagüí', 'Bogotá', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga', 'Pereira', 'Manizales', 'Santa Marta', 'Cúcuta', 'Otra']
-const MODALIDADES = ['Por hora', 'Media jornada (4 horas)', 'Jornada completa (8 horas)', 'Por día', 'Por noche', 'Por semana', 'Por 15 días', 'Por mes', 'Solo por cita', 'Flexible (acordar con el propietario)']
+const MODALIDADES = ['Por hora', 'Media jornada (4 horas)', 'Jornada completa (8 horas)', 'Por día', 'Por noche', 'Por semana', 'Por 15 días', 'Por mes', 'Solo por cita']
 const RUIDO = ['Silencioso (ideal para concentración)', 'Moderado (conversación normal)', 'Alto (actividad intensa)', 'Muy alto (industrial / eventos)', 'Aislado acústicamente', 'No aplica']
 const selectOptions = (values: string[], placeholder?: string) => [
   ...(placeholder ? [{ value: '', label: placeholder }] : []),
@@ -221,7 +222,6 @@ const getSuggestedPrice = (tipo: string, ciudad: string, barrioActual: string, c
     'Por 15 días': 28,
     'Por mes': 42,
     'Solo por cita': 1,
-    'Flexible (acordar con el propietario)': 1,
   }
 
   const base = baseByType[tipo] || 80000
@@ -299,7 +299,6 @@ const formatPriceForModality = (precioHora: number | null, modalidad: string | n
     'Por 15 días': '/ 15 días',
     'Por mes': '/ mes',
     'Solo por cita': ' por cita',
-    'Flexible (acordar con el propietario)': '/ tarifa',
   }
 
   return `$${precioHora.toLocaleString('es-CO')}${unidades[modalidad ?? ''] ?? ''}`
@@ -311,6 +310,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingAddress, setEditingAddress] = useState('')
   const [editingUrl, setEditingUrl] = useState('')
+  const editScrollPosition = useRef<number | null>(null)
   const [formError, setFormError] = useState('')
   const [activeToast, setActiveToast] = useState<{ message: string; isError: boolean } | null>(null)
   const [updatingActiveIds, setUpdatingActiveIds] = useState<Set<number>>(() => new Set())
@@ -326,6 +326,13 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
   const searchRef = useRef<HTMLInputElement>(null)
   const setField = (field: keyof NewPlaceForm, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const stopWheel = (event: React.WheelEvent<HTMLInputElement>) => event.currentTarget.blur()
+  const openPlaceEditor = (place: AdminPlace) => {
+    editScrollPosition.current = window.scrollY
+    setEditingId(place.id)
+    setEditingAddress(place.direccion || '')
+    setEditingUrl(place.image_url || '')
+  }
+  const closePlaceEditor = () => setEditingId(null)
 
   const suggestedPrice = getSuggestedPrice(form.tipo, form.ciudad, form.barrio, form.capacidad, form.modalidad)
   const normalizedQuery = query.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -389,6 +396,12 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       return next.size === current.size ? current : next
     })
   }, [places])
+
+  useLayoutEffect(() => {
+    if (editingId !== null || editScrollPosition.current === null) return
+    window.scrollTo({ top: editScrollPosition.current, behavior: 'auto' })
+    editScrollPosition.current = null
+  }, [editingId])
 
   async function savePlace(placeId: number, payload: Partial<AdminPlace>) {
     try {
@@ -537,14 +550,14 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
       setFormError(capacityValidationMessage)
       return
     }
-    const finalPrice = Number(form.precio_hora || suggestedPrice)
+    const finalPrice = Number(form.precio_hora)
     if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
       setFormError('Ingresa un precio mayor que cero.')
       return
     }
     setFormError('')
     try {
-      await createPlace({ ...form, direccion: form.direccion.trim() || null, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: Number.isFinite(finalPrice) ? finalPrice : null, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
+      await createPlace({ ...form, direccion: form.direccion.trim() || null, barrio: form.barrio || null, ciudad: form.ciudad || null, capacidad: form.capacidad || null, precio_hora: finalPrice, modalidad: form.modalidad || null, caracteristicas: form.caracteristicas || null, nivel_ruido: form.nivel_ruido || null, image_url: form.image_url || null })
       setForm(EMPTY)
       setCreateStep(0)
       setMaxCreateStep(0)
@@ -632,8 +645,11 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                 inputMode="numeric"
                 pattern="[0-9]+"
                 value={form.capacidad}
+                onKeyDown={preventNonIntegerKey}
+                onPaste={preventNonIntegerPaste}
                 onChange={(event) => {
                   const value = event.target.value
+                  if (!isIntegerInputValue(value)) return
                   setField('capacidad', value)
                   event.currentTarget.setCustomValidity(isValidCapacity(value) ? '' : capacityValidationMessage)
                 }}
@@ -685,7 +701,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               <span>Precio base en pesos colombianos <b>*</b></span>
               <div className="form-create-place-price">
                 <span aria-hidden="true">$</span>
-                <input id="create-place-price" className="form-create-place-input" type="number" min="1" step="1" value={form.precio_hora || String(Math.round(suggestedPrice))} onChange={(event) => setField('precio_hora', event.target.value)} onWheel={stopWheel} required />
+                <input id="create-place-price" className="form-create-place-input" type="number" min="1" step="1" placeholder={String(Math.round(suggestedPrice))} value={form.precio_hora} onKeyDown={preventNonIntegerKey} onPaste={preventNonIntegerPaste} onChange={(event) => { if (isIntegerInputValue(event.target.value)) setField('precio_hora', event.target.value) }} onWheel={stopWheel} required />
               </div>
               {form.tipo && form.ciudad && form.modalidad && <small>Precio sugerido: <strong>{formatPriceForModality(suggestedPrice, form.modalidad)}</strong></small>}
             </label>
@@ -843,7 +859,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
                       <button type="button" role="switch" aria-checked={active} aria-label={`${active ? 'Desactivar' : 'Activar'} ${place.name}`} disabled={updatingActiveIds.has(place.id)} className={`ad-switch${active ? ' is-on' : ''}`} onClick={() => void changePlaceActive(place, !active)}><i /></button>
                     </td>
                     <td data-label="Acciones" className="ad-acc">
-                      <button type="button" className="ad-icon" onClick={() => { setEditingId(place.id); setEditingAddress(place.direccion || ''); setEditingUrl(place.image_url || '') }} aria-label={`Editar dirección e imagen de ${place.name}`} data-tip="Editar">
+                      <button type="button" className="ad-icon" onClick={() => openPlaceEditor(place)} aria-label={`Editar dirección e imagen de ${place.name}`} data-tip="Editar">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
                       </button>
                       <button type="button" className="ad-icon ad-icon--bad" onClick={() => deletePlace(place.id)} aria-label={`Eliminar ${place.name}`} data-tip="Eliminar">
@@ -884,7 +900,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
         className="admin-image-modal"
         role="presentation"
         onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setEditingId(null)
+          if (event.target === event.currentTarget) closePlaceEditor()
         }}
       >
         <section className="admin-image-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-place-title">
@@ -894,7 +910,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
               <h3 id="edit-place-title">Editar lugar</h3>
               <p>Actualiza la dirección y la imagen del espacio.</p>
             </div>
-            <button type="button" className="admin-image-dialog__close" onClick={() => setEditingId(null)} aria-label="Cerrar">
+            <button type="button" className="admin-image-dialog__close" onClick={closePlaceEditor} aria-label="Cerrar">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m18 6-12 12M6 6l12 12" />
               </svg>
@@ -913,7 +929,7 @@ export default function AdminPlacesSection({ places, updatePlace, togglePlaceAct
           </label>
           <PlaceImagePicker id="edit-place-image" value={editingUrl} onChange={setEditingUrl} />
           <div className="admin-image-dialog__actions">
-            <button className="btn btn-secondary" type="button" onClick={() => setEditingId(null)}>Cancelar</button>
+            <button className="btn btn-secondary" type="button" onClick={closePlaceEditor}>Cancelar</button>
             <button
               className="btn btn-primary"
               type="button"

@@ -380,6 +380,7 @@
   height: 48px;
   padding: 0 6px;
   background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 12px;
 }
 
@@ -388,14 +389,20 @@
 }
 
 .ck-step button {
+  display: grid;
   width: 36px;
   height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  padding: 0;
   background: var(--surface);
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--brand);
   font-size: 1.25rem;
+  font-family: inherit;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -407,6 +414,15 @@
 .ck-step button:disabled {
   color: #b5bad6;
   cursor: not-allowed;
+}
+
+.ck--dark .ck-step {
+  background: rgba(17, 29, 45, 0.96);
+  border-color: rgba(148, 163, 184, 0.42);
+}
+
+.ck--dark .ck-step button {
+  border-color: rgba(148, 163, 184, 0.28);
 }
 
 .ck-step button:focus-visible {
@@ -487,6 +503,7 @@
 
 .ck-bar__track {
   position: relative;
+  overflow: hidden;
   height: 14px;
   background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
@@ -507,6 +524,10 @@
   margin-top: 6px;
   color: #aab0d6;
   font-size: 0.75rem;
+}
+
+.ck-bar__ends--single {
+  justify-content: center;
 }
 
 .ck-ticket__bottom {

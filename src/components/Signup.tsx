@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api';
 import { AuthMessage, AuthShell, PasswordField } from './AuthUI';
+import PhoneNumberInput from './PhoneNumberInput';
+import { isValidColombianMobile, normalizeColombianPhone } from '../utils/phoneValidation';
+import { preventDigitKey, preventDigitPaste, removeDigits } from '../utils/textInput';
 
 export default function Signup() {
   const [fullName, setFullName] = useState('');
@@ -48,6 +51,10 @@ export default function Signup() {
       setError('El nombre de usuario debe tener entre 3 y 50 caracteres.');
       return;
     }
+    if (phone && !isValidColombianMobile(phone)) {
+      setError('Si ingresas un celular, debe tener 10 dígitos y comenzar por 3.');
+      return;
+    }
     if (password.length < 6 || password.length > 128) {
       setError('La contraseña debe tener entre 6 y 128 caracteres.');
       return;
@@ -71,7 +78,7 @@ export default function Signup() {
           email: cleanEmail,
           username: cleanUsername,
           password,
-          phone: phone.trim(),
+          phone: normalizeColombianPhone(phone).trim(),
           accountType: registerAsOwner ? 'owner' : 'user',
         }),
       });
@@ -114,7 +121,9 @@ export default function Signup() {
               autoComplete="name"
               placeholder="Tu nombre y apellido"
               value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
+              onKeyDown={preventDigitKey}
+              onPaste={preventDigitPaste}
+              onChange={(event) => setFullName(removeDigits(event.target.value))}
               disabled={loading}
               required
             />
@@ -151,14 +160,10 @@ export default function Signup() {
           </div>
           <div className="wp-auth__field">
             <label htmlFor="signup-phone">Celular <span>(opcional)</span></label>
-            <input
+            <PhoneNumberInput
               id="signup-phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="300 123 4567"
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              onChange={setPhone}
               disabled={loading}
             />
           </div>

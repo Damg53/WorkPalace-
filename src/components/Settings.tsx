@@ -4,6 +4,9 @@ import './Settings.css'
 import { cacheProfileImageFromUrl, loadCachedProfileImage, removeCachedProfileImage, saveCachedProfileImage } from '../services/profileImageCache'
 import { API_BASE_URL, API_UNAVAILABLE_MESSAGE } from '../services/api'
 import { containsProfanity } from '../utils/contentValidation'
+import PhoneNumberInput from './PhoneNumberInput'
+import { isValidColombianMobile, normalizeColombianPhone } from '../utils/phoneValidation'
+import { preventDigitKey, preventDigitPaste, removeDigits } from '../utils/textInput'
 
 export interface UserProfile {
   id: number
@@ -72,7 +75,7 @@ function loadPreferencesFromStorage() {
 
 export default function Settings({ user, onProfileUpdate }: SettingsProps) {
   // Mostrar desde el primer momento los datos que tengamos (props/localStorage)
-  const [fullName, setFullName] = useState(() => user.fullName ?? '')
+  const [fullName, setFullName] = useState(() => removeDigits(user.fullName ?? ''))
   const [email, setEmail] = useState(() => user.email ?? '')
   const [username, setUsername] = useState(() => user.username ?? '')
   const [profileImage, setProfileImage] = useState(() => user.profileImage ?? '')
@@ -81,7 +84,7 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [phone, setPhone] = useState(() => loadPreferencesFromStorage().phone)
-  const [city, setCity] = useState(() => loadPreferencesFromStorage().city)
+  const [city, setCity] = useState(() => removeDigits(loadPreferencesFromStorage().city))
   const [preferences, setPreferences] = useState(() => loadPreferencesFromStorage().preferences)
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => loadPreferencesFromStorage().notificationsEnabled)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
@@ -102,13 +105,13 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
 
   // Sincronizar con props cuando cambien (ej. al restaurar sesión)
   useEffect(() => {
-    setFullName(user.fullName ?? '')
+    setFullName(removeDigits(user.fullName ?? ''))
     setEmail(user.email ?? '')
     setUsername(user.username ?? '')
     setProfileImage(user.profileImage ?? '')
     const stored = loadPreferencesFromStorage()
     setPhone(stored.phone)
-    setCity(stored.city)
+    setCity(removeDigits(stored.city))
     setPreferences(stored.preferences)
     setNotificationsEnabled(stored.notificationsEnabled)
     setTwoFactorEnabled(Boolean(user.twoFactorEnabled))
@@ -286,6 +289,10 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
+    if (phone && !isValidColombianMobile(phone)) {
+      setMessage({ type: 'error', text: 'Si ingresas un teléfono, debe tener 10 dígitos y comenzar por 3.' })
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`${API}/api/users/${user.id}/profile`, {
@@ -296,7 +303,7 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
           email: email.trim() || undefined,
           username: username.trim() || undefined,
           profile_image_url: profileImage,
-          phone,
+          phone: normalizeColombianPhone(phone),
         }),
       })
       const data = await res.json()
@@ -311,7 +318,7 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
         fullName: updated.full_name,
         email: updated.email,
         role: updated.role,
-        phone,
+        phone: normalizeColombianPhone(phone),
         city,
         preferences,
         notificationsEnabled,
@@ -320,7 +327,7 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
           ? profileImage
           : updated.profile_image_url || profileImage,
       })
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ phone, city, preferences, notificationsEnabled }))
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ phone: normalizeColombianPhone(phone), city, preferences, notificationsEnabled }))
       setMessage({ type: 'success', text: 'Datos guardados correctamente' })
     } catch {
       setMessage({ type: 'error', text: API_UNAVAILABLE_MESSAGE })
@@ -447,7 +454,9 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
                           id="settings-fullName"
                           type="text"
                           value={fullName}
-                          onChange={(event) => setFullName(event.target.value)}
+                          onKeyDown={preventDigitKey}
+                          onPaste={preventDigitPaste}
+                          onChange={(event) => setFullName(removeDigits(event.target.value))}
                           placeholder="Tu nombre completo"
                           autoComplete="name"
                         />
@@ -477,13 +486,10 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
                       <div className="settings-row">
                         <div className="settings-field settings-field--half">
                           <label htmlFor="settings-phone">Teléfono</label>
-                          <input
+                          <PhoneNumberInput
                             id="settings-phone"
-                            type="tel"
                             value={phone}
-                            onChange={(event) => setPhone(event.target.value)}
-                            placeholder="300 123 4567"
-                            autoComplete="tel"
+                            onChange={setPhone}
                           />
                         </div>
                         <div className="settings-field settings-field--half">
@@ -492,7 +498,9 @@ export default function Settings({ user, onProfileUpdate }: SettingsProps) {
                             id="settings-city"
                             type="text"
                             value={city}
-                            onChange={(event) => setCity(event.target.value)}
+                            onKeyDown={preventDigitKey}
+                            onPaste={preventDigitPaste}
+                            onChange={(event) => setCity(removeDigits(event.target.value))}
                             placeholder="Tu ciudad"
                             autoComplete="address-level2"
                           />
