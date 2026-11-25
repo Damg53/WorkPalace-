@@ -3126,6 +3126,10 @@ html[data-theme="light"] .admin-header p {
 .pc-city-top b small { margin-left: 6px; color: var(--p-muted); font-weight: 500; }
 .pc-city > div:last-child { height: 10px; overflow: hidden; border-radius: 9px; background: #ffffff0d; pointer-events: none; }
 .pc-city i { display: block; height: 100%; border-radius: 9px; background: linear-gradient(90deg, var(--p-brand), var(--p-violet), var(--p-pink)); transform: none; transition: none; }
+.pc-city-list.is-expanded { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; }
+.pc-city-toggle { margin-top: 12px; padding: 6px 0; border: 0; color: var(--p-brand); background: transparent; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.pc-city-toggle:hover { text-decoration: underline; }
+.pc-city-toggle:focus-visible { outline: 2px solid var(--p-brand); outline-offset: 3px; border-radius: 3px; }
 .pc-empty { color: var(--p-muted); font-size: .86rem; }
 .pc-feed { overflow: hidden; padding: 0; }
 .pc-feed > header { margin: 0; padding: 22px 24px 16px; background: transparent; }

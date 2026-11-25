@@ -1,7 +1,7 @@
 import { Router } from 'express';
+import { createHash, randomUUID } from 'node:crypto';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import bcryptjs from 'bcryptjs';
-import { randomUUID } from 'node:crypto';
 import pool from '../../db.js';
 import { normalizeText } from '../../shared/validation.js';
 import { getProfileImageUrl } from '../../shared/neon-storage.js';
@@ -12,6 +12,11 @@ import {
   findTotpStep,
   generateTotpSecret,
 } from './totp.js';
+import {
+  getLoginFailureState,
+  getNextLoginLockout,
+  normalizeLoginAttemptState,
+} from './login-lockout-policy.js';
 
 const router = Router();
 const otpChallenges = new Map();
@@ -48,6 +53,128 @@ async function publicUser(userData) {
   };
 }
 
+async function getLoginAttemptState(userId, ipHash) {
+  const client = await pool.connect();
+  let inTransaction = false;
+  try {
+    await client.query('BEGIN');
+    inTransaction = true;
+    await client.query(
+      `INSERT INTO login_attempts (user_id, ip_hash)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, ip_hash) DO NOTHING`,
+      [userId, ipHash]
+    );
+    let result = await client.query(
+      `SELECT failed_attempts, attempt_limit, lockout_minutes, locked_until,
+              locked_until > CURRENT_TIMESTAMP AS is_locked
+       FROM login_attempts
+       WHERE user_id = $1 AND ip_hash = $2
+       FOR UPDATE`,
+      [userId, ipHash]
+    );
+    let state = normalizeLoginAttemptState(result.rows[0]);
+    if (state.lockedUntil && !state.isLocked) {
+      const next = getNextLoginLockout(state.attemptLimit, state.lockoutMinutes);
+      result = await client.query(
+        `UPDATE login_attempts
+         SET failed_attempts = 0, attempt_limit = $3, lockout_minutes = $4,
+             locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND ip_hash = $2
+         RETURNING failed_attempts, attempt_limit, lockout_minutes, locked_until,
+                   FALSE AS is_locked`,
+        [userId, ipHash, next.attemptLimit, next.lockoutMinutes]
+      );
+      state = normalizeLoginAttemptState(result.rows[0]);
+    }
+    await client.query('COMMIT');
+    inTransaction = false;
+    return state;
+  } catch (error) {
+    if (inTransaction) await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function recordLoginFailure(userId, ipHash) {
+  const client = await pool.connect();
+  let inTransaction = false;
+  try {
+    await client.query('BEGIN');
+    inTransaction = true;
+    await client.query(
+      `INSERT INTO login_attempts (user_id, ip_hash)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, ip_hash) DO NOTHING`,
+      [userId, ipHash]
+    );
+    let result = await client.query(
+      `SELECT failed_attempts, attempt_limit, lockout_minutes, locked_until,
+              locked_until > CURRENT_TIMESTAMP AS is_locked
+       FROM login_attempts
+       WHERE user_id = $1 AND ip_hash = $2
+       FOR UPDATE`,
+      [userId, ipHash]
+    );
+    let state = normalizeLoginAttemptState(result.rows[0]);
+    if (state.isLocked) {
+      await client.query('COMMIT');
+      inTransaction = false;
+      return state;
+    }
+    if (state.lockedUntil) {
+      const next = getNextLoginLockout(state.attemptLimit, state.lockoutMinutes);
+      result = await client.query(
+        `UPDATE login_attempts
+         SET failed_attempts = 0, attempt_limit = $3, lockout_minutes = $4,
+             locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND ip_hash = $2
+         RETURNING failed_attempts, attempt_limit, lockout_minutes, locked_until,
+                   FALSE AS is_locked`,
+        [userId, ipHash, next.attemptLimit, next.lockoutMinutes]
+      );
+      state = normalizeLoginAttemptState(result.rows[0]);
+    }
+    const failure = getLoginFailureState(state);
+    result = await client.query(
+      `UPDATE login_attempts
+       SET failed_attempts = $3,
+           locked_until = CASE
+             WHEN $4::smallint IS NULL THEN NULL
+             ELSE CURRENT_TIMESTAMP + ($4::smallint * INTERVAL '1 minute')
+           END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND ip_hash = $2
+       RETURNING failed_attempts, attempt_limit, lockout_minutes, locked_until,
+                 locked_until > CURRENT_TIMESTAMP AS is_locked`,
+      [userId, ipHash, failure.failedAttempts, failure.lockedForMinutes]
+    );
+    await client.query('COMMIT');
+    inTransaction = false;
+    return normalizeLoginAttemptState(result.rows[0]);
+  } catch (error) {
+    if (inTransaction) await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+function respondLoginLocked(res, lockedUntil) {
+  const retryAfterSeconds = Math.max(1, Math.ceil((new Date(lockedUntil).getTime() - Date.now()) / 1000));
+  const retryAfterMinutes = Math.ceil(retryAfterSeconds / 60);
+  const waitHours = Math.ceil(retryAfterMinutes / 60);
+  const waitText = retryAfterMinutes >= 60
+    ? `${waitHours} ${waitHours === 1 ? 'hora' : 'horas'}`
+    : `${retryAfterMinutes} ${retryAfterMinutes === 1 ? 'minuto' : 'minutos'}`;
+  res.set('Retry-After', String(retryAfterSeconds));
+  return res.status(429).json({
+    error: `Demasiados intentos. Espera ${waitText} antes de volver a iniciar sesión.`,
+  });
+}
+
 router.post('/api/login', async (req, res) => {
   try {
     const username = normalizeText(req.body.username || '');
@@ -71,16 +198,28 @@ router.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
 
-    // Comparar contraseña
     const userData = user.rows[0];
     if (userData.active === false) {
       return res.status(403).json({ error: 'Esta cuenta está desactivada. Contacta al administrador.' });
     }
+    const ipHash = createHash('sha256')
+      .update(String(req.ip || req.socket.remoteAddress || 'unknown'))
+      .digest('hex');
+    let attemptState = await getLoginAttemptState(userData.id, ipHash);
+    if (attemptState.isLocked) return respondLoginLocked(res, attemptState.lockedUntil);
+
     const isPasswordValid = await bcryptjs.compare(password, userData.password);
 
     if (!isPasswordValid) {
+      attemptState = await recordLoginFailure(userData.id, ipHash);
+      if (attemptState.isLocked) return respondLoginLocked(res, attemptState.lockedUntil);
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
+
+    await pool.query(
+      'DELETE FROM login_attempts WHERE user_id = $1',
+      [userData.id]
+    );
 
     if (userData.two_factor_enabled) {
       const challengeId = randomUUID();
