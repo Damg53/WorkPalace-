@@ -14,6 +14,7 @@ interface AdminOverviewSectionProps {
 }
 
 const COMPLETED_COLOR = "#3ccf82";
+const INITIAL_VISIBLE_CITY_COUNT = 3;
 const ESTADOS = [
   ["pendientes", "Pendientes", "#f0a951"],
   ["confirmadas", "Confirmadas", "#3b73ff"],
@@ -216,6 +217,7 @@ export default function AdminOverviewSection({ users, reservations, places, coup
   const [now, setNow] = useState(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<SeriesKey>("usuarios");
+  const [showAllCities, setShowAllCities] = useState(false);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 15000);
     return () => window.clearInterval(timer);
@@ -246,7 +248,12 @@ export default function AdminOverviewSection({ users, reservations, places, coup
     counts[city] = (counts[city] || 0) + 1;
     return counts;
   }, {});
-  const topCities = Object.entries(cities).sort(([, first], [, second]) => second - first).slice(0, 5);
+  const topCities = Object.entries(cities).sort(([firstCity, firstCount], [secondCity, secondCount]) =>
+    secondCount - firstCount || firstCity.localeCompare(secondCity, "es")
+  );
+  const visibleCities = showAllCities
+    ? topCities
+    : topCities.slice(0, INITIAL_VISIBLE_CITY_COUNT);
   const today = bogotaDate(now);
   const todayLabel = new Intl.DateTimeFormat("es-CO", {
     timeZone: "America/Bogota",
@@ -408,15 +415,31 @@ export default function AdminOverviewSection({ users, reservations, places, coup
 
         <section className="pc-card pc-s6">
           <header><h2>Lugares por ciudad</h2><span>{publishedPlaces.length} publicados</span></header>
-          {topCities.length ? topCities.map(([city, count], index) => {
-            const percentage = publishedPlaces.length ? (count / publishedPlaces.length) * 100 : 0;
-            return (
-              <div className="pc-city" key={city}>
-                <div className="pc-city-top"><span>{city}</span><b>{count}<small>{Math.round(percentage)}%</small></b></div>
-                <div><i style={{ width: `${percentage}%`, animationDelay: `${index * 100}ms` }} /></div>
+          {topCities.length ? (
+            <>
+              <div className={`pc-city-list${showAllCities ? " is-expanded" : ""}`}>
+                {visibleCities.map(([city, count], index) => {
+                  const percentage = publishedPlaces.length ? (count / publishedPlaces.length) * 100 : 0;
+                  return (
+                    <div className="pc-city" key={city}>
+                      <div className="pc-city-top"><span>{city}</span><b>{count}<small>{Math.round(percentage)}%</small></b></div>
+                      <div><i style={{ width: `${percentage}%`, animationDelay: `${index * 100}ms` }} /></div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          }) : <p className="pc-empty">Todavía no hay lugares publicados.</p>}
+              {topCities.length > INITIAL_VISIBLE_CITY_COUNT && (
+                <button
+                  type="button"
+                  className="pc-city-toggle"
+                  aria-expanded={showAllCities}
+                  onClick={() => setShowAllCities((expanded) => !expanded)}
+                >
+                  {showAllCities ? "Mostrar menos" : `Ver todas (${topCities.length})`}
+                </button>
+              )}
+            </>
+          ) : <p className="pc-empty">Todavía no hay lugares publicados.</p>}
         </section>
 
         <section className="pc-card pc-s6">

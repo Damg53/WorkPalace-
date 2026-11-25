@@ -45,6 +45,17 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expiry ON password_reset_tokens(expires_at);
 
+CREATE TABLE IF NOT EXISTS login_attempts (
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip_hash CHAR(64) NOT NULL,
+  failed_attempts SMALLINT NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
+  attempt_limit SMALLINT NOT NULL DEFAULT 8 CHECK (attempt_limit IN (8, 3, 1)),
+  lockout_minutes SMALLINT NOT NULL DEFAULT 15 CHECK (lockout_minutes BETWEEN 15 AND 1440),
+  locked_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, ip_hash)
+);
+
 -- Ver la tabla creada
 SELECT * FROM users;
 

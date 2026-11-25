@@ -168,6 +168,20 @@ async function createTablesIfNotExist() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expiry ON password_reset_tokens(expires_at);');
     console.log('✅ Tabla password_reset_tokens verificada/creada');
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ip_hash CHAR(64) NOT NULL,
+        failed_attempts SMALLINT NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
+        attempt_limit SMALLINT NOT NULL DEFAULT 8 CHECK (attempt_limit IN (8, 3, 1)),
+        lockout_minutes SMALLINT NOT NULL DEFAULT 15 CHECK (lockout_minutes BETWEEN 15 AND 1440),
+        locked_until TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, ip_hash)
+      );
+    `);
+    console.log('✅ Tabla login_attempts verificada/creada');
+
     // Crear tabla de espacios antes de crear la referencia desde reservations
     await pool.query(`
       CREATE TABLE IF NOT EXISTS places (
