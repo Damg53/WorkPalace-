@@ -20,6 +20,7 @@
 }
 
 .admin-container .users-section.ad {
+  min-width: 0;
   padding: 0 clamp(20px, 3vw, 42px) 100px;
   border: 0;
   background: transparent;
@@ -671,6 +672,10 @@
   font-size: 0.84rem;
 }
 
+[data-theme="light"] .ad-pie {
+  color: #fff;
+}
+
 .ad-pager {
   display: flex;
   gap: 5px;
@@ -704,6 +709,33 @@
 .ad-pager button.is-on {
   border-color: transparent;
   background: linear-gradient(135deg, var(--d-brand), var(--d-violet));
+  color: #fff;
+}
+
+[data-theme="light"] .ad-pager button:not(.is-on):not(:disabled) {
+  border-color: var(--d-line);
+  background: var(--d-surface);
+  color: var(--d-muted);
+}
+
+[data-theme="light"] .place-create-steps button {
+  background: transparent;
+  color: var(--place-create-muted);
+}
+
+[data-theme="light"] .place-create-steps button > span {
+  border-color: var(--place-create-border);
+  background: var(--place-create-raised);
+  color: var(--place-create-muted);
+}
+
+[data-theme="light"] .place-create-steps .is-current button {
+  color: var(--place-create-text);
+}
+
+[data-theme="light"] .place-create-steps .is-current button > span {
+  border-color: var(--place-create-accent);
+  background: var(--place-create-accent);
   color: #fff;
 }
 

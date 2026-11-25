@@ -163,6 +163,7 @@ nav .nav-links a:focus-visible::after {
   }
 
   .authenticated-layout { margin-left: 0; padding-top: 70px; }
+  .authenticated-layout:has(.sb[data-mini="true"]) { margin-left: 0; }
   .authenticated-layout > .with-sidebar,
   .authenticated-layout > .admin-container { margin-left: 0; padding-top: 0; }
 }

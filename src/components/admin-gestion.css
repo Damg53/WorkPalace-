@@ -44,6 +44,10 @@
   color: var(--p-violet);
 }
 
+[data-theme="light"] .pg-coupon .pg-ico {
+  color: #55449c;
+}
+
 .pg-coupon .pg-ico svg {
   width: 21px;
   height: 21px;
@@ -299,6 +303,14 @@
   color: #3ccf82;
 }
 
+[data-theme="light"] .pg-coupon .pg-msg[data-t="error"] {
+  color: #b42332;
+}
+
+[data-theme="light"] .pg-coupon .pg-msg[data-t="ok"] {
+  color: #167a46;
+}
+
 .pg-coupon .pg-coupon-list {
   margin-top: 20px;
   border-top: 1px solid var(--p-line);
@@ -334,6 +346,10 @@
   color: #c9c3ff;
   font-size: 0.78rem;
   text-align: center;
+}
+
+[data-theme="light"] .pg-coupon .pg-coupon-list > summary b {
+  color: #493b93;
 }
 
 .pg-coupon .pg-coupon-list > summary svg {
@@ -768,6 +784,10 @@
   text-align: center;
 }
 
+[data-theme="light"] .pg-availability .pg-block-list > summary b {
+  color: #493b93;
+}
+
 .pg-availability .pg-block-list > summary svg {
   width: 18px;
   height: 18px;
@@ -793,6 +813,10 @@
   font-size: 0.85rem;
   font-weight: 800;
   text-align: center;
+}
+
+[data-theme="light"] .pg-operations .pg-count {
+  color: #493b93;
 }
 
 .pg-operations .pg-records {
@@ -848,6 +872,14 @@
 .pg-operations .pg-status.is-active {
   background: #3ccf821f;
   color: var(--p-ok);
+}
+
+[data-theme="light"] .pg-operations .pg-status {
+  color: #b42332;
+}
+
+[data-theme="light"] .pg-operations .pg-status.is-active {
+  color: #167a46;
 }
 
 .pg-operations .pg-empty {
@@ -935,6 +967,10 @@
   color: var(--c);
   font-size: 0.76rem;
   font-weight: 600;
+}
+
+[data-theme="light"] .pg-activity .pg-act {
+  color: var(--p-text);
 }
 
 .pg-activity .pg-vacio {
