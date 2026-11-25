@@ -83,10 +83,22 @@ tr:hover .rs-tile { transform: rotate(-6deg) scale(1.08); }
 .rs-switch.is-on { background: var(--d-ok); } .rs-switch.is-on i { transform: translateX(18px); }
 
 .rs-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--d-line); font-size: 0.88rem; color: var(--d-muted); }
+html[data-theme="light"] .rs-pie { color: #fff; }
+html[data-theme="light"] .rs-estado .is-on + span { color: #167a46; }
 .rs-pager { display: flex; gap: 6px; }
 .rs-pager button { display: grid; place-items: center; min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid var(--d-line); border-radius: 10px; background: none; font-weight: 600; color: var(--d-muted); transition: all 0.25s var(--d-ease); }
 .rs-pager button:hover:not(:disabled) { color: var(--d-text); border-color: var(--d-muted); } .rs-pager button:disabled { opacity: 0.35; cursor: default; }
 .rs-pager button.is-on { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--d-brand), var(--d-violet)); }
+
+[data-theme="light"] .rs-pager button:not(.is-on):not(:disabled) {
+  border-color: var(--d-line);
+  background: var(--d-surface);
+  color: var(--d-muted);
+}
+
+[data-theme="light"] .rs-badge {
+  color: var(--d-text);
+}
 .rs-vacio { display: grid; justify-items: center; gap: 8px; padding: 64px 20px; text-align: center; } .rs-vacio p { color: var(--d-muted); margin-bottom: 8px; }
 .rs-vacio span { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 6px; border-radius: 18px; color: #fff; background: linear-gradient(135deg, var(--d-brand), var(--d-violet)); }
 

@@ -33,6 +33,12 @@ body {
   min-height: 100vh;
 }
 
+@media (max-width: 319px) {
+  body {
+    min-width: 0;
+  }
+}
+
 html:has([aria-modal="true"]),
 html:has([aria-modal="true"]) body {
   overflow: hidden;
